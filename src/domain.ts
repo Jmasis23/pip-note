@@ -14,7 +14,7 @@ export type Note = {
   deletedAt: number | null;
   revision: number;
 };
-export type Draft = { text: string; updatedAt: number };
+export type Draft = { id: string; text: string; updatedAt: number };
 export type Theme = "light" | "dark" | "system";
 export type Size = "s" | "m" | "l";
 export type Accent = "lavender" | "sky" | "mint" | "peach" | "rose" | "graphite";
@@ -23,7 +23,7 @@ export type Prefs = {
   cardSize: Size; textSize: Size; accent: Accent; /** "quiet" turns the tinted cards neutral. */ tint: "color" | "quiet";
   /** Folders created before any note is in them. */ extraFolders: string[];
 };
-export type View = "all" | "today" | "pinned" | "trash";
+export type View = "all" | "today" | "pinned" | "drafts" | "trash";
 export type NoteInput = Partial<Pick<Note, "title" | "body" | "rich" | "checklist" | "pinned" | "folder">>;
 export const DEFAULT_PREFS: Prefs = { shortcut: "Ctrl+Shift+Space", theme: "system", reducedMotion: false, launchAtLogin: false, shakeToCapture: true, cardSize: "m", textSize: "m", accent: "lavender", tint: "color", extraFolders: [] };
 export class ConflictError extends Error {

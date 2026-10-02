@@ -11,17 +11,20 @@ import { useAi } from "../ai";
 import { initStorage, isNative, onNativeEvent, syncDesktopPrefs } from "../native";
 import { repo, useNotes } from "../useNotes";
 import type { Note, View } from "../domain";
+import { firstImage, imageFrom, imageNote, toDataUrl } from "../images";
 import { preview, useFull, useTriggers, when } from "./util";
 import "@fontsource-variable/bricolage-grotesque";
 import "./b.css";
 
-const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id: "today", label: "Today" }, { id: "pinned", label: "Pinned" }, { id: "trash", label: "Trash" }];
+const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id: "today", label: "Today" }, { id: "pinned", label: "Pinned" }, { id: "drafts", label: "Drafts" }, { id: "trash", label: "Trash" }];
 const tone = (n: Note) => n.pinned ? "lav" : n.checklist.length ? "mint" : Date.now() - n.updatedAt < 864e5 ? "peach" : "white";
 
 export default function DirB() {
-  const { folder, setFolder, folders, view, setView, query, setQuery, notes, counts, prefs, setPrefs, refresh } = useNotes();
+  const { folder, setFolder, folders, view, setView, query, setQuery, notes, drafts, counts, prefs, setPrefs, refresh } = useNotes();
   const [selId, setSelId] = useState<string | null>(null);
   const [capture, setCapture] = useState(false);
+  const [draftId, setDraftId] = useState<string | undefined>(undefined);
+  const openCapture = (id?: string) => { setDraftId(id); setCapture(true); };
   const [settings, setSettings] = useState(false);
   const [ask, setAsk] = useState(false);
   const ai = useAi();
@@ -48,13 +51,13 @@ export default function DirB() {
     const on = async (e: ClipboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (selId || capture || settings || ask || t?.closest("input, textarea, [contenteditable=true]")) return;
-      const text = e.clipboardData?.getData("text/plain").trim(); if (!text) return;
+      const text = e.clipboardData?.getData("text/plain").trim(); const img = imageFrom(e.clipboardData ?? null); if (!text && !img) return;
       e.preventDefault();
-      try { await repo.create({ body: text.slice(0, 20000), folder: view === "all" ? folder : "" }); await refresh(); setToast("Kept from clipboard"); window.setTimeout(() => setToast(""), 2200); } catch { setToast("Couldn't keep that"); window.setTimeout(() => setToast(""), 2200); }
+      try { await repo.create(text ? { body: text.slice(0, 20000), folder: view === "all" ? folder : "" } : { ...imageNote(await toDataUrl(img!)), folder: view === "all" ? folder : "" }); await refresh(); setToast("Kept from clipboard"); window.setTimeout(() => setToast(""), 2200); } catch { setToast("Couldn't keep that"); window.setTimeout(() => setToast(""), 2200); }
     };
     window.addEventListener("paste", on); return () => window.removeEventListener("paste", on);
   }, [selId, capture, settings, ask, folder, view, refresh]);
-  useTriggers(prefs, () => setCapture(true), capture || settings || ask);
+  useTriggers(prefs, () => openCapture(), capture || settings || ask);
   const full = useFull(selId, notes);
   useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
 
@@ -71,7 +74,7 @@ export default function DirB() {
         <button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button>
       </header>
 
-      {view !== "trash" && (() => {
+      {view !== "trash" && view !== "drafts" && (() => {
         const top = [...new Set(folders.map(f => f.split("/")[0]))];
         const root = folder.split("/")[0];
         const kids = [...new Set(folders.filter(f => root && f.startsWith(root + "/")).map(f => f.split("/").slice(0, 2).join("/")))];
@@ -84,6 +87,22 @@ export default function DirB() {
         </div>);
       })()}
       <LayoutGroup>
+        {view === "drafts" ? (
+          <section className="db-drafts" aria-label="Drafts">
+            <p className="db-drafts-hint">Unfinished captures. Nothing here is lost until you delete it.</p>
+            <AnimatePresence initial={false}>
+              {drafts.map(d => (
+                <motion.div key={d.id} className="db-draft" layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}>
+                  <button className="db-draft-open" onClick={() => openCapture(d.id)} aria-label={`Open draft: ${d.text.slice(0, 40)}`}>
+                    <span className="db-pre">{d.text.replace(/\s+/g, " ").trim().slice(0, 180)}</span>
+                    <time>{when(d.updatedAt)}</time>
+                  </button>
+                  <button className="db-draft-del" aria-label="Delete draft" onClick={async () => { await repo.deleteDraft(d.id); await refresh(); }}>Delete</button>
+                </motion.div>))}
+            </AnimatePresence>
+            {drafts.length === 0 && <div className="db-empty"><Pip size={72} look /><p>No drafts. Press Esc in a capture to keep one here.</p></div>}
+          </section>
+        ) : (
         <section className="db-board" aria-label="Notes">
           <AnimatePresence initial={false}>
             {notes.map((n, i) => (
@@ -91,13 +110,14 @@ export default function DirB() {
                 initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
                 whileHover={{ y: -4, rotate: i % 2 ? 0.5 : -0.5 }} transition={{ type: "spring", stiffness: 380, damping: 30 }}>
                 <b>{n.title}</b>
-                <span className="db-pre">{preview(n) || "Empty note"}</span>
+                {firstImage(n.rich) && <img className="db-thumb" src={firstImage(n.rich)} alt="" />}
+                {(preview(n) || !firstImage(n.rich)) && <span className="db-pre">{preview(n) || "Empty note"}</span>}
                 {n.checklist.length > 0 && <span className="db-prog" aria-label={`${n.checklist.filter(c => c.done).length} of ${n.checklist.length} done`}>{n.checklist.map(c => <i key={c.id} className={c.done ? "d" : ""} />)}</span>}
                 <time>{n.folder && <em className="db-fold">{n.folder.replace(/\//g, " / ")}</em>}{when(n.updatedAt)}</time>
               </motion.button>))}
           </AnimatePresence>
           {notes.length === 0 && <div className="db-empty"><Pip size={72} look /><p>{query ? "Nothing matches." : "Nothing kept yet."}</p></div>}
-        </section>
+        </section>)}
 
         <AnimatePresence>
           {selId && (
@@ -119,12 +139,12 @@ export default function DirB() {
         </LayoutGroup>
         <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" aria-label="Search notes" />
         {ai && <button className="db-ask" onClick={() => setAsk(true)} aria-label="Ask your notes">Ask</button>}
-        <button className="db-add" onClick={() => setCapture(true)} aria-label="New capture">Capture</button>
+        <button className="db-add" onClick={() => openCapture()} aria-label="New capture">Capture</button>
       </nav>
 
       <AnimatePresence>{ask && <AskPanel onClose={() => setAsk(false)} onOpen={id => setSelId(id)} />}</AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="db-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{toast}</motion.div>}</AnimatePresence>
-      <Capture open={capture} onClose={() => setCapture(false)} onSaved={() => void refresh()} />
+      <Capture open={capture} draftId={draftId} onClose={() => { setCapture(false); void refresh(); }} onSaved={() => void refresh()} />
       {settings && <Settings prefs={prefs} setPrefs={setPrefs} onClose={() => setSettings(false)} onRestored={() => void refresh()} />}
     </div>
     </MotionConfig>

@@ -18,7 +18,7 @@ export default function CapturePopup() {
     void theme();
     let off = () => {}; let dead = false;
     void onNativeEvent("pip://capture-show", () => { void (async () => { await initStorage(); await theme(); setRound(r => r + 1); setLive(true); })(); }).then(f => { if (dead) f(); else off = f; });
-    const blur = () => { if (live) void call("capture_hide"); };
+    const blur = () => { if (live) window.dispatchEvent(new Event("pip-dismiss")); };
     window.addEventListener("blur", blur);
     return () => { dead = true; off(); window.removeEventListener("blur", blur); };
   }, [live]);

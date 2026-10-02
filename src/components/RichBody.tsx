@@ -1,3 +1,4 @@
+import { imageFrom, toDataUrl } from "../images";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { answer } from "../calc";
 import { plainToRich, richToPlain } from "../rich";
@@ -87,7 +88,13 @@ export const RichBody = forwardRef<RichHandle, { html: string; onChange: (html: 
           onChange(el.innerHTML);
         }}
         onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "h") { e.preventDefault(); act(highlight); } }}
-        onPaste={e => { e.preventDefault(); exec("insertText", e.clipboardData.getData("text/plain")); }}
+        onPaste={e => {
+          e.preventDefault();
+          const img = imageFrom(e.clipboardData);
+          const txt = e.clipboardData.getData("text/plain");
+          if (img && !txt) { const el = e.currentTarget; void toDataUrl(img).then(src => { el.focus(); exec("insertHTML", `<img src="${src}" alt="">`); onChange(el.innerHTML); }); return; }
+          exec("insertText", txt);
+        }}
         onDrop={e => e.preventDefault()} />
     </div>
   );

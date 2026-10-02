@@ -55,9 +55,11 @@ describe("repo", () => {
   });
   it("draft persists across repo instances and clears", async () => {
     const { repo, kv } = fresh();
-    await repo.saveDraft("half a thou");
-    expect((await createRepo(kv).getDraft())?.text).toBe("half a thou");
-    await repo.clearDraft(); expect(await repo.getDraft()).toBeNull();
+    const id = await repo.saveDraft("half a thou");
+    expect((await createRepo(kv).listDrafts())[0].text).toBe("half a thou");
+    await repo.saveDraft("half a thought", id); expect((await repo.listDrafts()).length).toBe(1);
+    await repo.saveDraft("second"); expect((await repo.listDrafts()).length).toBe(2);
+    await repo.deleteDraft(id); expect((await repo.listDrafts()).map(d => d.text)).toEqual(["second"]);
   });
   it("failed write throws and never pretends success", async () => {
     const kv = { getItem: () => null, setItem: () => { throw new Error("disk full"); } };

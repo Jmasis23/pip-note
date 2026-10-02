@@ -22,6 +22,7 @@ function clean(node: Node, out: string[]) {
       return;
     }
     if (tag === "BR") { out.push("<br>"); return; }
+    if (tag === "IMG") { const s = el.getAttribute("src") ?? ""; if (/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s)) out.push(`<img src="${s}" alt="">`); return; }
     if (!KEEP.has(tag)) { clean(el, out); return; }
     const t = tag === "STRONG" ? "b" : tag === "EM" ? "i" : tag.toLowerCase();
     out.push(`<${t}>`); clean(el, out); out.push(`</${t}>`);

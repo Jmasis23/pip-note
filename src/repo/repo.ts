@@ -16,9 +16,10 @@ export interface NoteRepo {
   trash(id: string): Promise<Note>;
   restore(id: string): Promise<Note>;
   deleteForever(id: string): Promise<void>;
-  getDraft(): Promise<Draft | null>;
-  saveDraft(text: string): Promise<void>;
-  clearDraft(): Promise<void>;
+  listDrafts(): Promise<Draft[]>;
+  /** Keeps (or updates) an unfinished capture. Returns its id. Empty text removes it. */
+  saveDraft(text: string, id?: string): Promise<string>;
+  deleteDraft(id: string): Promise<void>;
   getPrefs(): Promise<Prefs>;
   setPrefs(p: Prefs): Promise<Prefs>;
   exportJson(): Promise<string>;
@@ -28,7 +29,7 @@ export interface NoteRepo {
   restoreBackup(day: string): Promise<void>;
 }
 
-type Store = { v: 1; notes: Note[]; draft: Draft | null; prefs: Prefs };
+type Store = { v: 1; notes: Note[]; draft?: { text: string; updatedAt: number } | null; drafts?: Draft[]; prefs: Prefs };
 const KEY = "pip.store.v1";
 const BACKUP_KEY = "pip.backups.v1";
 const KEEP = 7;
@@ -50,10 +51,12 @@ function validBackup(s: unknown): s is Store {
 export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
   const load = (): Store => {
     const raw = kv.getItem(KEY);
-    if (!raw) return { v: 1, notes: [], draft: null, prefs: { ...DEFAULT_PREFS } };
+    if (!raw) return { v: 1, notes: [], drafts: [], prefs: { ...DEFAULT_PREFS } };
     const s = JSON.parse(raw) as Store;
     if (!validBackup(s)) throw new Error("Stored notes could not be read. Nothing was changed.");
-    return { ...s, prefs: { ...DEFAULT_PREFS, ...s.prefs } };
+    // Older stores kept one draft. Fold it into the list.
+    const drafts = s.drafts ?? (s.draft ? [{ id: uid(), ...s.draft }] : []);
+    return { ...s, drafts, draft: null, prefs: { ...DEFAULT_PREFS, ...s.prefs } };
   };
   const save = (s: Store) => {
     const text = JSON.stringify(s);
@@ -111,9 +114,13 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
       if (n.deletedAt === null) throw new ValidationError("Move the note to Trash first.");
       s.notes = s.notes.filter(x => x.id !== id); save(s);
     },
-    async getDraft() { return load().draft; },
-    async saveDraft(text) { const s = load(); s.draft = text.trim() ? { text, updatedAt: now() } : null; save(s); },
-    async clearDraft() { const s = load(); s.draft = null; save(s); },
+    async listDrafts() { return [...(load().drafts ?? [])].sort((a, b) => b.updatedAt - a.updatedAt); },
+    async saveDraft(text, id) {
+      const s = load(); const list = (s.drafts ?? []).filter(d => d.id !== id);
+      const nid = id ?? uid();
+      s.drafts = text.trim() ? [...list, { id: nid, text, updatedAt: now() }] : list; save(s); return nid;
+    },
+    async deleteDraft(id) { const s = load(); s.drafts = (s.drafts ?? []).filter(d => d.id !== id); save(s); },
     async getPrefs() { return load().prefs; },
     async setPrefs(p) { const s = load(); s.prefs = p; save(s); return p; },
     async exportJson() {
