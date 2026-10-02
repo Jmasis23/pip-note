@@ -1,3 +1,4 @@
+import { richToMarkdown } from "../rich";
 import { ConflictError, DEFAULT_PREFS, NotFoundError, ValidationError } from "../domain";
 import type { Draft, Note, NoteInput, Prefs, View } from "../domain";
 
@@ -83,7 +84,7 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
       const body = input.body ?? ""; const checklist = input.checklist ?? [];
       if (!body.trim() && !checklist.length && !(input.title ?? "").trim()) throw new ValidationError("Write something first.");
       const s = load(); const t = now();
-      const n: Note = { id: uid(), title: deriveTitle(input.title ?? "", body), body, checklist, createdAt: t, updatedAt: t, pinned: !!input.pinned, deletedAt: null, revision: 1 };
+      const n: Note = { id: uid(), title: deriveTitle(input.title ?? "", body), body, ...(input.rich ? { rich: input.rich } : {}), checklist, createdAt: t, updatedAt: t, pinned: !!input.pinned, deletedAt: null, revision: 1 };
       s.notes.push(n); save(s); return { ...n };
     },
     async update(id, expected, patch) {
@@ -92,6 +93,7 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
       if (n.revision !== expected) throw new ConflictError({ ...n });
       return mutate(id, m => {
         if (patch.body !== undefined) m.body = patch.body;
+        if (patch.rich !== undefined) m.rich = patch.rich || undefined;
         if (patch.checklist !== undefined) m.checklist = patch.checklist;
         if (patch.pinned !== undefined) m.pinned = patch.pinned;
         if (patch.title !== undefined) m.title = patch.title.trim() ? patch.title.trim() : deriveTitle("", m.body);
@@ -117,7 +119,8 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
     async exportMarkdown(id) {
       const n = find(load(), id);
       const list = n.checklist.map(c => `- [${c.done ? "x" : " "}] ${c.text}`).join("\n");
-      const text = `# ${n.title}\n\n${n.body}${n.body && list ? "\n\n" : ""}${list}\n`;
+      const body = n.rich ? richToMarkdown(n.rich) : n.body;
+      const text = `# ${n.title}\n\n${body}${body && list ? "\n\n" : ""}${list}\n`;
       return { filename: `${n.title.replace(/[\\/:*?"<>|]/g, "-").slice(0, 60) || "note"}.md`, text };
     },
     async runDailyBackup() {

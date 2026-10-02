@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { Pip } from "../components/Pip";
 import { Capture } from "../components/Capture";
 import { Editor } from "../components/Editor";
@@ -18,11 +18,22 @@ export default function DirB() {
   const [selId, setSelId] = useState<string | null>(null);
   const [capture, setCapture] = useState(false);
   const [settings, setSettings] = useState(false);
+  useEffect(() => {
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark = prefs.theme === "dark" || (prefs.theme === "system" && mq.matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      document.documentElement.dataset.motion = prefs.reducedMotion ? "reduced" : "full";
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#12131A" : "#F7F7FB");
+    };
+    apply(); mq.addEventListener("change", apply); return () => mq.removeEventListener("change", apply);
+  }, [prefs.theme, prefs.reducedMotion]);
   useTriggers(prefs, () => setCapture(true), capture || settings);
   const full = useFull(selId, notes);
   useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
 
   return (
+    <MotionConfig reducedMotion={prefs.reducedMotion ? "always" : "user"}>
     <div className="db">
       <header className="db-hero">
         <div className="db-mascot"><Pip size={92} look /></div>
@@ -74,6 +85,7 @@ export default function DirB() {
       <Capture open={capture} onClose={() => setCapture(false)} onSaved={() => void refresh()} />
       {settings && <Settings prefs={prefs} setPrefs={setPrefs} onClose={() => setSettings(false)} onRestored={() => void refresh()} />}
     </div>
+    </MotionConfig>
   );
 }
 void repo;

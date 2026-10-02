@@ -3,6 +3,8 @@ export type Note = {
   id: string;
   title: string;
   body: string;
+  /** Sanitized rich text (b, i, u, mark, lists). `body` always holds the plain-text twin for search and preview. */
+  rich?: string;
   checklist: ChecklistItem[];
   createdAt: number;
   updatedAt: number;
@@ -14,7 +16,7 @@ export type Draft = { text: string; updatedAt: number };
 export type Theme = "light" | "dark" | "system";
 export type Prefs = { shortcut: string; theme: Theme; reducedMotion: boolean; launchAtLogin: boolean; shakeToCapture: boolean };
 export type View = "all" | "today" | "pinned" | "trash";
-export type NoteInput = Partial<Pick<Note, "title" | "body" | "checklist" | "pinned">>;
+export type NoteInput = Partial<Pick<Note, "title" | "body" | "rich" | "checklist" | "pinned">>;
 export const DEFAULT_PREFS: Prefs = { shortcut: "Ctrl+Shift+Space", theme: "system", reducedMotion: false, launchAtLogin: false, shakeToCapture: true };
 export class ConflictError extends Error {
   constructor(public latest: Note) { super("This note changed somewhere else."); this.name = "ConflictError"; }

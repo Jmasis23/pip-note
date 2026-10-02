@@ -99,3 +99,25 @@ input[type=checkbox]:not(.switch):checked::after{content:"";width:9px;height:5px
 }
 .primary.wide{white-space:nowrap;justify-content:center;padding:11px 14px}
 .hint{font-size:12.5px;color:var(--muted);margin:-8px 6px 0}
+
+/* Rich body */
+.rich{position:relative}
+.rt-bar{display:flex;align-items:center;gap:2px;margin:4px 0 10px;padding:3px;border-radius:12px;background:rgba(127,127,150,.1);width:max-content;max-width:100%;overflow-x:auto}
+.rt-bar i{width:1px;height:16px;background:rgba(127,127,150,.35);margin:0 4px}
+.rt-bar button,.rt-bubble button{min-width:32px;height:30px;border-radius:9px;font-weight:700;font-size:14px;color:inherit;padding:0 8px;transition:background .12s}
+.rt-bar button:hover,.rt-bubble button:hover{background:rgba(127,127,150,.18)}
+.rt-bar button.on,.rt-bubble button.on{background:var(--ink);color:var(--surface,#fff)}
+.rt-italic{font-style:italic;font-family:Georgia,serif!important}.rt-underline{text-decoration:underline}.rt-hl{background:#FFE58A;color:#1B1C26!important;border-radius:6px}.rt-hl.on{outline:2px solid var(--ink)}
+.rt-bubble{position:fixed;z-index:60;transform:translate(-50%,calc(-100% - 10px));display:flex;gap:1px;padding:4px;border-radius:14px;background:var(--ink);color:var(--surface,#fff);box-shadow:0 12px 30px -8px rgba(0,0,0,.5);animation:bub .14s ease-out}
+.rt-bubble button.on{background:rgba(255,255,255,.22);color:inherit}
+@keyframes bub{from{opacity:0;transform:translate(-50%,calc(-100% - 4px)) scale(.94)}}
+.rt-body{min-height:180px;outline:none;white-space:pre-wrap;word-break:break-word;line-height:1.55}
+.rt-body:empty::before{content:attr(data-placeholder);opacity:.45;pointer-events:none}
+.rt-body mark,.rt-body [style*="background"]{background:#FFE58A;color:#1B1C26;border-radius:4px;padding:0 1px}
+.rt-body ul,.rt-body ol{margin:.3em 0;padding-left:1.4em;white-space:normal}
+.rt-body ul{list-style:disc}.rt-body ol{list-style:decimal}.rt-body li{padding-left:.2em}
+@media (prefers-reduced-motion:reduce){.rt-bubble{animation:none}}
+.rt-bubble.below{transform:translate(-50%,10px)}
+.rt-bar button.rt-hl.on,.rt-bubble button.rt-hl.on{background:#FFE58A;color:#1B1C26;box-shadow:inset 0 0 0 2px #1B1C26}
+.check-row input[type=text]{min-width:0;flex:1}
+@media (max-width:760px){.x{opacity:1;font-size:12px;padding:6px 8px}}

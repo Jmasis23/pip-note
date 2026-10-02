@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { ChecklistItem, Note } from "../domain";
 import { ConflictError } from "../domain";
 import { repo } from "../useNotes";
+import { plainToRich, richToPlain, sanitizeRich } from "../rich";
+import { RichBody } from "./RichBody";
 
 type Save = "idle" | "pending" | "saved" | "error";
 const uid = () => crypto.randomUUID();
@@ -12,6 +14,8 @@ const download = (name: string, text: string, type: string) => {
 export function Editor({ note, onChanged, onBack }: { note: Note; onChanged: () => void; onBack: () => void }) {
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
+  const [rich, setRich] = useState(note.rich ?? plainToRich(note.body));
+  const [seed, setSeed] = useState(0);
   const [items, setItems] = useState<ChecklistItem[]>(note.checklist);
   const [save, setSave] = useState<Save>("idle");
   const [conflict, setConflict] = useState<Note | null>(null);
@@ -19,21 +23,21 @@ export function Editor({ note, onChanged, onBack }: { note: Note; onChanged: () 
   const rev = useRef(note.revision);
   const timer = useRef<number>();
   const dirty = useRef(false);
-  const latest = useRef({ title, body, items });
-  latest.current = { title, body, items };
+  const latest = useRef({ title, body, rich, items });
+  latest.current = { title, body, rich, items };
   const locked = note.deletedAt !== null;
 
-  useEffect(() => { setTitle(note.title); setBody(note.body); setItems(note.checklist); rev.current = note.revision; setSave("idle"); setConflict(null); setErr(""); dirty.current = false; }, [note.id]);
+  useEffect(() => { setTitle(note.title); setBody(note.body); setRich(note.rich ?? plainToRich(note.body)); setSeed(x => x + 1); setItems(note.checklist); rev.current = note.revision; setSave("idle"); setConflict(null); setErr(""); dirty.current = false; }, [note.id]);
   useEffect(() => {
-    if (!dirty.current && !conflict) { setTitle(note.title); setBody(note.body); setItems(note.checklist); rev.current = note.revision; }
+    if (!dirty.current && !conflict) { setTitle(note.title); setBody(note.body); setRich(note.rich ?? plainToRich(note.body)); setItems(note.checklist); rev.current = note.revision; }
   }, [note.revision]);
 
   const flush = async () => {
     window.clearTimeout(timer.current);
     if (!dirty.current || locked) return;
-    const { title, body, items } = latest.current;
+    const { title, body, rich, items } = latest.current;
     try {
-      const n = await repo.update(note.id, rev.current, { title, body, checklist: items });
+      const n = await repo.update(note.id, rev.current, { title, body, rich, checklist: items });
       rev.current = n.revision; dirty.current = false; setSave("saved"); setErr(""); onChanged();
     } catch (e) {
       if (e instanceof ConflictError) { setConflict(e.latest); setSave("error"); }
@@ -48,8 +52,8 @@ export function Editor({ note, onChanged, onBack }: { note: Note; onChanged: () 
   const add = () => { setItems(a => [...a, { id: uid(), text: "", done: false }]); touch(); setTimeout(() => document.querySelector<HTMLInputElement>(".check-row:last-of-type input[type=text]")?.focus(), 0); };
   const remove = (id: string) => { setItems(a => a.filter(i => i.id !== id)); touch(); };
 
-  const saveAsCopy = async () => { await repo.create({ title: `${title} (my version)`, body, checklist: items }); setConflict(null); dirty.current = false; onChanged(); };
-  const reload = () => { if (!conflict) return; setTitle(conflict.title); setBody(conflict.body); setItems(conflict.checklist); rev.current = conflict.revision; dirty.current = false; setConflict(null); setSave("idle"); onChanged(); };
+  const saveAsCopy = async () => { await repo.create({ title: `${title} (my version)`, body, rich, checklist: items }); setConflict(null); dirty.current = false; onChanged(); };
+  const reload = () => { if (!conflict) return; setTitle(conflict.title); setBody(conflict.body); setRich(conflict.rich ?? plainToRich(conflict.body)); setSeed(x => x + 1); setItems(conflict.checklist); rev.current = conflict.revision; dirty.current = false; setConflict(null); setSave("idle"); onChanged(); };
 
   const label = locked ? "In Trash" : save === "pending" ? "Saving" : save === "saved" ? "Saved" : save === "error" ? (err || "Not saved") : "";
 
@@ -76,7 +80,7 @@ export function Editor({ note, onChanged, onBack }: { note: Note; onChanged: () 
         </div>
       )}
       <input className="ed-title" value={title} disabled={locked} placeholder="Untitled" aria-label="Title" onChange={e => { setTitle(e.target.value); touch(); }} />
-      <textarea className="ed-body" value={body} disabled={locked} placeholder="Start typing" aria-label="Body" onChange={e => { setBody(e.target.value); touch(); }} />
+      <RichBody key={seed} html={rich} disabled={locked} onChange={h => { const c = sanitizeRich(h); setRich(c); setBody(richToPlain(c)); touch(); }} />
       <div className="checklist" aria-label="Checklist">
         {items.map(i => (
           <div className="check-row" key={i.id}>
