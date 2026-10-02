@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { judge, JevError } from "../jev";
 import { runJev } from "../askjev";
+import { getAiConfig, writeFromNotes, AiError } from "../ai";
 import { applyOps, type AgentResult, type Op } from "../agent";
 import { repo } from "../useNotes";
 import type { Note } from "../domain";
@@ -37,12 +38,12 @@ export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOp
   const go = async (text = q) => {
     if (!text.trim() || busy) return; setBusy(true); setErr(""); setRes(null); setApplied(""); setPhase("idle"); setSteps([]); setPeek([]); ctl.current = new AbortController();
     try {
-      const r = await runJev(text, repo, { judge, scope, signal: ctl.current.signal, onStep: (t, notes) => {
+      const r = await runJev(text, repo, { judge, scope, gen: getAiConfig() ? (i, ns, sg) => writeFromNotes(getAiConfig()!, i, ns, sg) : undefined, signal: ctl.current.signal, onStep: (t, notes) => {
         setSteps(s => [...s.map(x => ({ ...x, done: true })), { id: ++seq.current, text: t, done: false }].slice(-4));
         if (notes?.length) setPeek(p => { const m = new Map(p.map(n => [n.id, n])); notes.forEach(n => m.set(n.id, n)); return [...m.values()].slice(-5); });
       } });
       setSteps(s => s.map(x => ({ ...x, done: true }))); setRes(r);
-    } catch (e) { setErr(e instanceof JevError ? e.message : "Couldn't get an answer."); } finally { setBusy(false); }
+    } catch (e) { setErr(e instanceof JevError || e instanceof AiError ? e.message : "Couldn't get an answer."); } finally { setBusy(false); }
   };
   const apply = async () => {
     if (!res || phase !== "idle") return; setPhase("applying");
@@ -92,7 +93,7 @@ export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOp
               {applied && <motion.p className="ask-done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{applied}</motion.p>}
               {res.looked.length > 0 && phase === "idle" && <div className="ask-src"><span>Looked at</span>{res.looked.map((n, i) => <button key={n.id} onClick={() => { onClose(); onOpen(n.id); }}><em>{i + 1}</em>{n.title}</button>)}</div>}
             </motion.div>}</AnimatePresence>
-            <p className="ask-note">{scope ? `Only "${scope.title || "Untitled"}" is read.` : "Pip reads only the notes it needs."} Short excerpts go to Pip's judgment service (Jev), never to a chat model. It proposes, you decide. Nothing saves until you apply.</p>
+            <p className="ask-note">{scope ? `Only "${scope.title || "Untitled"}" is read.` : "Pip reads only the notes it needs."} Short excerpts go to Pip's judgment service (Jev). Only if you ask Pip to write something do the notes it picked go to your connected ChatGPT. It proposes, you decide. Nothing saves until you apply.</p>
           </motion.div>
         </motion.div>
       </motion.div>

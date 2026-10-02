@@ -63,10 +63,20 @@ describe("askjev", () => {
     const p = await runJev("pin groceries", repo, { judge: fake("pin").j }); expect(p.ops[0]).toMatchObject({ id: groc.id, pinned: true });
     const t = await runJev("retitle groceries", repo, { judge: fake("retitle").j }); expect(t.ops[0]).toMatchObject({ id: groc.id, title: "milk" });
   });
-  it("does not write text and never calls anything for it", async () => {
+  it("writing without ChatGPT connected says to connect it", async () => {
     const { repo } = await mk(); const f = fake("write");
     const r = await runJev("summarize my trip", repo, { judge: f.j });
-    expect(f.sent).toHaveLength(1); expect(r.message).toMatch(/doesn't write/); expect(r.ops).toEqual([]);
+    expect(f.sent).toHaveLength(1); expect(r.message).toMatch(/Connect ChatGPT/); expect(r.ops).toEqual([]);
+  });
+  it("writing routes to ChatGPT once, with only the notes Jev picked, after one Jev call", async () => {
+    const { repo } = await mk(); const f = fake("write"); const seen: { i: string; n: number }[] = [];
+    const r = await runJev("summarize my trip", repo, { judge: f.j, gen: async (i, ns) => { seen.push({ i, n: ns.length }); return "Short summary."; } });
+    expect(f.sent).toHaveLength(1); expect(seen).toHaveLength(1); expect(seen[0].n).toBeLessThanOrEqual(5); expect(r.message).toBe("Short summary."); expect(r.ops).toEqual([]);
+  });
+  it("non-writing requests never call ChatGPT", async () => {
+    const { repo } = await mk(); const f = fake("find"); let called = 0;
+    await runJev("when is the tram", repo, { judge: f.j, gen: async () => { called++; return "x"; } });
+    expect(called).toBe(0);
   });
   it("note scope sends only that note and edits only that note", async () => {
     const { repo, tram, groc } = await mk(); const f = fake("find");

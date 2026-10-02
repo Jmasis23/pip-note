@@ -10,7 +10,8 @@ export const T = { route: 0.3, note: 0.5, line: 0.55, folder: 0.5, title: 0.4 };
 const SHORT = 20, TOP_CODE = 3, MAX_SEGS = 40, PER_NOTE = 12;
 type Store = { list(o: { view: "all"; query: string }): Promise<Note[]> };
 type Seg = { text: string; note: Note };
-type Run = { judge: Judge; signal?: AbortSignal; onStep?: (s: string, notes?: Note[]) => void };
+type Gen = (instruction: string, notes: Note[], signal?: AbortSignal) => Promise<string>;
+type Run = { judge: Judge; gen?: Gen; signal?: AbortSignal; onStep?: (s: string, notes?: Note[]) => void };
 
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) : s);
 const flat = (s: string) => s.replace(/\s+/g, " ").trim();
@@ -61,7 +62,13 @@ export async function runJev(request: string, store: Store, o: Run & { scope?: N
   const route = first.intent; const intent = route?.choice ?? "other";
   const rel = scope ? [scope] : short.filter((_, i) => noul(first, `r${i}`) >= T.note);
   if ((route?.confidence ?? 1) < T.route && intent !== "find") return done(`I'm not sure what you'd like me to do. ${CAN}`);
-  if (intent === "write") return done(`That needs new writing, and Ask doesn't write text. ${CAN}`);
+  if (intent === "write") {
+    // Jev decided this is a writing request. Only now does the connected ChatGPT run, once, over the few notes Jev picked.
+    if (!o.gen) return done("That needs new writing. Connect ChatGPT in Settings and ask again. Until then I can find, file, rename, pin and pull lines together.");
+    const src = (scope ? [scope] : rel.length ? rel : short).slice(0, 5); see(src);
+    o.onStep?.("Writing it", src.slice(0, 4));
+    return done(await o.gen(q, src, signal));
+  }
   if (intent === "other") return done(CAN);
   see(rel.slice(0, 5));
 
