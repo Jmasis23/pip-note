@@ -51,7 +51,7 @@ jobs:
       - name: Version each build so the updater sees it as newer
         shell: bash
         run: |
-          node -e "const f='src-tauri/tauri.conf.json',c=JSON.parse(require('fs').readFileSync(f));c.version='0.1.'+process.env.GITHUB_RUN_NUMBER;if(process.env.PUBLISH==='true')c.bundle.createUpdaterArtifacts=true;require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+          node -e "const f='src-tauri/tauri.conf.json',c=JSON.parse(require('fs').readFileSync(f));c.version='0.2.'+process.env.GITHUB_RUN_NUMBER;if(process.env.PUBLISH==='true')c.bundle.createUpdaterArtifacts=true;require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
       - name: Build installer only (no signing key set)
         if: env.PUBLISH != 'true'
         run: npx tauri build
@@ -61,8 +61,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v0.1.${{ github.run_number }}
-          releaseName: Pip 0.1.${{ github.run_number }}
+          tagName: v0.2.${{ github.run_number }}
+          releaseName: Pip 0.2.${{ github.run_number }}
           releaseBody: Install the .exe. Pip updates from Settings > Updates.
           releaseDraft: false
           prerelease: false
