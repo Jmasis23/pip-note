@@ -3,15 +3,55 @@
   "productName": "Pip",
   "version": "0.1.0",
   "identifier": "com.jmasis.pip",
-  "build": { "beforeDevCommand": "npm run dev", "devUrl": "http://localhost:1420", "beforeBuildCommand": "npm run build", "frontendDist": "../dist" },
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
   "app": {
-    "windows": [{ "label": "main", "title": "Pip", "width": 1180, "height": 780, "minWidth": 420, "minHeight": 520, "resizable": true, "decorations": false }],
-    "security": { "csp": null }
+    "windows": [
+      {
+        "label": "main",
+        "title": "Pip",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 420,
+        "minHeight": 520,
+        "resizable": true,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
-    "windows": { "nsis": { "installMode": "currentUser" } }
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY1Qzc4RTEwQjE1NzhBQkEKUldTNmlsZXhFSTdIOVpjTGppZEExTUdEbzcrMDVJRUZzMi9HeXEwMVZGWW52MFlDY3RtM1FuZUUK",
+      "endpoints": [
+        "https://github.com/Jmasis23/pip-note/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

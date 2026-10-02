@@ -33,6 +33,13 @@ jobs:
     name: Windows installer
     runs-on: windows-latest
     needs: [web, core]
+    permissions:
+      contents: write
+    env:
+      # Updates are signed and published only when the signing key is set as a repo secret.
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      PUBLISH: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && github.event_name == 'push' && github.ref == 'refs/heads/windows/pip-app' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,8 +48,25 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: src-tauri }
       - run: npm ci
-      - name: Build (unsigned) installer
+      - name: Version each build so the updater sees it as newer
+        shell: bash
+        run: |
+          node -e "const f='src-tauri/tauri.conf.json',c=JSON.parse(require('fs').readFileSync(f));c.version='0.1.'+process.env.GITHUB_RUN_NUMBER;if(process.env.PUBLISH==='true')c.bundle.createUpdaterArtifacts=true;require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+      - name: Build installer only (no signing key set)
+        if: env.PUBLISH != 'true'
         run: npx tauri build
+      - name: Build, sign and publish release (updater feed)
+        if: env.PUBLISH == 'true'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v0.1.${{ github.run_number }}
+          releaseName: Pip 0.1.${{ github.run_number }}
+          releaseBody: Install the .exe. Pip updates from Settings > Updates.
+          releaseDraft: false
+          prerelease: false
+          uploadUpdaterJson: true
       - uses: actions/upload-artifact@v4
         with:
           name: Pip-windows-installer

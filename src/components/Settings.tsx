@@ -3,7 +3,7 @@ import type { Accent, Prefs, Size, Theme } from "../domain";
 import { Dropdown } from "./Dropdown";
 import { repo } from "../useNotes";
 import { PRESETS, getAiRaw, normalizeBase, setAiConfig, testAi, validBase, AiError, aiHasStoredKey } from "../ai";
-import { exportFile, isNative } from "../native";
+import { exportFile, isNative, updater } from "../native";
 
 const keyName = (e: KeyboardEvent) => {
   const k = e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key;
@@ -57,6 +57,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
         {msg && <p className="status" role="status">{msg}</p>}
         <div className="row"><div><b>Theme</b></div>
           <div className="seg" role="radiogroup" aria-label="Theme">{(["system", "light", "dark"] as Theme[]).map(t => <button key={t} role="radio" aria-checked={prefs.theme === t} className={prefs.theme === t ? "on" : ""} onClick={() => void setPrefs({ ...prefs, theme: t })}>{t[0].toUpperCase() + t.slice(1)}</button>)}</div></div>
+        {isNative() && <UpdateRow />}
         <div className="row col look"><div><b>Appearance</b><p>Taste settings. They apply right away and stay on this device.</p></div>
           <div className="look-grid">
             <span>Card size</span><Seg label="Card size" value={prefs.cardSize} opts={SIZES} onChange={v => void setPrefs({ ...prefs, cardSize: v })} />
@@ -86,5 +87,28 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
         </div>
       </div>
     </div>
+  );
+}
+
+type Up = { s: "idle" | "checking" | "current" | "downloading" | "ready" | "error"; v?: string; err?: string };
+/** Manual update. Nothing happens until the button is pressed. */
+function UpdateRow() {
+  const [u, setU] = useState<Up>({ s: "idle" });
+  const run = async () => {
+    if (u.s === "ready") { try { await updater.install(); } catch (e) { setU({ s: "error", err: String(e) }); } return; }
+    if (u.s === "checking" || u.s === "downloading") return;
+    setU({ s: "checking" });
+    try {
+      const v = await updater.check();
+      if (!v) { setU({ s: "current" }); return; }
+      setU({ s: "downloading", v });
+      await updater.download(); setU({ s: "ready", v });
+    } catch (e) { setU({ s: "error", err: String(e) }); }
+  };
+  const label = { idle: "Check for updates", checking: "Checking...", current: "You're up to date", downloading: "Downloading update...", ready: "Update ready - restart to apply", error: "Try again" }[u.s];
+  const note = u.s === "ready" ? `Version ${u.v} is downloaded. Pip restarts to finish.` : u.s === "downloading" ? `Version ${u.v}` : u.s === "error" ? `Couldn't update: ${u.err}` : "Pip never updates by itself. Press the button when you want the newest version.";
+  return (
+    <div className="row" data-update={u.s}><div><b>Updates</b><p role="status" aria-live="polite">{note}</p></div>
+      <button className={`ghost field${u.s === "ready" ? " primary" : ""}`} disabled={u.s === "checking" || u.s === "downloading"} onClick={() => void run()}>{label}</button></div>
   );
 }

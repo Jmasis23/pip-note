@@ -186,3 +186,4 @@
 .db-draft-del{border:0;background:none;color:inherit;opacity:.55;padding:0 16px;cursor:pointer;font:inherit;font-size:13px}
 .db-draft-del:hover{opacity:1;color:#c0392b}
 :root[data-theme=dark] .db-draft{background:#232433;box-shadow:0 8px 24px -12px rgba(0,0,0,.5)}
+.sheet .ghost.field.primary{background:var(--accent,#8A90FF);color:#fff;border-color:transparent}.sheet [data-update=current] .ghost.field{opacity:.7}

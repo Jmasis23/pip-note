@@ -30,6 +30,11 @@ export async function exportFile(name: string, text: string, type: string): Prom
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
   return "";
 }
+export const updater = {
+  check: () => call<string | null>("update_check"),
+  download: () => call<string>("update_download"),
+  install: () => call<void>("update_install"),
+};
 export const syncDesktopPrefs = (shakeEnabled: boolean, shortcut: string, level: string = "normal") => {
   if (!isNative()) return;
   void call("set_shake_enabled", { enabled: shakeEnabled }).catch(() => {});

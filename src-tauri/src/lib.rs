@@ -96,6 +96,30 @@ fn win_toggle_max(w: tauri::WebviewWindow) -> bool {
 fn win_is_max(w: tauri::WebviewWindow) -> bool { w.is_maximized().unwrap_or(false) }
 #[tauri::command]
 fn win_close(w: tauri::WebviewWindow) { let _ = w.hide(); }
+/// An update that finished downloading and waits for the user to restart.
+struct Pending(Mutex<Option<(tauri_plugin_updater::Update, Vec<u8>)>>);
+
+#[tauri::command]
+async fn update_check(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let u = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    Ok(u.map(|u| u.version))
+}
+#[tauri::command]
+async fn update_download(app: AppHandle, pending: State<'_, Pending>) -> Result<String, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let u = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?.ok_or("You're up to date")?;
+    let bytes = u.download(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    let v = u.version.clone();
+    *pending.0.lock().map_err(|_| "busy".to_string())? = Some((u, bytes));
+    Ok(v)
+}
+#[tauri::command]
+fn update_install(app: AppHandle, pending: State<'_, Pending>) -> Result<(), String> {
+    let (u, bytes) = pending.0.lock().map_err(|_| "busy".to_string())?.take().ok_or("Nothing downloaded yet")?;
+    u.install(bytes).map_err(|e| e.to_string())?;
+    app.restart()
+}
 #[tauri::command]
 fn set_shake_level(st: State<AppState>, level: String) {
     let n = match level.as_str() { "gentle" => 0, "eager" => 2, _ => 1 };
@@ -137,6 +161,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(Pending(Mutex::new(None)))
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             let kv = FileKv::open(dir.join("store")).map_err(|e| e.to_string())?;
@@ -165,7 +191,7 @@ pub fn run() {
         })
         // Closing the window keeps Pip in the tray so the shake and hotkey still work.
         .on_window_event(|w, ev| { if let WindowEvent::CloseRequested { api, .. } = ev { api.prevent_close(); let _ = w.hide(); } })
-        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, set_shake_enabled, set_shake_level, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved])
+        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }
