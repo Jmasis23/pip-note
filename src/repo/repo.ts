@@ -27,9 +27,18 @@ export interface NoteRepo {
   runDailyBackup(): Promise<boolean>;
   listBackups(): Promise<{ day: string; count: number }[]>;
   restoreBackup(day: string): Promise<void>;
+  /** Sync support. Raw access that keeps ids, timestamps and revisions as they are. */
+  syncState(): Promise<{ notes: Note[]; tombstones: string[]; prefs: Prefs }>;
+  /** Folds cloud notes in. The newer edit wins; a note deleted here stays deleted. Returns what changed. */
+  syncMerge(remote: Note[], opts?: { prefs?: Partial<Prefs> }): Promise<{ added: number; updated: number }>;
+  syncClearTombstones(ids: string[]): Promise<void>;
+  /** Snapshot under a name (for example "before-sync") so a first sync can always be undone. */
+  backupNow(label: string): Promise<void>;
+  /** Used on sign-out after a final sync: keeps a backup, then empties this PC so the next account starts clean. */
+  wipeNotes(): Promise<void>;
 }
 
-type Store = { v: 1; notes: Note[]; draft?: { text: string; updatedAt: number } | null; drafts?: Draft[]; prefs: Prefs };
+type Store = { v: 1; tombstones?: string[]; notes: Note[]; draft?: { text: string; updatedAt: number } | null; drafts?: Draft[]; prefs: Prefs };
 const KEY = "pip.store.v1";
 const BACKUP_KEY = "pip.backups.v1";
 const KEEP = 7;
@@ -112,7 +121,7 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
     async deleteForever(id) {
       const s = load(); const n = find(s, id);
       if (n.deletedAt === null) throw new ValidationError("Move the note to Trash first.");
-      s.notes = s.notes.filter(x => x.id !== id); save(s);
+      s.notes = s.notes.filter(x => x.id !== id); s.tombstones = [...new Set([...(s.tombstones ?? []), id])]; save(s);
     },
     async listDrafts() { return [...(load().drafts ?? [])].sort((a, b) => b.updatedAt - a.updatedAt); },
     async saveDraft(text, id) {
@@ -144,6 +153,27 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
     async listBackups() {
       const b = readBackups();
       return Object.keys(b).sort().reverse().map(day => ({ day, count: b[day].notes.length }));
+    },
+    async syncState() { const s = load(); return { notes: s.notes.map(n => ({ ...n })), tombstones: [...(s.tombstones ?? [])], prefs: s.prefs }; },
+    async syncMerge(remote, opts) {
+      const s = load(); let added = 0, updated = 0; const dead = new Set(s.tombstones ?? []);
+      for (const r of remote) {
+        if (dead.has(r.id)) continue;
+        const i = s.notes.findIndex(n => n.id === r.id);
+        if (i < 0) { s.notes.push({ ...r }); added++; }
+        else if (r.updatedAt > s.notes[i].updatedAt) { s.notes[i] = { ...r }; updated++; }
+      }
+      if (opts?.prefs) s.prefs = { ...s.prefs, ...opts.prefs };
+      if (added || updated || opts?.prefs) save(s);
+      return { added, updated };
+    },
+    async syncClearTombstones(ids) { const s = load(); s.tombstones = (s.tombstones ?? []).filter(x => !ids.includes(x)); save(s); },
+    async backupNow(label) {
+      const b = readBackups(); b[`${dayKey(now())}-${label}`] = load(); kv.setItem(BACKUP_KEY, JSON.stringify(b));
+    },
+    async wipeNotes() {
+      const b = readBackups(); b[`${dayKey(now())}-before-signout`] = load(); kv.setItem(BACKUP_KEY, JSON.stringify(b));
+      const s = load(); s.notes = []; s.tombstones = []; s.drafts = []; save(s);
     },
     async restoreBackup(day) {
       const b = readBackups(); const snap = b[day];

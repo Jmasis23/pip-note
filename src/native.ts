@@ -20,6 +20,7 @@ export async function initStorage(): Promise<void> {
 export const kv: KV = {
   getItem: k => (mem ? mem.get(k) ?? null : globalThis.localStorage.getItem(k)),
   setItem: (k, v) => {
+    if (k === "pip.store.v1") queueMicrotask(() => window.dispatchEvent(new Event("pip:changed")));
     if (!mem) { globalThis.localStorage.setItem(k, v); return; }
     mem.set(k, v);
     chain = chain.then(() => call("store_set", { key: k, value: v })).catch(e => console.error("store_set failed", e));

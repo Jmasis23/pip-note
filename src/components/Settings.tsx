@@ -4,6 +4,8 @@ import { Dropdown } from "./Dropdown";
 import { repo } from "../useNotes";
 import { PRESETS, getAiRaw, normalizeBase, setAiConfig, testAi, validBase, AiError, aiHasStoredKey, chatGptState, chatGptSignIn, chatGptSignOut, chatGptModels, chatGptUse } from "../ai";
 import { exportFile, isNative, updater } from "../native";
+import { loadSession, signOut } from "../cloud/auth";
+import { onSyncStatus, syncNow, syncStatus } from "../cloud/sync";
 
 const keyName = (e: KeyboardEvent) => {
   const k = e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key;
@@ -53,8 +55,9 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
   const exportAll = async () => { const t = await repo.exportJson(); try { const where = await exportFile("pip-notes.json", t, "application/json"); if (where) setMsg(`Saved to ${where}`); } catch { setMsg("Couldn't save the file."); } };
   return (
     <div className="scrim" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }} onKeyDown={e => { if (e.key === "Escape") onClose(); }}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label="Settings">
+      <div className="sheet" role="dialog" aria-modal="true" aria-label="Settings" tabIndex={-1} ref={el => { if (el && !el.contains(document.activeElement)) el.focus({ preventScroll: true }); }}>
         <header><h2>Settings</h2><button className="ghost" onClick={onClose}>Done</button></header>
+        <AccountRow />
         <label className="row"><div><b>Shake to capture</b><p>Shake the mouse side to side to open capture. Ignored while a button is held.</p></div><input type="checkbox" className="switch" checked={prefs.shakeToCapture} onChange={e => void setPrefs({ ...prefs, shakeToCapture: e.target.checked })} /></label>
         {prefs.shakeToCapture && <div className="row col"><div><b>Shake sensitivity</b><p role="status" aria-live="polite">{(() => { const v = prefs.shakeSens ?? 50; return v < 25 ? "Needs a firm, deliberate shake." : v < 45 ? "A little firmer than usual." : v <= 55 ? "A quick back and forth." : v <= 75 ? "Picks up smaller shakes." : "Fires on a small wiggle. May trigger by accident."; })()}</p></div>
           <div className="sens"><span>Firm</span><input type="range" min={0} max={100} step={1} value={prefs.shakeSens ?? 50} aria-label="Shake sensitivity" onChange={e => void setPrefs({ ...prefs, shakeSens: Number(e.target.value) })} /><span>Hair-trigger</span></div></div>}
@@ -95,7 +98,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
             <span className="muted" role="status">{aiState}</span></div>
         </div>
         <div className="row col"><div><b>Backups</b><p>One a day, last seven kept. Restoring saves your current notes first.</p></div>
-          {backups.length === 0 ? <p className="muted">No backups yet.</p> : backups.filter(b => !b.day.includes("before")).map(b => (
+          {backups.length === 0 ? <p className="muted">No backups yet.</p> : backups.filter(b => !b.day.includes("before-restore")).map(b => (
             <div className="bk" key={b.day}><span>{b.day}</span><span className="muted">{b.count} {b.count === 1 ? "note" : "notes"}</span>
               <button className="ghost" onClick={async () => { if (!confirm(`Restore ${b.day}? Your current notes are backed up first.`)) return; try { await repo.restoreBackup(b.day); onRestored(); setMsg("Restored."); } catch (e) { setMsg((e as Error).message); } }}>Restore</button></div>))}
         </div>
@@ -125,5 +128,25 @@ function UpdateRow() {
   return (
     <div className="row" data-update={u.s}><div><b>Updates</b><p role="status" aria-live="polite">{note}</p></div>
       <button className={`ghost field${u.s === "ready" ? " primary" : ""}`} disabled={u.s === "checking" || u.s === "downloading"} onClick={() => void run()}>{label}</button></div>
+  );
+}
+
+/** Who is signed in, whether the last sync worked, and sign out. */
+function AccountRow() {
+  const [st, setSt] = useState(syncStatus());
+  useEffect(() => onSyncStatus(setSt), []);
+  const me = loadSession(); if (!me) return null;
+  const when = st.at ? new Date(st.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
+  const line = st.state === "syncing" ? "Syncing..." : st.state === "error" || st.state === "offline" ? st.message : st.state === "idle" ? `Synced at ${when}` : "Waiting to sync";
+  return (
+    <div className="row col" data-sync={st.state}><div><b>Account</b><p>{me.user.email}</p></div>
+      <div className="ai-act"><button className="ghost field" disabled={st.state === "syncing"} onClick={() => void syncNow()}>Sync now</button>
+        <button className="ghost danger" onClick={async () => {
+          if (!confirm("Sign out of Pip? Your notes are saved to your account first, then removed from this PC. Sign back in to get them back.")) return;
+          await syncNow(); const r = syncStatus();
+          if (r.state !== "idle") { alert("Couldn't save your latest notes to your account (" + (r.message || "offline") + "). You're still signed in. Try again when you're online."); return; }
+          const id = me.user.id; await repo.wipeNotes(); await signOut(); localStorage.removeItem(`pip.sync.cursor.${id}`); localStorage.removeItem(`pip.sync.push.${id}`); location.reload();
+        }}>Sign out</button>
+        <span className="muted" role="status">{line}</span></div></div>
   );
 }

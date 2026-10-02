@@ -12,6 +12,7 @@ async function boot() {
     createRoot(document.getElementById("root")!).render(<Pop />); return;
   }
   const { default: Desk } = await import("./dirs/DirB");
-  createRoot(document.getElementById("root")!).render(<Desk />);
+  const { default: Gate } = await import("./cloud/Gate");
+  createRoot(document.getElementById("root")!).render(<Gate><Desk /></Gate>);
 }
 void boot();

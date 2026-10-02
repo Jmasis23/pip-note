@@ -12,7 +12,12 @@ export const dayLabel = (t: number) => {
   const d = new Date(t), n = new Date(), y = new Date(Date.now() - 864e5);
   return d.toDateString() === n.toDateString() ? "Today" : d.toDateString() === y.toDateString() ? "Yesterday" : d.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
 };
-export const preview = (n: Note) => (n.body.replace(/\s+/g, " ").trim() || n.checklist.map(c => c.text).join(", ")).slice(0, 140);
+/** Card preview. When the title was taken from the first words of the note, don't print those words twice. */
+export const preview = (n: Note) => {
+  let b = n.body.replace(/\s+/g, " ").trim(); const t = n.title.trim();
+  if (t && b.startsWith(t)) b = b.slice(t.length).trim();
+  return (b || (n.body.trim() ? "" : n.checklist.map(c => c.text).join(", "))).slice(0, 140);
+};
 
 /** Shake + hotkey triggers shared by every direction. */
 export function useTriggers(prefs: Prefs, trigger: () => void, paused: boolean) {

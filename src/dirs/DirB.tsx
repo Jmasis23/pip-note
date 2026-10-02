@@ -112,7 +112,7 @@ export default function DirB() {
                 whileHover={{ y: -4, rotate: i % 2 ? 0.5 : -0.5 }} transition={{ type: "spring", stiffness: 380, damping: 30 }}>
                 <b>{n.title}</b>
                 {firstImage(n.rich) && <img className="db-thumb" src={firstImage(n.rich)} alt="" />}
-                {(preview(n) || !firstImage(n.rich)) && <span className="db-pre">{preview(n) || "Empty note"}</span>}
+                {(preview(n) || (!n.body.trim() && !n.checklist.length && !firstImage(n.rich))) && <span className="db-pre">{preview(n) || "Empty note"}</span>}
                 {n.checklist.length > 0 && <span className="db-prog" aria-label={`${n.checklist.filter(c => c.done).length} of ${n.checklist.length} done`}>{n.checklist.map(c => <i key={c.id} className={c.done ? "d" : ""} />)}</span>}
                 <time>{n.folder && <em className="db-fold">{n.folder.replace(/\//g, " / ")}</em>}{when(n.updatedAt)}</time>
               </motion.button>))}

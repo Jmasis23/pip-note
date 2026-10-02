@@ -129,6 +129,21 @@ async fn chatgpt_sign_in(st: State<'_, AppState>) -> Result<String, String> {
     Ok(c.email)
 }
 
+/// The ChatGPT ID token saved by the last sign-in. Pip's own account sign-in sends it to our server to be verified.
+#[tauri::command]
+fn chatgpt_id_token(st: State<AppState>) -> Result<String, String> { cred(&st).map(|c| c.id_token).filter(|t| !t.is_empty()).ok_or("Sign in with ChatGPT first.".to_string()) }
+
+/// Opens an account sign-in page in the browser and waits for it to come back to a loopback address. `{PORT}` in the URL is replaced by the listener's port. Returns the one-time code.
+#[tauri::command]
+async fn oauth_browser(url_template: String, state: String) -> Result<String, String> {
+    if !url_template.starts_with("https://ovkfjiciwuhcqqpmdgaa.supabase.co/") { return Err("Unexpected sign-in address.".into()); }
+    let listener = match chatgpt::bind_loopback(0).await { Some(l) => l, None => return Err("Couldn't start the sign-in listener.".into()) };
+    let port = listener.local_addr().map_err(|e| e.to_string())?.port();
+    open_url(&url_template.replace("%7BPORT%7D", &port.to_string()).replace("{PORT}", &port.to_string()))?;
+    let cb = chatgpt::wait_for_callback(listener, &state, std::time::Duration::from_secs(300)).await?;
+    Ok(cb.code)
+}
+
 #[tauri::command]
 fn chatgpt_sign_out(st: State<AppState>) -> Result<(), String> {
     st.kv.remove(CRED_KEY).map_err(|e| e.to_string())?; st.kv.set(MODE_KEY, "key").map_err(|e| e.to_string())
@@ -256,7 +271,7 @@ pub fn run() {
         })
         // Closing the window keeps Pip in the tray so the shake and hotkey still work.
         .on_window_event(|w, ev| { if let WindowEvent::CloseRequested { api, .. } = ev { api.prevent_close(); let _ = w.hide(); } })
-        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, chatgpt_sign_in, chatgpt_sign_out, chatgpt_models, chatgpt_set_model, ai_use_key, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, chatgpt_sign_in, chatgpt_id_token, oauth_browser, chatgpt_sign_out, chatgpt_models, chatgpt_set_model, ai_use_key, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }
