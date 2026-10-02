@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "motion/react";
+import { AskPanel } from "./AskPanel";
 import type { ChecklistItem, Note } from "../domain";
 import { ConflictError } from "../domain";
 import { repo } from "../useNotes";
@@ -33,6 +35,7 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
   useEffect(() => setInfo(""), [note.id]);
   const richRef = useRef<RichHandle>(null);
   const [busy, setBusy] = useState<"" | "meta" | "clean">("");
+  const [askNote, setAskNote] = useState(false);
   const [aiMsg, setAiMsg] = useState("");
   const [sug, setSug] = useState<{ title: string; folder: string } | null>(null);
   useEffect(() => { setSug(null); setAiMsg(""); setBusy(""); }, [note.id]);
@@ -102,6 +105,8 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
             onChange={v => { setFolder(v); void moveTo(v); }}
             footer={close => <NewFolder onAdd={f => { const c = cleanFolder(f); if (c) { setFolder(c); void moveTo(c); } close(); }} />} />
         </div>)}
+      {!locked && <div className="ai-bar ask-row"><button className="ai-btn ask-note-btn" onClick={() => setAskNote(true)} aria-label="Ask this note">Ask this note</button></div>}
+      <AnimatePresence>{askNote && <AskPanel scope={{ ...note, title, body: latest.current.body }} onClose={() => setAskNote(false)} onOpen={() => {}} />}</AnimatePresence>
       {ai && !locked && (
         <div className="ai-bar" aria-label="AI tools">
           <button className="ai-btn" disabled={!!busy} onClick={() => void runAi("meta")}>{busy === "meta" ? "Thinking" : "Title and folder"}</button>

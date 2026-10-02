@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { AiError, useAi } from "../ai";
-import { applyOps, runAgent, type AgentResult, type Op } from "../agent";
+import { judge, JevError } from "../jev";
+import { runJev } from "../askjev";
+import { applyOps, type AgentResult, type Op } from "../agent";
 import { repo } from "../useNotes";
 import type { Note } from "../domain";
 
 const IDEAS = ["File my loose notes where they belong", "When did I plan the tram?", "Tidy my travel notes", "Pull this week's tasks into one note"];
 type Step = { id: number; text: string; done: boolean };
-const hostOf = (u: string) => { if (u === "chatgpt") return "ChatGPT"; try { return new URL(u).host; } catch { return "your AI provider"; } };
 const spring = { type: "spring", stiffness: 420, damping: 34 } as const;
 
 function Spark({ size = 16, className = "" }: { size?: number; className?: string }) {
@@ -24,8 +24,7 @@ function Typed({ text }: { text: string }) {
   return <p className="as-msg">{words.map((w, i) => <motion.span key={i} initial={{ opacity: 0, y: 5, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ delay: i * 0.035, duration: 0.35, ease: "easeOut" }}>{w}{" "}</motion.span>)}</p>;
 }
 
-export function AskPanel({ onClose, onOpen }: { onClose: () => void; onOpen: (id: string) => void }) {
-  const ai = useAi();
+export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOpen: (id: string) => void; scope?: Note }) {
   const [q, setQ] = useState(""); const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<AgentResult | null>(null); const [err, setErr] = useState("");
   const [steps, setSteps] = useState<Step[]>([]); const [peek, setPeek] = useState<Note[]>([]);
@@ -34,17 +33,16 @@ export function AskPanel({ onClose, onOpen }: { onClose: () => void; onOpen: (id
   const ctl = useRef<AbortController>(); const input = useRef<HTMLInputElement>(null); const seq = useRef(0);
   useEffect(() => { input.current?.focus(); return () => ctl.current?.abort(); }, []);
   useEffect(() => { if (q || busy || res) return; const t = setInterval(() => setIdea(i => (i + 1) % IDEAS.length), 3200); return () => clearInterval(t); }, [q, busy, res]);
-  if (!ai) return null;
 
   const go = async (text = q) => {
     if (!text.trim() || busy) return; setBusy(true); setErr(""); setRes(null); setApplied(""); setPhase("idle"); setSteps([]); setPeek([]); ctl.current = new AbortController();
     try {
-      const r = await runAgent(ai, text, repo, { signal: ctl.current.signal, onStep: (t, notes) => {
+      const r = await runJev(text, repo, { judge, scope, signal: ctl.current.signal, onStep: (t, notes) => {
         setSteps(s => [...s.map(x => ({ ...x, done: true })), { id: ++seq.current, text: t, done: false }].slice(-4));
         if (notes?.length) setPeek(p => { const m = new Map(p.map(n => [n.id, n])); notes.forEach(n => m.set(n.id, n)); return [...m.values()].slice(-5); });
       } });
       setSteps(s => s.map(x => ({ ...x, done: true }))); setRes(r);
-    } catch (e) { setErr(e instanceof AiError ? e.message : "Couldn't get an answer."); } finally { setBusy(false); }
+    } catch (e) { setErr(e instanceof JevError ? e.message : "Couldn't get an answer."); } finally { setBusy(false); }
   };
   const apply = async () => {
     if (!res || phase !== "idle") return; setPhase("applying");
@@ -61,7 +59,7 @@ export function AskPanel({ onClose, onOpen }: { onClose: () => void; onOpen: (id
         <motion.div layout className={`db-sheet ask as ${busy ? "is-busy" : ""}`} role="dialog" aria-modal="true" aria-label="Ask your notes" initial={{ y: 22, scale: 0.96, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 340, damping: 30 }}>
           <span className="as-glow" aria-hidden />
           <motion.div layout className="ask-in">
-            <div className="as-head"><h2>Ask Pip</h2><Spark size={20} className={busy ? "live" : ""} /></div>
+            <div className="as-head"><h2>{scope ? "Ask this note" : "Ask Pip"}</h2><Spark size={20} className={busy ? "live" : ""} /></div>
             <form className="as-form" onSubmit={e => { e.preventDefault(); void go(); }}>
               <div className="as-field">
                 <input ref={input} value={q} onChange={e => setQ(e.target.value)} aria-label="Question" maxLength={500} disabled={busy} placeholder="" />
@@ -94,7 +92,7 @@ export function AskPanel({ onClose, onOpen }: { onClose: () => void; onOpen: (id
               {applied && <motion.p className="ask-done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{applied}</motion.p>}
               {res.looked.length > 0 && phase === "idle" && <div className="ask-src"><span>Looked at</span>{res.looked.map((n, i) => <button key={n.id} onClick={() => { onClose(); onOpen(n.id); }}><em>{i + 1}</em>{n.title}</button>)}</div>}
             </motion.div>}</AnimatePresence>
-            <p className="ask-note">Pip reads only the notes it needs and sends them to {hostOf(ai.baseUrl)}. It proposes, you decide. Nothing saves until you apply.</p>
+            <p className="ask-note">{scope ? `Only "${scope.title || "Untitled"}" is read.` : "Pip reads only the notes it needs."} Short excerpts go to Pip's judgment service (Jev), never to a chat model. It proposes, you decide. Nothing saves until you apply.</p>
           </motion.div>
         </motion.div>
       </motion.div>

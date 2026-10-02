@@ -139,7 +139,7 @@ export default function DirB() {
             </button>))}
         </LayoutGroup>
         <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" aria-label="Search notes" />
-        {ai && <button className="db-ask" onClick={() => setAsk(true)} aria-label="Ask your notes">Ask</button>}
+        <button className="db-ask" onClick={() => setAsk(true)} aria-label="Ask your notes">Ask</button>
         <button className="db-add" onClick={() => openCapture()} aria-label="New capture">Capture</button>
       </nav>
 
