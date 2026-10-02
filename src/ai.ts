@@ -89,7 +89,7 @@ export async function complete(cfg: AiConfig, messages: Msg[], opts: { signal?: 
     });
   } catch (e) {
     if ((e as Error).name === "AbortError") throw new AiError(opts.signal?.aborted ? "Cancelled." : "That took too long.");
-    throw new AiError(`Couldn't reach ${new URL(cfg.baseUrl).host}. Check the address, and that it allows browser requests.`);
+    throw new AiError(`Couldn't reach ${(() => { try { return new URL(cfg.baseUrl).host; } catch { return "the AI provider"; } })()}. Check the address, and that it allows browser requests.`);
   } finally { clearTimeout(timer); }
   if (!res.ok) {
     let detail = ""; try { detail = ((await res.json()) as { error?: { message?: string } }).error?.message ?? ""; } catch { /* not json */ }

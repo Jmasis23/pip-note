@@ -7,6 +7,7 @@ import type { Note } from "../domain";
 
 const IDEAS = ["File my loose notes where they belong", "When did I plan the tram?", "Tidy my travel notes", "Pull this week's tasks into one note"];
 type Step = { id: number; text: string; done: boolean };
+const hostOf = (u: string) => { if (u === "chatgpt") return "ChatGPT"; try { return new URL(u).host; } catch { return "your AI provider"; } };
 const spring = { type: "spring", stiffness: 420, damping: 34 } as const;
 
 function Spark({ size = 16, className = "" }: { size?: number; className?: string }) {
@@ -93,7 +94,7 @@ export function AskPanel({ onClose, onOpen }: { onClose: () => void; onOpen: (id
               {applied && <motion.p className="ask-done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{applied}</motion.p>}
               {res.looked.length > 0 && phase === "idle" && <div className="ask-src"><span>Looked at</span>{res.looked.map((n, i) => <button key={n.id} onClick={() => { onClose(); onOpen(n.id); }}><em>{i + 1}</em>{n.title}</button>)}</div>}
             </motion.div>}</AnimatePresence>
-            <p className="ask-note">Pip reads only the notes it needs and sends them to {new URL(ai.baseUrl).host}. It proposes, you decide. Nothing saves until you apply.</p>
+            <p className="ask-note">Pip reads only the notes it needs and sends them to {hostOf(ai.baseUrl)}. It proposes, you decide. Nothing saves until you apply.</p>
           </motion.div>
         </motion.div>
       </motion.div>
