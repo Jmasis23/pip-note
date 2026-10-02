@@ -68,7 +68,7 @@ export default function DirB() {
       <header className="db-hero">
         <div className="db-mascot"><Pip size={92} look /></div>
         <div>
-          <h1>Thought it? <span>Keep it.</span></h1>
+          <h1>Need it later? <span>Pip it.</span></h1>
           <p>Shake the mouse, or press <kbd>{prefs.shortcut.replace(/\+/g, " + ")}</kbd></p>
         </div>
         <button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button>

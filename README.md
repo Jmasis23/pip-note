@@ -1,6 +1,6 @@
 # Pip
 
-Thought it? Keep it.
+Need it later? Pip it.
 
 A Windows-first desktop notes companion with an original lavender cursor mascot.
 
