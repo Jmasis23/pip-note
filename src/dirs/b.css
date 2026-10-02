@@ -273,3 +273,4 @@
 .as-burst{position:absolute;left:50%;top:50%;pointer-events:none}.as-burst i{position:absolute;margin:-6px;color:#FFB48F}.as-burst i:nth-child(3n){color:#8A90FF}.as-burst i:nth-child(3n+1){color:#7FD6AA}
 @media (prefers-reduced-motion:reduce){.as-glow,.as-spark.live,.as-apply::after,.db-sheet.as::after{animation:none!important}}
 .as-apply.done:disabled,.as-apply:disabled.done{opacity:1}
+.ed-folder .ed-ts{margin-left:auto}.as-head .as-ts{margin-left:auto}

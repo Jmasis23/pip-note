@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { judge, JevError } from "../jev";
+import { LiveTextStepper } from "./LiveTextStepper";
 import { runJev } from "../askjev";
 import { getAiConfig, writeFromNotes, AiError } from "../ai";
 import { applyOps, type AgentResult, type Op } from "../agent";
@@ -60,7 +61,7 @@ export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOp
         <motion.div layout className={`db-sheet ask as ${busy ? "is-busy" : ""}`} role="dialog" aria-modal="true" aria-label="Ask your notes" initial={{ y: 22, scale: 0.96, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 340, damping: 30 }}>
           <span className="as-glow" aria-hidden />
           <motion.div layout className="ask-in">
-            <div className="as-head"><h2>{scope ? "Ask this note" : "Ask Pip"}</h2><Spark size={20} className={busy ? "live" : ""} /></div>
+            <div className="as-head"><h2>{scope ? "Ask this note" : "Ask Pip"}</h2><Spark size={20} className={busy ? "live" : ""} /><LiveTextStepper className="as-ts" /></div>
             <form className="as-form" onSubmit={e => { e.preventDefault(); void go(); }}>
               <div className="as-field">
                 <input ref={input} value={q} onChange={e => setQ(e.target.value)} aria-label="Question" maxLength={500} disabled={busy} placeholder="" />

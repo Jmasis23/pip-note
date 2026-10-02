@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
+import { LiveTextStepper } from "./LiveTextStepper";
 import { AskPanel } from "./AskPanel";
 import type { ChecklistItem, Note } from "../domain";
 import { ConflictError } from "../domain";
@@ -104,6 +105,7 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
           <Dropdown label="Folder" value={folder} placeholder="None" options={[{ value: "", label: "None" }, ...folders.map(f => ({ value: f, label: f }))]}
             onChange={v => { setFolder(v); void moveTo(v); }}
             footer={close => <NewFolder onAdd={f => { const c = cleanFolder(f); if (c) { setFolder(c); void moveTo(c); } close(); }} />} />
+          <LiveTextStepper className="ed-ts" />
         </div>)}
       {!locked && <div className="ai-bar ask-row"><button className="ai-btn ask-note-btn" onClick={() => setAskNote(true)} aria-label="Ask this note">Ask this note</button></div>}
       <AnimatePresence>{askNote && <AskPanel scope={{ ...note, title, body: latest.current.body }} onClose={() => setAskNote(false)} onOpen={() => {}} />}</AnimatePresence>
