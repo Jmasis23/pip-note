@@ -5,7 +5,7 @@
   "identifier": "com.jmasis.pip",
   "build": { "beforeDevCommand": "npm run dev", "devUrl": "http://localhost:1420", "beforeBuildCommand": "npm run build", "frontendDist": "../dist" },
   "app": {
-    "windows": [{ "label": "main", "title": "Pip", "width": 1180, "height": 780, "minWidth": 420, "minHeight": 520, "resizable": true }],
+    "windows": [{ "label": "main", "title": "Pip", "width": 1180, "height": 780, "minWidth": 420, "minHeight": 520, "resizable": true, "decorations": false }],
     "security": { "csp": null }
   },
   "bundle": {

@@ -5,6 +5,7 @@ import { Capture } from "../components/Capture";
 import { Editor } from "../components/Editor";
 import { Settings } from "../components/Settings";
 import { AskPanel } from "../components/AskPanel";
+import { Titlebar } from "../components/Titlebar";
 import { useAi } from "../ai";
 import { isNative, onNativeEvent, syncDesktopPrefs } from "../native";
 import { repo, useNotes } from "../useNotes";
@@ -53,7 +54,8 @@ export default function DirB() {
 
   return (
     <MotionConfig reducedMotion={prefs.reducedMotion ? "always" : "user"}>
-    <div className="db">
+    <div className={isNative() ? "db db-native" : "db"}>
+      {isNative() && <Titlebar />}
       <header className="db-hero">
         <div className="db-mascot"><Pip size={92} look /></div>
         <div>

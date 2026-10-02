@@ -77,6 +77,16 @@ async fn ai_complete(st: State<'_, AppState>, messages: Vec<Msg>, max_tokens: Op
 }
 
 #[tauri::command]
+fn win_minimize(w: tauri::WebviewWindow) { let _ = w.minimize(); }
+#[tauri::command]
+fn win_toggle_max(w: tauri::WebviewWindow) -> bool {
+    if w.is_maximized().unwrap_or(false) { let _ = w.unmaximize(); false } else { let _ = w.maximize(); true }
+}
+#[tauri::command]
+fn win_is_max(w: tauri::WebviewWindow) -> bool { w.is_maximized().unwrap_or(false) }
+#[tauri::command]
+fn win_close(w: tauri::WebviewWindow) { let _ = w.hide(); }
+#[tauri::command]
 fn set_shake_enabled(st: State<AppState>, enabled: bool) { st.shake.store(enabled, Ordering::Relaxed); }
 
 fn parse_shortcut(s: &str) -> Result<Shortcut, String> {
@@ -135,7 +145,7 @@ pub fn run() {
         })
         // Closing the window keeps Pip in the tray so the shake and hotkey still work.
         .on_window_event(|w, ev| { if let WindowEvent::CloseRequested { api, .. } = ev { api.prevent_close(); let _ = w.hide(); } })
-        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, set_shake_enabled, set_shortcut, export_file])
+        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, set_shake_enabled, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }
