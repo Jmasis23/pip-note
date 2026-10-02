@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Accent, Prefs, Size, Theme } from "../domain";
+import type { Accent, Prefs, Size, TextSize, Theme } from "../domain";
 import { Dropdown } from "./Dropdown";
 import { repo } from "../useNotes";
 import { PRESETS, getAiRaw, normalizeBase, setAiConfig, testAi, validBase, AiError, aiHasStoredKey, chatGptState, chatGptSignIn, chatGptSignOut, chatGptModels, chatGptUse } from "../ai";
@@ -11,6 +11,7 @@ const keyName = (e: KeyboardEvent) => {
   return [e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", e.metaKey && "Win", k].filter(Boolean).join("+");
 };
 
+const TEXT_OPTS: [TextSize, string][] = [["xs", "Tiny"], ["s", "Small"], ["m", "Medium"], ["l", "Large"]];
 const SIZES: [Size, string][] = [["s", "Small"], ["m", "Medium"], ["l", "Large"]];
 const ACCENTS: [Accent, string, string][] = [["lavender", "#8A90FF", "Lavender"], ["sky", "#4FA8F5", "Sky"], ["mint", "#3DBE8C", "Mint"], ["peach", "#F59A6B", "Peach"], ["rose", "#EE6F96", "Rose"], ["graphite", "#6B6F82", "Graphite"]];
 function Seg<T extends string>({ label, value, opts, onChange }: { label: string; value: T; opts: [T, string][]; onChange: (v: T) => void }) {
@@ -65,7 +66,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
         <div className="row col look"><div><b>Appearance</b><p>Taste settings. They apply right away and stay on this device.</p></div>
           <div className="look-grid">
             <span>Card size</span><Seg label="Card size" value={prefs.cardSize} opts={SIZES} onChange={v => void setPrefs({ ...prefs, cardSize: v })} />
-            <span>Text size</span><Seg label="Text size" value={prefs.textSize} opts={SIZES} onChange={v => void setPrefs({ ...prefs, textSize: v })} />
+            <span>Text size</span><Seg label="Text size" value={prefs.textSize} opts={TEXT_OPTS} onChange={v => void setPrefs({ ...prefs, textSize: v })} />
             <span>Accent</span>
             <div className="swatches" role="radiogroup" aria-label="Accent colour">{ACCENTS.map(([id, hex, name]) => <button key={id} role="radio" aria-checked={prefs.accent === id} aria-label={name} title={name} className={prefs.accent === id ? "on" : ""} style={{ background: hex }} onClick={() => void setPrefs({ ...prefs, accent: id })} />)}</div>
             <span>Cards</span><Seg label="Card colours" value={prefs.tint} opts={[["color", "Colourful"], ["quiet", "Quiet"]]} onChange={v => void setPrefs({ ...prefs, tint: v })} />

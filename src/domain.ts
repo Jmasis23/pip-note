@@ -17,10 +17,13 @@ export type Note = {
 export type Draft = { id: string; text: string; updatedAt: number };
 export type Theme = "light" | "dark" | "system";
 export type Size = "s" | "m" | "l";
+/** Text size has one extra, smaller step. */
+export type TextSize = "xs" | Size;
+export const TEXT_STEPS: TextSize[] = ["xs", "s", "m", "l"];
 export type Accent = "lavender" | "sky" | "mint" | "peach" | "rose" | "graphite";
 export type Prefs = {
   shortcut: string; theme: Theme; reducedMotion: boolean; launchAtLogin: boolean; shakeToCapture: boolean; /** 0 to 100, 50 is the default. */ shakeSens: number;
-  cardSize: Size; textSize: Size; accent: Accent; /** "quiet" turns the tinted cards neutral. */ tint: "color" | "quiet";
+  cardSize: Size; textSize: TextSize; accent: Accent; /** "quiet" turns the tinted cards neutral. */ tint: "color" | "quiet";
   /** Folders created before any note is in them. */ extraFolders: string[];
 };
 export type View = "all" | "today" | "pinned" | "drafts" | "trash";

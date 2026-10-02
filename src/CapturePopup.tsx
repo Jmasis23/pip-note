@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Capture } from "./components/Capture";
 import { initStorage, call, onNativeEvent } from "./native";
+import type { TextSize } from "./domain";
 import { repo } from "./useNotes";
 import "@fontsource-variable/bricolage-grotesque";
 import "./dirs/b.css";
@@ -9,11 +10,12 @@ import "./dirs/b.css";
 export default function CapturePopup() {
   const [round, setRound] = useState(0);
   const [live, setLive] = useState(false);
+  const [size, setSize] = useState<TextSize>("m");
   useEffect(() => {
     document.documentElement.classList.add("cap-win");
     const theme = async () => {
       const p = await repo.getPrefs(); const mq = matchMedia("(prefers-color-scheme: dark)");
-      const d = document.documentElement.dataset; d.theme = p.theme === "dark" || (p.theme === "system" && mq.matches) ? "dark" : "light"; d.accent = p.accent; d.text = p.textSize; d.motion = p.reducedMotion ? "reduced" : "full";
+      const d = document.documentElement.dataset; d.theme = p.theme === "dark" || (p.theme === "system" && mq.matches) ? "dark" : "light"; d.accent = p.accent; d.text = p.textSize; setSize(p.textSize); d.motion = p.reducedMotion ? "reduced" : "full";
     };
     void theme();
     let off = () => {}; let dead = false;
@@ -24,7 +26,7 @@ export default function CapturePopup() {
   }, [live]);
   return (
     <div className="db db-pop">
-      <Capture key={round} open onClose={() => void call("capture_hide")} onSaved={() => void call("capture_saved")} />
+      <Capture key={round} textSize={size} onTextSize={v => { setSize(v); document.documentElement.dataset.text = v; void repo.getPrefs().then(p => repo.setPrefs({ ...p, textSize: v })).then(() => call("prefs_changed")); }} open onClose={() => void call("capture_hide")} onSaved={() => void call("capture_saved")} />
     </div>
   );
 }

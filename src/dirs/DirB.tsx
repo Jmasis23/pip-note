@@ -8,6 +8,7 @@ import { AskPanel } from "../components/AskPanel";
 import { Titlebar } from "../components/Titlebar";
 import { cleanFolder } from "../repo/repo";
 import { useAi } from "../ai";
+import { TextStepper } from "../components/TextStepper";
 import { initStorage, isNative, onNativeEvent, syncDesktopPrefs } from "../native";
 import { repo, useNotes } from "../useNotes";
 import type { Note, View } from "../domain";
@@ -71,7 +72,7 @@ export default function DirB() {
           <h1>Need it later? <span>Pip it.</span></h1>
           <p>Shake the mouse, or press <kbd>{prefs.shortcut.replace(/\+/g, " + ")}</kbd></p>
         </div>
-        <button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button>
+        <div className="db-tools"><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button></div>
       </header>
 
       {view !== "trash" && view !== "drafts" && (() => {
@@ -144,7 +145,7 @@ export default function DirB() {
 
       <AnimatePresence>{ask && <AskPanel onClose={() => setAsk(false)} onOpen={id => setSelId(id)} />}</AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="db-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{toast}</motion.div>}</AnimatePresence>
-      <Capture open={capture} draftId={draftId} onClose={() => { setCapture(false); void refresh(); }} onSaved={() => void refresh()} />
+      <Capture open={capture} draftId={draftId} textSize={prefs.textSize} onTextSize={v => void setPrefs({ ...prefs, textSize: v })} onClose={() => { setCapture(false); void refresh(); }} onSaved={() => void refresh()} />
       {settings && <Settings prefs={prefs} setPrefs={setPrefs} onClose={() => setSettings(false)} onRestored={() => void refresh()} />}
     </div>
     </MotionConfig>

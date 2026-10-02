@@ -149,6 +149,9 @@ fn capture_saved(app: AppHandle) {
     if let Some(w) = app.get_webview_window("capture") { let _ = w.hide(); }
     let _ = app.emit_to("main", "pip://notes-changed", ());
 }
+/// The capture box changed a preference. Tell the main window to reload.
+#[tauri::command]
+fn prefs_changed(app: AppHandle) { let _ = app.emit_to("main", "pip://notes-changed", ()); }
 #[tauri::command]
 fn win_minimize(w: tauri::WebviewWindow) { let _ = w.minimize(); }
 #[tauri::command]
@@ -253,7 +256,7 @@ pub fn run() {
         })
         // Closing the window keeps Pip in the tray so the shake and hotkey still work.
         .on_window_event(|w, ev| { if let WindowEvent::CloseRequested { api, .. } = ev { api.prevent_close(); let _ = w.hide(); } })
-        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, chatgpt_sign_in, chatgpt_sign_out, chatgpt_models, chatgpt_set_model, ai_use_key, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved])
+        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, chatgpt_sign_in, chatgpt_sign_out, chatgpt_models, chatgpt_set_model, ai_use_key, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }

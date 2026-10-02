@@ -18,6 +18,35 @@ function highlight() {
   exec("styleWithCSS", "false");
 }
 
+/** Make the selected text one step bigger or smaller. Steps stack up to two each way, and opposite steps cancel. */
+function sizeStep(dir: 1 | -1, root: HTMLElement | null) {
+  const sel = getSelection(); if (!root || !sel || !sel.rangeCount || sel.isCollapsed) return;
+  let level = 0;
+  for (let e = sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode?.parentElement ?? null; e && e !== root; e = e.parentElement) { if (e.tagName === "BIG") level++; else if (e.tagName === "SMALL") level--; }
+  if (Math.abs(level + dir) > 2) return;
+  // The selection is exactly one existing size tag (what a previous click leaves behind): nest or cancel in place.
+  const sc = sel.getRangeAt(0).commonAncestorContainer, host = sc instanceof Element ? sc : sc.parentElement;
+  if (host && (host.tagName === "BIG" || host.tagName === "SMALL") && host !== root && sel.toString() === host.textContent) {
+    const r = document.createRange();
+    if ((host.tagName === "BIG") === (dir > 0)) { const n = document.createElement(host.tagName); n.append(...Array.from(host.childNodes)); host.append(n); r.selectNodeContents(n); }
+    else { const kids = Array.from(host.childNodes); host.replaceWith(...kids); if (kids.length) { r.setStartBefore(kids[0]); r.setEndAfter(kids[kids.length - 1]); } }
+    sel.removeAllRanges(); sel.addRange(r); return;
+  }
+  const d = document.createElement("div"); d.appendChild(sel.getRangeAt(0).cloneContents());
+  d.querySelectorAll("big,small").forEach(e => e.replaceWith(...Array.from(e.childNodes)));
+  const tag = dir > 0 ? "big" : "small";
+  exec("insertHTML", `<${tag} id="pip-sz">${d.innerHTML}</${tag}>`);
+  // Chrome rewrites <big>/<small> into styled spans on insert; turn them back into the real tags.
+  root.querySelectorAll<HTMLElement>("span[style*='font-size']").forEach(sp => {
+    const m = /font-size:\s*(1\.25em|0?\.8em|larger|smaller)/.exec(sp.getAttribute("style") ?? ""); if (!m) return;
+    const t = document.createElement(/1\.25|larger/.test(m[1]) ? "big" : "small"); if (sp.id === "pip-sz") t.id = "pip-sz";
+    t.append(...Array.from(sp.childNodes)); sp.replaceWith(t);
+  });
+  const el = root.querySelector("#pip-sz") ?? Array.from(root.querySelectorAll("big,small")).find(e => e.textContent === d.textContent); if (!el) return;
+  el.removeAttribute("id");
+  const r = document.createRange(); r.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(r); // keep it selected so the next click steps again
+}
+
 export type RichHandle = { replaceAll: (plain: string) => void };
 export const RichBody = forwardRef<RichHandle, { html: string; onChange: (html: string) => void; disabled: boolean }>(function RichBody({ html, onChange, disabled }, handle) {
   const ref = useRef<HTMLDivElement>(null);
@@ -63,7 +92,11 @@ export const RichBody = forwardRef<RichHandle, { html: string; onChange: (html: 
           <button type="button" data-cmd="redo" title="Redo (Ctrl+Y)" aria-label="Redo" onMouseDown={e => e.preventDefault()} onClick={() => act(() => exec("redo"))}>↷</button>
           <i />{cmds.map(Btn)}
         </div>)}
-      {bubble && !disabled && <div className={`rt-bubble${bubble.below ? " below" : ""}`} role="toolbar" aria-label="Format selection" style={{ left: bubble.x, top: bubble.y }}>{cmds.slice(0, 4).map(Btn)}</div>}
+      {bubble && !disabled && <div className={`rt-bubble${bubble.below ? " below" : ""}`} role="toolbar" aria-label="Format selection" style={{ left: bubble.x, top: bubble.y }}>{cmds.slice(0, 4).map(Btn)}
+        <div className="ts-step" role="group" aria-label="Selection size">
+          <button type="button" data-cmd="smaller" title="Smaller text" aria-label="Smaller selected text" onMouseDown={e => e.preventDefault()} onClick={() => act(() => sizeStep(-1, ref.current))}><svg viewBox="0 0 12 12" aria-hidden><path d="M2.5 6h7" /></svg></button>
+          <button type="button" data-cmd="bigger" title="Larger text" aria-label="Larger selected text" onMouseDown={e => e.preventDefault()} onClick={() => act(() => sizeStep(1, ref.current))}><svg viewBox="0 0 12 12" aria-hidden><path d="M2.5 6h7M6 2.5v7" /></svg></button>
+        </div></div>}
       <div ref={ref} className="ed-body rt-body" contentEditable={!disabled} suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label="Body" data-placeholder="Start typing. End a sum with = for the answer" spellCheck
         onInput={e => {
           const el = e.currentTarget;

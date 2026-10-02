@@ -1,5 +1,5 @@
 /** Rich text helpers. Browser-only (uses DOM). Stored HTML is restricted to a small allowlist. */
-const KEEP = new Set(["B", "STRONG", "I", "EM", "U", "MARK", "UL", "OL", "LI", "P", "DIV", "BR"]);
+const KEEP = new Set(["B", "STRONG", "I", "EM", "U", "MARK", "BIG", "SMALL", "UL", "OL", "LI", "P", "DIV", "BR"]);
 const hasBg = (el: HTMLElement) => {
   const v = el.style.backgroundColor;
   return !!v && v !== "transparent" && v !== "inherit" && v !== "initial" && !/^rgba\(\s*0,\s*0,\s*0,\s*0\s*\)$/.test(v);
@@ -32,7 +32,7 @@ export function sanitizeRich(html: string): string {
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
   const out: string[] = []; clean(doc.body, out);
   let r = out.join(""), prev = "";
-  while (r !== prev) { prev = r; r = r.replace(/<(b|i|u|mark)><\/\1>/g, ""); }
+  while (r !== prev) { prev = r; r = r.replace(/<(b|i|u|mark|big|small)><\/\1>/g, "").replace(/<big><small>([^<>]*)<\/small><\/big>|<small><big>([^<>]*)<\/big><\/small>/g, (_m, a, b) => a ?? b); }
   return r;
 }
 export const plainToRich = (text: string) => text.split("\n").map(l => `<div>${l ? esc(l) : "<br>"}</div>`).join("");

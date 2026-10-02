@@ -3,9 +3,11 @@ import { AnimatePresence, motion } from "motion/react";
 import { Pip } from "./Pip";
 import type { PipState } from "./Pip";
 import { repo } from "../useNotes";
+import { TextStepper } from "./TextStepper";
+import type { TextSize } from "../domain";
 import { imageFrom, imageNote, toDataUrl } from "../images";
 
-export function Capture({ open, onClose, onSaved, variant = "modal", draftId }: { open: boolean; onClose: () => void; onSaved: () => void; variant?: "modal" | "island"; draftId?: string }) {
+export function Capture({ open, onClose, onSaved, variant = "modal", draftId, textSize, onTextSize }: { open: boolean; onClose: () => void; onSaved: () => void; variant?: "modal" | "island"; draftId?: string; textSize?: TextSize; onTextSize?: (v: TextSize) => void }) {
   const [text, setText] = useState("");
   const [state, setState] = useState<PipState>("idle");
   const [status, setStatus] = useState("");
@@ -53,7 +55,7 @@ export function Capture({ open, onClose, onSaved, variant = "modal", draftId }: 
             exit={variant === "island" ? { width: 252, height: 44, borderRadius: 22, opacity: 0 } : { y: 10, scale: 0.98, opacity: 0 }}
             transition={{ type: "spring", stiffness: variant === "island" ? 300 : 420, damping: variant === "island" ? 26 : 32 }}
             onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); void dismiss(); } if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void keep(); } }}>
-            <header><Pip state={state} size={34} /><span>Something on your mind?</span><kbd>Esc</kbd></header>
+            <header><Pip state={state} size={34} /><span>Something on your mind?</span>{textSize && onTextSize && <TextStepper value={textSize} onChange={onTextSize} />}<kbd>Esc</kbd></header>
             <textarea ref={ref} onPaste={e => void pasteImage(e)} value={text} onChange={e => { setText(e.target.value); if (state !== "capturing") setState("capturing"); setStatus(""); }} placeholder="Type it before it slips away" aria-label="Note text" />
             <footer>
               <span className={`status ${state === "error" ? "bad" : ""}`} role="status" aria-live="polite">{status || "Esc keeps a draft"}</span>
