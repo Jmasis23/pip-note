@@ -69,7 +69,7 @@ function Tour({ s, onDone }: { s: Session; onDone: () => void }) {
       <div className="gt-mascot"><Pip size={72} state="saved" /></div>
       <h1>{hi(s, "You're in")}</h1>
       <p className="gt-tag">Two ways to capture a thought from anywhere on your PC.</p>
-      <div className="gt-keys"><div><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd><span>Open the capture box</span></div><div><kbd>Shake</kbd><span>Wiggle the mouse, it opens too</span></div></div>
+      <div className="gt-keys"><div><i className="kk"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd></i><span>Open the capture box</span></div><div><i className="kk"><kbd>Shake</kbd></i><span>Wiggle the mouse, it opens too</span></div></div>
       <div className="gt-btns"><button className="gt-btn main" autoFocus onClick={() => setStep(1)}>Try it</button><button className="gt-link" onClick={() => finish(true)}>Skip, take me in</button></div>
     </>}
     {step === 1 && <>

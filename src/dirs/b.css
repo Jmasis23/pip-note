@@ -229,3 +229,11 @@
 .ask-opsbar{display:flex;gap:8px}.ask-opsbar button{padding:9px 16px;border-radius:999px;font-weight:650;background:var(--surface);color:var(--ink)}
 .ask-done{margin-top:10px;font-weight:650;font-size:calc(14px*var(--ts,1))}
 @media (prefers-reduced-motion:reduce){.ask-step{animation:none}}
+
+.sens input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:22px;cursor:pointer}
+.sens input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:rgba(127,127,150,.28)}
+.sens input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-8px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 4px rgba(20,20,40,.35),0 0 0 .5px rgba(20,20,40,.12);transition:transform .15s}
+.sens input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+.sens input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:6px}
+.db-sheet .rt-body{min-height:84px}
+.db-card{text-wrap:pretty}

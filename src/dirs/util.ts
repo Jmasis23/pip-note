@@ -14,7 +14,7 @@ export const dayLabel = (t: number) => {
 };
 /** Card preview. When the title was taken from the first words of the note, don't print those words twice. */
 export const preview = (n: Note) => {
-  let b = n.body.replace(/\s+/g, " ").trim(); const t = n.title.trim();
+  let b = n.body.trim().split(/\n+/).map(l => l.trim()).filter(Boolean).join(" \u00b7 "); b = b.replace(/\s+/g, " "); const t = n.title.trim();
   if (t && b.startsWith(t)) b = b.slice(t.length).trim();
   return (b || (n.body.trim() ? "" : n.checklist.map(c => c.text).join(", "))).slice(0, 140);
 };
