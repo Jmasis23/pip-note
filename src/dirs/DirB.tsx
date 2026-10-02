@@ -18,7 +18,7 @@ import "@fontsource-variable/bricolage-grotesque";
 import "./b.css";
 
 const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id: "today", label: "Today" }, { id: "pinned", label: "Pinned" }, { id: "drafts", label: "Drafts" }, { id: "trash", label: "Trash" }];
-const tone = (n: Note) => n.pinned ? "lav" : n.checklist.length ? "mint" : Date.now() - n.updatedAt < 864e5 ? "peach" : "white";
+const tone = (n: Note, picked?: string) => picked ?? (n.pinned ? "lav" : n.checklist.length ? "mint" : Date.now() - n.updatedAt < 864e5 ? "peach" : "white");
 
 export default function DirB() {
   const { folder, setFolder, folders, view, setView, query, setQuery, notes, drafts, counts, prefs, setPrefs, refresh } = useNotes();
@@ -107,7 +107,7 @@ export default function DirB() {
         <section className="db-board" aria-label="Notes">
           <AnimatePresence initial={false}>
             {notes.map((n, i) => (
-              <motion.button key={n.id} layoutId={`card-${n.id}`} className={`db-card ${tone(n)}`} onClick={() => setSelId(n.id)}
+              <motion.button key={n.id} layoutId={`card-${n.id}`} className={`db-card ${tone(n, prefs.noteColors?.[n.id])}`} onClick={() => setSelId(n.id)}
                 initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
                 whileHover={{ y: -4, rotate: i % 2 ? 0.5 : -0.5 }} transition={{ type: "spring", stiffness: 380, damping: 30 }}>
                 <b>{n.title}</b>
@@ -124,7 +124,7 @@ export default function DirB() {
           {selId && (
             <motion.div className="db-veil" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={e => { if (e.target === e.currentTarget) setSelId(null); }} onKeyDown={e => { if (e.key === "Escape") setSelId(null); }}>
               <motion.div layoutId={`card-${selId}`} className="db-sheet" transition={{ type: "spring", stiffness: 330, damping: 32 }}>
-                {full && <Editor key={full.id} note={full} folders={folders} onChanged={() => void refresh()} onBack={() => setSelId(null)} />}
+                {full && <Editor key={full.id} note={full} folders={folders} color={prefs.noteColors?.[full.id] ?? null} onColor={c => { const m = { ...(prefs.noteColors ?? {}) }; if (c) m[full.id] = c; else delete m[full.id]; void setPrefs({ ...prefs, noteColors: m }); }} onChanged={() => void refresh()} onBack={() => setSelId(null)} />}
               </motion.div>
             </motion.div>)}
         </AnimatePresence>

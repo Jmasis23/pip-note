@@ -274,3 +274,14 @@
 @media (prefers-reduced-motion:reduce){.as-glow,.as-spark.live,.as-apply::after,.db-sheet.as::after{animation:none!important}}
 .as-apply.done:disabled,.as-apply:disabled.done{opacity:1}
 .ed-folder .ed-ts{margin-left:auto}.as-head .as-ts{margin-left:auto}
+/* Card color: one swatch in the editor bar, choices fan out above it */
+.ed-actions{align-items:center}
+.cp{position:relative;display:inline-flex;margin-right:4px}
+.cp-btn,.cp-sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);transition:transform .15s,box-shadow .15s}
+.cp-btn:hover,.cp-sw:hover{transform:scale(1.1)}.cp-btn:active,.cp-sw:active{transform:scale(.94)}
+.cp-btn:focus-visible,.cp-sw:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.cp-btn.lav,.cp-sw.lav{background:#E1E4FF}.cp-btn.mint,.cp-sw.mint{background:#D5F2E5}.cp-btn.peach,.cp-sw.peach{background:#FFE3D3}.cp-btn.white,.cp-sw.white{background:#fff}
+.cp-btn.auto,.cp-sw.auto{background:conic-gradient(#E1E4FF 0 33%,#D5F2E5 0 66%,#FFE3D3 0)}
+:root[data-theme=dark] .cp-btn.lav,:root[data-theme=dark] .cp-sw.lav{background:#2D3169}:root[data-theme=dark] .cp-btn.mint,:root[data-theme=dark] .cp-sw.mint{background:#1C3A2F}:root[data-theme=dark] .cp-btn.peach,:root[data-theme=dark] .cp-sw.peach{background:#47302A}
+.cp-sw[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
+.cp-pop{position:fixed;display:flex;gap:8px;padding:8px 10px;border-radius:999px;background:var(--surface);box-shadow:0 1px 2px rgba(20,20,40,.08),0 12px 32px -8px rgba(20,20,40,.28);z-index:9999;transform-origin:bottom right}

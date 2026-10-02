@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { LiveTextStepper } from "./LiveTextStepper";
+import { ColorPick, type Tone } from "./ColorPick";
 import { AskPanel } from "./AskPanel";
 import type { ChecklistItem, Note } from "../domain";
 import { ConflictError } from "../domain";
@@ -16,7 +17,7 @@ import { AiError, cleanUp, suggestMeta, useAi } from "../ai";
 type Save = "idle" | "pending" | "saved" | "error";
 const uid = () => crypto.randomUUID();
 
-export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; folders?: string[]; onChanged: () => void; onBack: () => void }) {
+export function Editor({ note, folders = [], onChanged, onBack, color = null, onColor }: { note: Note; folders?: string[]; onChanged: () => void; onBack: () => void; color?: Tone | null; onColor?: (c: Tone | null) => void }) {
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
   const [rich, setRich] = useState(note.rich ?? plainToRich(note.body));
@@ -93,6 +94,7 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
             <button className="ghost" onClick={async () => { await repo.restore(note.id); onChanged(); }}>Restore</button>
             <button className="ghost danger" onClick={async () => { if (confirm("Delete this note forever? This can't be undone.")) { await repo.deleteForever(note.id); onChanged(); } }}>Delete forever</button>
           </>) : (<>
+            {onColor && <ColorPick value={color} onChange={onColor} />}
             <button className="ghost" aria-pressed={note.pinned} onClick={async () => { await flush(); await repo.setPinned(note.id, !note.pinned); onChanged(); }}>{note.pinned ? "Unpin" : "Pin"}</button>
             <button className="ghost" onClick={async () => { const m = await repo.exportMarkdown(note.id); try { const where = await exportFile(m.filename, m.text, "text/markdown"); if (where) setInfo(`Saved to ${where}`); } catch { setInfo("Couldn't save the file."); } }}>Export .md</button>
             <button className="ghost" onClick={async () => { await flush(); await repo.trash(note.id); onChanged(); }}>Trash</button>
