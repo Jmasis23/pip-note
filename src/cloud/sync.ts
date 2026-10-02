@@ -6,8 +6,8 @@ import { SUPABASE_ANON, SUPABASE_URL } from "./config";
 type Row = { id: string; title: string; body: string; rich: string | null; checklist: Note["checklist"]; pinned: boolean; folder: string | null; created_at: string; updated_at: string; deleted_at: string | null; revision: number };
 const iso = (ms: number) => new Date(ms).toISOString();
 const ms = (s: string) => Date.parse(s);
-const toRow = (n: Note): Row => ({ id: n.id, title: n.title, body: n.body, rich: n.rich ?? null, checklist: n.checklist, pinned: n.pinned, folder: n.folder ?? null, created_at: iso(n.createdAt), updated_at: iso(n.updatedAt), deleted_at: n.deletedAt === null ? null : iso(n.deletedAt), revision: n.revision });
-const fromRow = (r: Row): Note => ({ id: r.id, title: r.title, body: r.body, ...(r.rich ? { rich: r.rich } : {}), checklist: r.checklist ?? [], pinned: r.pinned, ...(r.folder ? { folder: r.folder } : {}), createdAt: ms(r.created_at), updatedAt: ms(r.updated_at), deletedAt: r.deleted_at ? ms(r.deleted_at) : null, revision: r.revision });
+export const toRow = (n: Note): Row => ({ id: n.id, title: n.title, body: n.body, rich: n.rich ?? null, checklist: n.checklist, pinned: n.pinned, folder: n.folder ?? null, created_at: iso(n.createdAt), updated_at: iso(n.updatedAt), deleted_at: n.deletedAt === null ? null : iso(n.deletedAt), revision: n.revision });
+export const fromRow = (r: Row): Note => ({ id: r.id, title: r.title, body: r.body, ...(r.rich ? { rich: r.rich } : {}), checklist: r.checklist ?? [], pinned: r.pinned, ...(r.folder ? { folder: r.folder } : {}), createdAt: ms(r.created_at), updatedAt: ms(r.updated_at), deletedAt: r.deleted_at ? ms(r.deleted_at) : null, revision: r.revision });
 /** Settings that follow you between PCs. Shortcut, shake and launch-at-login stay per device. */
 const SHARED: (keyof Prefs)[] = ["theme", "reducedMotion", "cardSize", "textSize", "accent", "tint", "extraFolders"];
 

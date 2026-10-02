@@ -223,3 +223,9 @@
 .rt-bubble .ts-step{background:none;padding:0;gap:0;margin-left:2px;border-left:1px solid rgba(127,127,150,.35);border-radius:0;padding-left:2px}
 .rt-bubble .ts-step button{color:inherit;width:28px;height:30px;border-radius:9px}
 .rt-body big{font-size:1.25em}.rt-body small{font-size:.8em}
+
+.ask-step{margin-top:12px;font-size:calc(13.5px*var(--ts,1));color:var(--muted);animation:askp 1.2s ease-in-out infinite}@keyframes askp{50%{opacity:.45}}
+.ask-ops{margin-top:12px;padding-top:12px;border-top:1px solid rgba(127,127,150,.2)}.ask-ops ul{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px;font-size:calc(14px*var(--ts,1))}.ask-ops i{font-style:normal;color:var(--muted)}
+.ask-opsbar{display:flex;gap:8px}.ask-opsbar button{padding:9px 16px;border-radius:999px;font-weight:650;background:var(--surface);color:var(--ink)}
+.ask-done{margin-top:10px;font-weight:650;font-size:calc(14px*var(--ts,1))}
+@media (prefers-reduced-motion:reduce){.ask-step{animation:none}}

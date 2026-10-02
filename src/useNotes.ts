@@ -32,7 +32,9 @@ export function useNotes() {
   useEffect(() => { void repo.runDailyBackup(); }, []);
   useEffect(() => {
     const on = (e: StorageEvent) => { if (e.key?.startsWith("pip.")) void refresh(); };
-    window.addEventListener("storage", on); return () => window.removeEventListener("storage", on);
+    const ch = () => void refresh();
+    window.addEventListener("storage", on); window.addEventListener("pip:changed", ch);
+    return () => { window.removeEventListener("storage", on); window.removeEventListener("pip:changed", ch); };
   }, [refresh]);
 
   const setPrefs = async (p: Prefs) => { setPrefsState(await repo.setPrefs(p)); };
