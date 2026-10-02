@@ -54,19 +54,19 @@
 .db .sheet .status{padding:0 24px}
 
 /* Dark Desk */
-:root[data-theme=dark] .db{--bg:#12131A;--surface:#1E202B;--ink:#F1F1F8;--muted:#A3A6BB;--line:#2E3140;--lav-soft:#2F3366;--focus:#B0B5FF;color-scheme:dark}
-:root[data-theme=dark] body{background:#12131A}
+:root[data-theme=dark] .db{--bg:#07080C;--surface:#13151D;--ink:#F1F1F8;--muted:#A3A6BB;--line:#242733;--lav-soft:#2F3366;--focus:#B0B5FF;color-scheme:dark}
+:root[data-theme=dark] body{background:#07080C}
 :root[data-theme=dark] .db-card{box-shadow:0 0 0 1px rgba(255,255,255,.05),0 14px 30px -18px #000}
-:root[data-theme=dark] .db-card.white{background:#1E202B}
+:root[data-theme=dark] .db-card.white{background:#13151D}
 :root[data-theme=dark] .db-card.lav{background:#2D3169}
 :root[data-theme=dark] .db-card.mint{background:#1C3A2F}
 :root[data-theme=dark] .db-card.peach{background:#47302A}
 :root[data-theme=dark] .db-pre{color:rgba(241,241,248,.72)}
 :root[data-theme=dark] .db-card time{color:rgba(241,241,248,.5)}
 :root[data-theme=dark] .db-prog i{background:rgba(255,255,255,.16)}:root[data-theme=dark] .db-prog i.d{background:#F1F1F8}
-:root[data-theme=dark] .db-hero kbd,:root[data-theme=dark] .db-gear:hover{background:#1E202B}
+:root[data-theme=dark] .db-hero kbd,:root[data-theme=dark] .db-gear:hover{background:#13151D}
 :root[data-theme=dark] .db-veil,:root[data-theme=dark] .db .scrim{background:rgba(10,11,16,.62)}
-:root[data-theme=dark] .db-sheet,:root[data-theme=dark] .db .capture,:root[data-theme=dark] .db .sheet{background:#1E202B;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 40px 90px -30px #000}
+:root[data-theme=dark] .db-sheet,:root[data-theme=dark] .db .capture,:root[data-theme=dark] .db .sheet{background:#13151D;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 40px 90px -30px #000}
 :root[data-theme=dark] .db-dock{background:rgba(30,32,43,.82);box-shadow:0 0 0 1px rgba(255,255,255,.08),0 20px 50px -16px #000}
 :root[data-theme=dark] .db-dock input{background:rgba(255,255,255,.08)}
 :root[data-theme=dark] .db-add,:root[data-theme=dark] .db .primary{background:#F1F1F8;color:#1B1C26}

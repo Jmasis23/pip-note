@@ -36,7 +36,7 @@ export default function DirB() {
       document.documentElement.dataset.theme = dark ? "dark" : "light";
       document.documentElement.dataset.motion = prefs.reducedMotion ? "reduced" : "full";
       const d = document.documentElement.dataset; d.accent = prefs.accent; d.cards = prefs.cardSize; d.text = prefs.textSize; d.tint = prefs.tint;
-      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#12131A" : "#F7F7FB");
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#07080C" : "#F7F7FB");
     };
     apply(); mq.addEventListener("change", apply); return () => mq.removeEventListener("change", apply);
   }, [prefs.theme, prefs.reducedMotion, prefs.accent, prefs.cardSize, prefs.textSize, prefs.tint]);
