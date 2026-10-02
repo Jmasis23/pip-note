@@ -1,0 +1,3 @@
+project_id = "pip"
+[functions.chatgpt-auth]
+verify_jwt = false
