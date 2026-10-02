@@ -4,7 +4,7 @@ import { Pip } from "./Pip";
 import type { PipState } from "./Pip";
 import { repo } from "../useNotes";
 
-export function Capture({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+export function Capture({ open, onClose, onSaved, variant = "modal" }: { open: boolean; onClose: () => void; onSaved: () => void; variant?: "modal" | "island" }) {
   const [text, setText] = useState("");
   const [state, setState] = useState<PipState>("idle");
   const [status, setStatus] = useState("");
@@ -37,9 +37,11 @@ export function Capture({ open, onClose, onSaved }: { open: boolean; onClose: ()
     <AnimatePresence>
       {open && (
         <motion.div className="scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={e => { if (e.target === e.currentTarget) void dismiss(); }}>
-          <motion.div className="capture" role="dialog" aria-modal="true" aria-label="Quick capture"
-            initial={{ y: 18, scale: 0.97, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} exit={{ y: 10, scale: 0.98, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+          <motion.div className={`capture ${variant}`} role="dialog" aria-modal="true" aria-label="Quick capture"
+            initial={variant === "island" ? { width: 252, height: 44, borderRadius: 22 } : { y: 18, scale: 0.97, opacity: 0 }}
+            animate={variant === "island" ? { width: 560, height: 236, borderRadius: 30 } : { y: 0, scale: 1, opacity: 1 }}
+            exit={variant === "island" ? { width: 252, height: 44, borderRadius: 22, opacity: 0 } : { y: 10, scale: 0.98, opacity: 0 }}
+            transition={{ type: "spring", stiffness: variant === "island" ? 300 : 420, damping: variant === "island" ? 26 : 32 }}
             onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); void dismiss(); } if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void keep(); } }}>
             <header><Pip state={state} size={34} /><span>Something on your mind?</span><kbd>Esc</kbd></header>
             <textarea ref={ref} value={text} onChange={e => { setText(e.target.value); if (state !== "capturing") setState("capturing"); setStatus(""); }} placeholder="Type it before it slips away" aria-label="Note text" />
