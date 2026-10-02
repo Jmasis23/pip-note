@@ -4,6 +4,7 @@ import { Pip } from "./components/Pip";
 import { Capture } from "./components/Capture";
 import { Editor } from "./components/Editor";
 import { Settings } from "./components/Settings";
+import { createShakeDetector } from "./gesture";
 import { repo, useNotes } from "./useNotes";
 import type { Note, View } from "./domain";
 
@@ -43,6 +44,14 @@ export default function App() {
     window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on);
   }, [prefs.shortcut]);
 
+  useEffect(() => {
+    if (!prefs.shakeToCapture || capture || settings) return;
+    const det = createShakeDetector(() => setCapture(true));
+    const on = (e: PointerEvent) => { if (e.pointerType === "mouse") det.move(e.clientX, e.clientY, e.timeStamp, e.buttons); };
+    window.addEventListener("pointermove", on, { passive: true });
+    return () => window.removeEventListener("pointermove", on);
+  }, [prefs.shakeToCapture, capture, settings]);
+
   const sel = useMemo(() => notes.find(n => n.id === selId) ?? null, [notes, selId]);
   useEffect(() => { if (selId && !notes.some(n => n.id === selId)) { setSelId(null); setPane("list"); } }, [notes, selId]);
   useEffect(() => { if (!selId) { setFull(null); return; } repo.get(selId).then(setFull).catch(() => setFull(null)); }, [selId, notes]);
@@ -57,7 +66,7 @@ export default function App() {
         <aside className="side">
           <div className="brand"><Pip size={38} state="idle" /><div><h1>Pip</h1><p>Thought it? Keep it.</p></div></div>
           <button className="primary wide" onClick={() => setCapture(true)}>New capture</button>
-          <p className="hint">or press {prefs.shortcut.replace(/\+/g, " + ")}</p>
+          <p className="hint">{prefs.shakeToCapture ? "or shake your mouse, or press " : "or press "}{prefs.shortcut.replace(/\+/g, " + ")}</p>
           <nav aria-label="Views"><LayoutGroup>
             {TABS.map(t => (
               <button key={t.id} className={`tab ${view === t.id ? "on" : ""}`} aria-current={view === t.id ? "page" : undefined} onClick={() => { setView(t.id); setPane("list"); }}>

@@ -27,7 +27,8 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
     <div className="scrim" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }} onKeyDown={e => { if (e.key === "Escape") onClose(); }}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Settings">
         <header><h2>Settings</h2><button className="ghost" onClick={onClose}>Done</button></header>
-        <div className="row"><div><b>Capture shortcut</b><p>Opens the capture panel from anywhere in Pip.</p></div>
+        <label className="row"><div><b>Shake to capture</b><p>Shake the mouse side to side to open capture. Ignored while a button is held.</p></div><input type="checkbox" className="switch" checked={prefs.shakeToCapture} onChange={e => void setPrefs({ ...prefs, shakeToCapture: e.target.checked })} /></label>
+        <div className="row"><div><b>Capture shortcut</b><p>Second way in, same panel.</p></div>
           <button className="ghost field" onClick={() => { setRec(true); setMsg("Press the new keys"); }}>{rec ? "Press keys" : prefs.shortcut}</button></div>
         {msg && <p className="status" role="status">{msg}</p>}
         <div className="row"><div><b>Theme</b></div>
