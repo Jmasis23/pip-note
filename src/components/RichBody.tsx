@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { answer } from "../calc";
-import { richToPlain } from "../rich";
+import { plainToRich, richToPlain } from "../rich";
 
 type Cmd = { id: string; label: string; title: string; run: () => void; on?: boolean };
 const exec = (c: string, v?: string) => document.execCommand(c, false, v);
@@ -17,8 +17,10 @@ function highlight() {
   exec("styleWithCSS", "false");
 }
 
-export function RichBody({ html, onChange, disabled }: { html: string; onChange: (html: string) => void; disabled: boolean }) {
+export type RichHandle = { replaceAll: (plain: string) => void };
+export const RichBody = forwardRef<RichHandle, { html: string; onChange: (html: string) => void; disabled: boolean }>(function RichBody({ html, onChange, disabled }, handle) {
   const ref = useRef<HTMLDivElement>(null);
+  useImperativeHandle(handle, () => ({ replaceAll: plain => { const el = ref.current; if (!el) return; el.focus(); exec("selectAll"); exec("insertHTML", plainToRich(plain)); } }), []);
   const [state, setState] = useState<Record<string, boolean>>({});
   const [bubble, setBubble] = useState<{ x: number; y: number; below?: boolean } | null>(null);
 
@@ -89,4 +91,4 @@ export function RichBody({ html, onChange, disabled }: { html: string; onChange:
         onDrop={e => e.preventDefault()} />
     </div>
   );
-}
+});

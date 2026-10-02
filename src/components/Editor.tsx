@@ -5,6 +5,8 @@ import { repo } from "../useNotes";
 import { cleanFolder } from "../repo/repo";
 import { plainToRich, richToPlain, sanitizeRich } from "../rich";
 import { RichBody } from "./RichBody";
+import type { RichHandle } from "./RichBody";
+import { AiError, cleanUp, suggestMeta, useAi } from "../ai";
 
 type Save = "idle" | "pending" | "saved" | "error";
 const uid = () => crypto.randomUUID();
@@ -27,6 +29,21 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
   const latest = useRef({ title, body, rich, items });
   latest.current = { title, body, rich, items };
   const locked = note.deletedAt !== null;
+  const ai = useAi();
+  const richRef = useRef<RichHandle>(null);
+  const [busy, setBusy] = useState<"" | "meta" | "clean">("");
+  const [aiMsg, setAiMsg] = useState("");
+  const [sug, setSug] = useState<{ title: string; folder: string } | null>(null);
+  useEffect(() => { setSug(null); setAiMsg(""); setBusy(""); }, [note.id]);
+  const runAi = async (kind: "meta" | "clean") => {
+    if (!ai || busy) return; setBusy(kind); setAiMsg(""); setSug(null);
+    try {
+      const text = latest.current.body.trim() || latest.current.items.map(i => i.text).join("\n");
+      if (!text) { setAiMsg("Write something first."); return; }
+      if (kind === "meta") { const all = await repo.list({ view: "all", query: "" }); const r = await suggestMeta(ai, text, [...new Set(all.map(n => n.folder).filter((f): f is string => !!f))]); if (!r.title && !r.folder) setAiMsg("No suggestion this time."); else setSug(r); }
+      else { const out = await cleanUp(ai, latest.current.body); if (out) { richRef.current?.replaceAll(out); setAiMsg("Tidied. Ctrl+Z puts it back."); } }
+    } catch (e) { setAiMsg(e instanceof AiError ? e.message : "AI hit a snag. Your note is untouched."); } finally { setBusy(""); }
+  };
   const [folder, setFolder] = useState(note.folder ?? "");
   useEffect(() => setFolder(note.folder ?? ""), [note.id, note.folder]);
   const moveTo = async () => { const f = cleanFolder(folder); setFolder(f); if (f === (note.folder ?? "")) return; await flush(); try { const n = await repo.update(note.id, rev.current, { folder: f }); rev.current = n.revision; onChanged(); } catch { setErr("Couldn't move it."); setSave("error"); } };
@@ -84,6 +101,18 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
             onChange={e => setFolder(e.target.value)} onBlur={() => void moveTo()} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }} />
           <datalist id="pip-folders">{folders.map(f => <option key={f} value={f} />)}</datalist>
         </label>)}
+      {ai && !locked && (
+        <div className="ai-bar" aria-label="AI tools">
+          <button className="ai-btn" disabled={!!busy} onClick={() => void runAi("meta")}>{busy === "meta" ? "Thinking" : "Title and folder"}</button>
+          <button className="ai-btn" disabled={!!busy} onClick={() => void runAi("clean")}>{busy === "clean" ? "Thinking" : "Tidy up"}</button>
+          {aiMsg && <span className="ai-msg" role="status">{aiMsg}</span>}
+        </div>)}
+      {sug && (sug.title || sug.folder) && (
+        <div className="ai-sug" role="group" aria-label="Suggestion">
+          {sug.title && <button onClick={() => { setTitle(sug.title); touch(); setSug(s => s && { ...s, title: "" }); }}>Title: <b>{sug.title}</b></button>}
+          {sug.folder && <button onClick={() => { setFolder(sug.folder); setSug(s => s && { ...s, folder: "" }); void (async () => { await flush(); try { const n = await repo.update(note.id, rev.current, { folder: cleanFolder(sug.folder) }); rev.current = n.revision; onChanged(); } catch { setAiMsg("Couldn't move it."); } })(); }}>Folder: <b>{sug.folder}</b></button>}
+          <button className="ghost" onClick={() => setSug(null)}>Dismiss</button>
+        </div>)}
       {conflict && (
         <div className="conflict" role="alert">
           <p>This note changed in another window. Your edits are still here.</p>
@@ -91,7 +120,7 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
         </div>
       )}
       <input className="ed-title" value={title} disabled={locked} placeholder="Untitled" aria-label="Title" onChange={e => { setTitle(e.target.value); touch(); }} />
-      <RichBody key={seed} html={rich} disabled={locked} onChange={h => { const c = sanitizeRich(h); setRich(c); setBody(richToPlain(c)); touch(); }} />
+      <RichBody ref={richRef} key={seed} html={rich} disabled={locked} onChange={h => { const c = sanitizeRich(h); setRich(c); setBody(richToPlain(c)); touch(); }} />
       <div className="checklist" aria-label="Checklist">
         {items.map(i => (
           <div className="check-row" key={i.id}>

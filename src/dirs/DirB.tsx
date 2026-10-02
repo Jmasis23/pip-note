@@ -4,6 +4,8 @@ import { Pip } from "../components/Pip";
 import { Capture } from "../components/Capture";
 import { Editor } from "../components/Editor";
 import { Settings } from "../components/Settings";
+import { AskPanel } from "../components/AskPanel";
+import { useAi } from "../ai";
 import { repo, useNotes } from "../useNotes";
 import type { Note, View } from "../domain";
 import { preview, useFull, useTriggers, when } from "./util";
@@ -18,6 +20,8 @@ export default function DirB() {
   const [selId, setSelId] = useState<string | null>(null);
   const [capture, setCapture] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [ask, setAsk] = useState(false);
+  const ai = useAi();
   useEffect(() => {
     const mq = matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
@@ -32,14 +36,14 @@ export default function DirB() {
   useEffect(() => {
     const on = async (e: ClipboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (selId || capture || settings || t?.closest("input, textarea, [contenteditable=true]")) return;
+      if (selId || capture || settings || ask || t?.closest("input, textarea, [contenteditable=true]")) return;
       const text = e.clipboardData?.getData("text/plain").trim(); if (!text) return;
       e.preventDefault();
       try { await repo.create({ body: text.slice(0, 20000), folder: view === "all" ? folder : "" }); await refresh(); setToast("Kept from clipboard"); window.setTimeout(() => setToast(""), 2200); } catch { setToast("Couldn't keep that"); window.setTimeout(() => setToast(""), 2200); }
     };
     window.addEventListener("paste", on); return () => window.removeEventListener("paste", on);
-  }, [selId, capture, settings, folder, view, refresh]);
-  useTriggers(prefs, () => setCapture(true), capture || settings);
+  }, [selId, capture, settings, ask, folder, view, refresh]);
+  useTriggers(prefs, () => setCapture(true), capture || settings || ask);
   const full = useFull(selId, notes);
   useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
 
@@ -99,9 +103,11 @@ export default function DirB() {
             </button>))}
         </LayoutGroup>
         <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" aria-label="Search notes" />
+        {ai && <button className="db-ask" onClick={() => setAsk(true)} aria-label="Ask your notes">Ask</button>}
         <button className="db-add" onClick={() => setCapture(true)} aria-label="New capture">Capture</button>
       </nav>
 
+      <AnimatePresence>{ask && <AskPanel onClose={() => setAsk(false)} onOpen={id => setSelId(id)} />}</AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="db-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{toast}</motion.div>}</AnimatePresence>
       <Capture open={capture} onClose={() => setCapture(false)} onSaved={() => void refresh()} />
       {settings && <Settings prefs={prefs} setPrefs={setPrefs} onClose={() => setSettings(false)} onRestored={() => void refresh()} />}
