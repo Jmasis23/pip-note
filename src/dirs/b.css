@@ -299,7 +299,7 @@
 .as-thinkrow{display:flex;align-items:center;gap:14px;margin-top:6px}.as-thinkrow ul{margin-top:0!important}
 .db-add{background:var(--ink)}
 .db-card.white{background:#fff}
-.db-mascot{width:60px;height:60px;border-radius:0;transform:none}.db-mascot svg{width:52px;height:52px}
+.db-mascot{width:72px;height:72px;border-radius:0;transform:none}.db-mascot svg{width:76px;height:auto}
 .db-wm{display:flex;align-items:baseline;gap:14px}
 .db-hero h1{font-size:calc(34px*var(--ts,1))}.db-wm-spark{width:16px;height:16px;right:-17px;top:-3px}
 .db-hero p.db-sub{font-size:calc(14px*var(--ts,1));margin:0}
