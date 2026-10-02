@@ -1,14 +1,14 @@
 //! System-wide mouse shake. A low-level mouse hook (mouse only, no keyboard hook) feeds the detector.
 //! Windows only. Elsewhere this is a no-op so the crate still builds for development.
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{atomic::{AtomicBool, AtomicU8}, Arc};
 use tauri::AppHandle;
 
 #[cfg(not(windows))]
-pub fn start(_app: AppHandle, _enabled: Arc<AtomicBool>) {}
+pub fn start(_app: AppHandle, _enabled: Arc<AtomicBool>, _level: Arc<AtomicU8>) {}
 
 #[cfg(windows)]
-pub fn start(app: AppHandle, enabled: Arc<AtomicBool>) {
-    use pip_core::gesture::ShakeDetector;
+pub fn start(app: AppHandle, enabled: Arc<AtomicBool>, level: Arc<AtomicU8>) {
+    use pip_core::gesture::{ShakeDetector, ShakeOpts};
     use std::sync::atomic::Ordering;
     use std::sync::{Mutex, OnceLock};
     use std::time::Instant;
@@ -16,7 +16,7 @@ pub fn start(app: AppHandle, enabled: Arc<AtomicBool>) {
     use windows::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows::Win32::UI::WindowsAndMessaging::*;
 
-    struct Ctx { app: AppHandle, enabled: Arc<AtomicBool>, det: ShakeDetector, t0: Instant, buttons: i32, last_button: Instant }
+    struct Ctx { app: AppHandle, enabled: Arc<AtomicBool>, level: Arc<AtomicU8>, applied: u8, det: ShakeDetector, t0: Instant, buttons: i32, last_button: Instant }
     static CTX: OnceLock<Mutex<Ctx>> = OnceLock::new();
 
     unsafe extern "system" fn hook(code: i32, w: WPARAM, l: LPARAM) -> LRESULT {
@@ -29,6 +29,8 @@ pub fn start(app: AppHandle, enabled: Arc<AtomicBool>) {
                         WM_MOUSEMOVE => {
                             // A missed button-up must not disable the gesture forever.
                             if c.buttons > 0 && c.last_button.elapsed().as_secs() > 8 { c.buttons = 0; }
+                            let want = c.level.load(Ordering::Relaxed);
+                            if want != c.applied { c.applied = want; c.det.set_opts(ShakeOpts::level(want)); }
                             if c.enabled.load(Ordering::Relaxed) {
                                 let ms = &*(l.0 as *const MSLLHOOKSTRUCT);
                                 let t = c.t0.elapsed().as_secs_f64() * 1000.0;
@@ -47,7 +49,7 @@ pub fn start(app: AppHandle, enabled: Arc<AtomicBool>) {
         CallNextHookEx(HHOOK::default(), code, w, l)
     }
 
-    let _ = CTX.set(Mutex::new(Ctx { app, enabled, det: ShakeDetector::new(), t0: Instant::now(), buttons: 0, last_button: Instant::now() }));
+    let _ = CTX.set(Mutex::new(Ctx { app, enabled, level, applied: 1, det: ShakeDetector::new(), t0: Instant::now(), buttons: 0, last_button: Instant::now() }));
     std::thread::spawn(|| unsafe {
         let module = GetModuleHandleW(None).map(|m| HINSTANCE(m.0)).unwrap_or_default();
         if SetWindowsHookExW(WH_MOUSE_LL, Some(hook), module, 0).is_err() { return; }

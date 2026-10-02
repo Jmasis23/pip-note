@@ -50,6 +50,8 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Settings">
         <header><h2>Settings</h2><button className="ghost" onClick={onClose}>Done</button></header>
         <label className="row"><div><b>Shake to capture</b><p>Shake the mouse side to side to open capture. Ignored while a button is held.</p></div><input type="checkbox" className="switch" checked={prefs.shakeToCapture} onChange={e => void setPrefs({ ...prefs, shakeToCapture: e.target.checked })} /></label>
+        {prefs.shakeToCapture && <div className="row"><div><b>Shake sensitivity</b><p>{({ gentle: "Needs a firm, deliberate shake.", normal: "A quick back and forth.", eager: "Fires on a small wiggle. May trigger by accident." } as const)[prefs.shakeLevel ?? "normal"]}</p></div>
+          <div className="seg" role="radiogroup" aria-label="Shake sensitivity">{([["gentle", "Gentle"], ["normal", "Normal"], ["eager", "Hair-trigger"]] as const).map(([id, t]) => <button key={id} role="radio" aria-checked={(prefs.shakeLevel ?? "normal") === id} className={(prefs.shakeLevel ?? "normal") === id ? "on" : ""} onClick={() => void setPrefs({ ...prefs, shakeLevel: id })}>{t}</button>)}</div></div>}
         <div className="row"><div><b>Capture shortcut</b><p>Second way in, same panel.</p></div>
           <button className="ghost field" onClick={() => { setRec(true); setMsg("Press the new keys"); }}>{rec ? "Press keys" : prefs.shortcut}</button></div>
         {msg && <p className="status" role="status">{msg}</p>}

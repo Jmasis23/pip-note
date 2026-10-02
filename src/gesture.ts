@@ -2,6 +2,14 @@
 export type ShakeOpts = { windowMs: number; minSwing: number; reversals: number; minSpeed: number };
 export const DEFAULT_SHAKE: ShakeOpts = { windowMs: 700, minSwing: 40, reversals: 4, minSpeed: 0.6 };
 
+export type ShakeLevel = "gentle" | "normal" | "eager";
+/** Same numbers live in src-tauri/core/src/gesture.rs. Keep both in step. */
+export const SHAKE_LEVELS: Record<ShakeLevel, ShakeOpts> = {
+  gentle: { windowMs: 800, minSwing: 60, reversals: 5, minSpeed: 0.8 },
+  normal: DEFAULT_SHAKE,
+  eager: { windowMs: 700, minSwing: 24, reversals: 3, minSpeed: 0.35 },
+};
+
 type Pt = { x: number; y: number; t: number };
 
 export function createShakeDetector(onShake: () => void, opts: ShakeOpts = DEFAULT_SHAKE, cooldownMs = 1200) {

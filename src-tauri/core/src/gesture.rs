@@ -3,6 +3,17 @@
 pub struct ShakeOpts { pub window_ms: f64, pub min_swing: f64, pub reversals: u32, pub min_speed: f64 }
 pub const DEFAULT_SHAKE: ShakeOpts = ShakeOpts { window_ms: 700.0, min_swing: 40.0, reversals: 4, min_speed: 0.6 };
 
+impl ShakeOpts {
+    /// Same numbers as SHAKE_LEVELS in src/gesture.ts. 0 gentle, 2 hair-trigger, anything else normal.
+    pub fn level(l: u8) -> ShakeOpts {
+        match l {
+            0 => ShakeOpts { window_ms: 800.0, min_swing: 60.0, reversals: 5, min_speed: 0.8 },
+            2 => ShakeOpts { window_ms: 700.0, min_swing: 24.0, reversals: 3, min_speed: 0.35 },
+            _ => DEFAULT_SHAKE,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Pt { x: f64, y: f64, t: f64 }
 
@@ -14,6 +25,7 @@ impl ShakeDetector {
     pub fn new() -> Self { Self::with(DEFAULT_SHAKE, 1200.0) }
     pub fn with(opts: ShakeOpts, cooldown_ms: f64) -> Self { Self { opts, cooldown_ms, pts: vec![], last_fire: f64::NEG_INFINITY } }
 
+    pub fn set_opts(&mut self, opts: ShakeOpts) { self.opts = opts; self.pts.clear(); }
     fn reversals(&self, get: impl Fn(&Pt) -> f64) -> (u32, f64) {
         let half = self.opts.min_swing / 2.0;
         let (mut dir, mut anchor, mut flips, mut dist) = (0, get(&self.pts[0]), 0u32, 0.0);
@@ -62,6 +74,12 @@ mod tests {
         let mut d = ShakeDetector::new(); let mut n = 0;
         for (i, (x, y)) in path.iter().enumerate() { if d.moved(*x, *y, i as f64 * step, down) { n += 1; } } n
     }
+    fn run_l(path: &[(f64, f64)], level: u8) -> u32 {
+        let mut d = ShakeDetector::new(); d.set_opts(ShakeOpts::level(level)); let mut n = 0;
+        for (i, (x, y)) in path.iter().enumerate() { if d.moved(*x, *y, i as f64 * 14.0, false) { n += 1; } } n
+    }
+    #[test] fn hair_trigger_fires_on_small_wiggle_normal_does_not() { let p = shake(4, 30.0, 4); assert_eq!(run_l(&p, 1), 0); assert_eq!(run_l(&p, 2), 1); }
+    #[test] fn gentle_needs_a_bigger_shake_than_normal() { let p = shake(6, 65.0, 5); let (n, g, big) = (run_l(&p, 1), run_l(&p, 0), run_l(&shake(10, 90.0, 5), 0)); assert_eq!((n, g, big), (1, 0, 1)); }
     #[test] fn fires_on_back_and_forth() { assert_eq!(run(&shake(6, 80.0, 5), 14.0, false), 1); }
     #[test] fn fires_on_vertical() { let v: Vec<_> = shake(6, 80.0, 5).into_iter().map(|(x, y)| (y, x)).collect(); assert_eq!(run(&v, 14.0, false), 1); }
     #[test] fn ignores_single_sweep() { assert_eq!(run(&shake(1, 400.0, 30), 10.0, false), 0); }

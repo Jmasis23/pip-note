@@ -46,7 +46,7 @@ export default function DirB() {
   const refreshRef = useRef(refresh); refreshRef.current = refresh;
   useEffect(() => { if (!isNative()) return; let off = () => {}; let dead = false; void onNativeEvent("pip://notes-changed", () => { void initStorage().then(() => refreshRef.current()); }).then(f => { if (dead) f(); else off = f; }); return () => { dead = true; off(); }; }, []);
 
-  useEffect(() => { syncDesktopPrefs(prefs.shakeToCapture, prefs.shortcut); }, [prefs.shakeToCapture, prefs.shortcut]);
+  useEffect(() => { syncDesktopPrefs(prefs.shakeToCapture, prefs.shortcut, prefs.shakeLevel); }, [prefs.shakeToCapture, prefs.shortcut, prefs.shakeLevel]);
   useEffect(() => {
     const on = async (e: ClipboardEvent) => {
       const t = e.target as HTMLElement | null;

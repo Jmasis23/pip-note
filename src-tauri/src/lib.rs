@@ -14,7 +14,7 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 const ENDPOINT_KEY: &str = "ai-endpoint"; // not a "pip." key, so the web view cannot read or write it
 
-struct AppState { kv: FileKv, shake: Arc<AtomicBool>, shortcut: Mutex<Option<Shortcut>> }
+struct AppState { kv: FileKv, shake: Arc<AtomicBool>, level: Arc<std::sync::atomic::AtomicU8>, shortcut: Mutex<Option<Shortcut>> }
 
 /// Bring the window forward and tell the web view to open Capture. Used by the shake, the hotkey and the tray.
 pub fn open_capture(app: &AppHandle) {
@@ -97,6 +97,11 @@ fn win_is_max(w: tauri::WebviewWindow) -> bool { w.is_maximized().unwrap_or(fals
 #[tauri::command]
 fn win_close(w: tauri::WebviewWindow) { let _ = w.hide(); }
 #[tauri::command]
+fn set_shake_level(st: State<AppState>, level: String) {
+    let n = match level.as_str() { "gentle" => 0, "eager" => 2, _ => 1 };
+    st.level.store(n, Ordering::Relaxed);
+}
+#[tauri::command]
 fn set_shake_enabled(st: State<AppState>, enabled: bool) { st.shake.store(enabled, Ordering::Relaxed); }
 
 fn parse_shortcut(s: &str) -> Result<Shortcut, String> {
@@ -136,11 +141,12 @@ pub fn run() {
             let dir = app.path().app_data_dir()?;
             let kv = FileKv::open(dir.join("store")).map_err(|e| e.to_string())?;
             let shake = Arc::new(AtomicBool::new(true));
-            let st = AppState { kv, shake: shake.clone(), shortcut: Mutex::new(None) };
+            let level = Arc::new(std::sync::atomic::AtomicU8::new(1));
+            let st = AppState { kv, shake: shake.clone(), level: level.clone(), shortcut: Mutex::new(None) };
             let handle = app.handle().clone();
             let _ = register_shortcut(&handle, &st, parse_shortcut("Ctrl+Shift+Space")?); // default until the web view says otherwise
             app.manage(st);
-            shake::start(handle.clone(), shake);
+            shake::start(handle.clone(), shake, level);
 
             // The capture box: a small always-on-top window that stays hidden until the shake, hotkey or tray asks for it.
             tauri::WebviewWindowBuilder::new(app, "capture", tauri::WebviewUrl::App("index.html?capture=1".into()))
@@ -159,7 +165,7 @@ pub fn run() {
         })
         // Closing the window keeps Pip in the tray so the shake and hotkey still work.
         .on_window_event(|w, ev| { if let WindowEvent::CloseRequested { api, .. } = ev { api.prevent_close(); let _ = w.hide(); } })
-        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, set_shake_enabled, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved])
+        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, set_shake_enabled, set_shake_level, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }
