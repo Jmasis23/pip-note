@@ -3,7 +3,7 @@ import { Capture } from "./components/Capture";
 import { initStorage, call, onNativeEvent } from "./native";
 import type { TextSize } from "./domain";
 import { repo } from "./useNotes";
-import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/inter";
 import "./dirs/b.css";
 
 /** The small always-on-top box the shake and the hotkey open. It writes straight to the notes store and tells the main window. */

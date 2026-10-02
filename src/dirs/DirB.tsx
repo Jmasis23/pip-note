@@ -14,7 +14,7 @@ import { repo, useNotes } from "../useNotes";
 import type { Note, View } from "../domain";
 import { firstImage, imageFrom, imageNote, toDataUrl } from "../images";
 import { preview, useFull, useTriggers, when } from "./util";
-import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/inter";
 import "./b.css";
 
 const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id: "today", label: "Today" }, { id: "pinned", label: "Pinned" }, { id: "drafts", label: "Drafts" }, { id: "trash", label: "Trash" }];
@@ -67,9 +67,10 @@ export default function DirB() {
     <div className={isNative() ? "db db-native" : "db"}>
       {isNative() && <Titlebar />}
       <header className="db-hero">
-        <div className="db-mascot"><Pip size={92} look /></div>
+        <div className="db-mascot"><Pip size={96} look /></div>
         <div>
-          <h1>Need it later? <span>Pip it.</span></h1>
+          <div className="db-wm"><h1 aria-label="Pip">Pip<svg className="db-wm-spark" width="34" height="34" viewBox="0 0 34 34" aria-hidden><path d="M22 14l5-6M27 22l7-1M17 6l1-6" stroke="#FFC78B" strokeWidth="4" strokeLinecap="round" fill="none"/></svg></h1>
+          <p className="db-sub">Quick notes, right where you are.</p></div>
           <p>Shake the mouse, or press <kbd>{prefs.shortcut.replace(/\+/g, " + ")}</kbd></p>
         </div>
         <div className="db-tools"><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button></div>

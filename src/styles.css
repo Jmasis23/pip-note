@@ -82,7 +82,7 @@ input[type=checkbox]:not(.switch):checked::after{content:"";width:9px;height:5px
 .switch:checked{background:var(--lav)} .switch:checked::after{transform:translateX(16px)}
 .bk{display:flex;align-items:center;gap:12px;font-variant-numeric:tabular-nums} .bk .muted{margin-left:auto}
 
-.pip-blink{animation:blink 5s infinite;transform-origin:25px 29px} @keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.pip-blink{animation:blink 5s infinite;transform-origin:30px 33px} @keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
 :root[data-motion="reduced"] *{animation:none!important;transition:none!important}
 @media (prefers-reduced-motion:reduce){.pip-blink{animation:none}}
 

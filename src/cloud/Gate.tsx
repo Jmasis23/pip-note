@@ -6,7 +6,7 @@ import { isNative } from "../native";
 import { AuthError, finishRedirect, freshSession, loadSession, signInChatGpt, signInGoogle } from "./auth";
 import type { Session } from "./auth";
 import { startSync, syncNow, syncStatus } from "./sync";
-import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/inter";
 import "./gate.css";
 
 type Phase = "boot" | "wall" | "syncing" | "back" | "tour" | "app";

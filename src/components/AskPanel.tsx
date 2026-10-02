@@ -1,3 +1,4 @@
+import { Pip } from "./Pip";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { judge, JevError } from "../jev";
@@ -72,8 +73,8 @@ export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOp
             <AnimatePresence>{showIdeas && <motion.div className="as-ideas" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>{IDEAS.slice(0, 3).map((t, i) => <motion.button key={t} type="button" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }} onClick={() => { setQ(t); void go(t); }}>{t}</motion.button>)}</motion.div>}</AnimatePresence>
 
             <AnimatePresence initial={false}>{busy && <motion.div className="as-think" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} role="status">
-              <ul>{steps.map(s => <motion.li key={s.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: s.done ? 0.5 : 1, x: 0 }} transition={spring}>{s.done ? <svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 8.500l3.200 3L13 4.500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> : <span className="as-spin" />}<span>{s.text}</span></motion.li>)}
-                {!steps.length && <li><span className="as-spin" /><span>Thinking</span></li>}</ul>
+              <div className="as-thinkrow"><Pip state="thinking" size={56} /><ul>{steps.map(s => <motion.li key={s.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: s.done ? 0.5 : 1, x: 0 }} transition={spring}>{s.done ? <svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 8.500l3.200 3L13 4.500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> : <span className="as-spin" />}<span>{s.text}</span></motion.li>)}
+                {!steps.length && <li><span className="as-spin" /><span>Thinking</span></li>}</ul></div>
               <div className="as-peek"><AnimatePresence>{peek.map(n => <motion.span key={n.id} layout initial={{ opacity: 0, y: 14, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={spring}>{n.title || "Untitled"}</motion.span>)}</AnimatePresence></div>
             </motion.div>}</AnimatePresence>
 
