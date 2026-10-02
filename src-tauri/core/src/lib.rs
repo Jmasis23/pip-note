@@ -1,3 +1,4 @@
+pub mod chatgpt;
 pub mod ai;
 pub mod gesture;
 pub mod kv;

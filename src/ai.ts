@@ -25,14 +25,22 @@ export const normalizeBase = (u: string) => u.trim().replace(/\/+$/, "");
 export const validBase = (u: string) => { try { const p = new URL(normalizeBase(u)); return p.protocol === "https:" || (p.protocol === "http:" && isLocal(u)); } catch { return false; } };
 
 /** Desktop: endpoint and key live in Rust (key in Windows Credential Manager). The web view only knows whether AI is set up. */
-type NativeAi = { configured: boolean; baseUrl: string; model: string; hasKey: boolean };
+type NativeAi = { configured: boolean; baseUrl: string; model: string; hasKey: boolean; mode?: string; chatgptEmail?: string; chatgptModel?: string };
 let nativeState: NativeAi | null = null;
 export async function initAi() { if (isNative()) { nativeState = await call<NativeAi>("ai_status"); cache = undefined; subs.forEach(f => f()); } }
 export const aiHasStoredKey = () => !!nativeState?.hasKey;
+/** Sign in with ChatGPT (desktop only): the user's own ChatGPT plan powers the AI. Tokens stay in Rust. */
+export type ChatGpt = { email: string; model: string; active: boolean };
+export const chatGptState = (): ChatGpt | null => (nativeState?.chatgptEmail ? { email: nativeState.chatgptEmail, model: nativeState.chatgptModel ?? "", active: nativeState.mode === "chatgpt" } : null);
+const refresh = async () => { await initAi(); };
+export async function chatGptSignIn(): Promise<void> { try { await call<string>("chatgpt_sign_in"); } catch (e) { throw new AiError(String(e)); } await refresh(); }
+export async function chatGptSignOut(): Promise<void> { await call("chatgpt_sign_out"); await refresh(); }
+export async function chatGptModels(): Promise<{ slug: string; name: string }[]> { try { return await call("chatgpt_models"); } catch (e) { throw new AiError(String(e)); } }
+export async function chatGptUse(model: string): Promise<void> { await call("chatgpt_set_model", { model }); await refresh(); }
 let cache: AiConfig | null | undefined;
 const subs = new Set<() => void>();
 function read(): AiConfig | null {
-  if (isNative()) return nativeState?.configured ? { baseUrl: nativeState.baseUrl, model: nativeState.model, key: "" } : null;
+  if (isNative()) return nativeState?.configured ? (nativeState.mode === "chatgpt" ? { baseUrl: "chatgpt", model: nativeState.chatgptModel ?? "", key: "" } : { baseUrl: nativeState.baseUrl, model: nativeState.model, key: "" }) : null;
   try {
     const raw = globalThis.localStorage?.getItem(KEY); if (!raw) return null;
     const c = JSON.parse(raw) as AiConfig;

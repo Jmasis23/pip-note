@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Accent, Prefs, Size, Theme } from "../domain";
 import { Dropdown } from "./Dropdown";
 import { repo } from "../useNotes";
-import { PRESETS, getAiRaw, normalizeBase, setAiConfig, testAi, validBase, AiError, aiHasStoredKey } from "../ai";
+import { PRESETS, getAiRaw, normalizeBase, setAiConfig, testAi, validBase, AiError, aiHasStoredKey, chatGptState, chatGptSignIn, chatGptSignOut, chatGptModels, chatGptUse } from "../ai";
 import { exportFile, isNative, updater } from "../native";
 
 const keyName = (e: KeyboardEvent) => {
@@ -35,6 +35,11 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
   const [aiKey, setAiKey] = useState(raw.key ?? "");
   const [aiModel, setAiModel] = useState(raw.model ?? "");
   const [aiState, setAiState] = useState("");
+  const cg = chatGptState();
+  const [cgBusy, setCgBusy] = useState(false); const [cgMsg, setCgMsg] = useState("");
+  const [cgModels, setCgModels] = useState<{ slug: string; name: string }[]>([]);
+  useEffect(() => { if (cg) void chatGptModels().then(setCgModels).catch(() => {}); }, [cg?.email]);
+  const cgRun = async (f: () => Promise<void>, wait = "") => { setCgBusy(true); setCgMsg(wait); try { await f(); setCgMsg(""); } catch (e) { setCgMsg(e instanceof AiError ? e.message : "Something went wrong."); } finally { setCgBusy(false); } };
   const local = /^http:\/\/(localhost|127\.0\.0\.1)/.test(aiBase.trim());
   const aiReady = validBase(aiBase) && !!aiModel.trim() && (!!aiKey.trim() || local || aiHasStoredKey());
   const saveAi = async (test: boolean) => {
@@ -68,7 +73,16 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
         <label className="row"><div><b>Reduce motion</b><p>Swap movement for plain state changes.</p></div><input type="checkbox" className="switch" checked={prefs.reducedMotion} onChange={e => void setPrefs({ ...prefs, reducedMotion: e.target.checked })} /></label>
         <label className="row"><div><b>Open when I sign in</b><p>Windows app only. Off by default.</p></div><input type="checkbox" className="switch" checked={prefs.launchAtLogin} onChange={e => void setPrefs({ ...prefs, launchAtLogin: e.target.checked })} /></label>
         <div className="row"><div><b>Export</b><p>All active notes as one JSON file.</p></div><button className="ghost field" onClick={() => void exportAll()}>Export JSON</button></div>
-        <div className="row col ai-set"><div><b>AI (bring your own key)</b><p>Optional. Pip works fully without it. {isNative() ? "Your key is kept in Windows Credential Manager and requests go straight to the provider you pick." : "Your key stays in this browser and requests go straight to the provider you pick."}  Notes you run through AI are sent to that provider.</p></div>
+        <div className="row col ai-set"><div><b>AI</b><p>Optional. Pip works fully without it. {isNative() ? "Notes you run through AI are sent to ChatGPT or the provider you pick. A key you add is kept in Windows Credential Manager." : "Your key stays in this browser and requests go straight to the provider you pick.  Notes you run through AI are sent to that provider."}</p></div>
+          {isNative() && (cg ? (
+            <div className="cg" data-state="in"><div className="cg-who"><span className="cg-dot" aria-hidden /><div><b>{cg.active ? "Using your ChatGPT plan" : "ChatGPT connected"}</b><p>{cg.email}</p></div></div>
+              <Dropdown label="Model" value={cg.model} placeholder="Choose a model" options={cgModels.map(m => ({ value: m.slug, label: m.name, hint: "" }))} onChange={v => void cgRun(() => chatGptUse(v))} />
+              <div className="ai-act">{!cg.active && <button className="ghost field primary" disabled={cgBusy || !cg.model} onClick={() => void cgRun(() => chatGptUse(cg.model))}>Use ChatGPT</button>}
+                <button className="ghost danger" disabled={cgBusy} onClick={() => void cgRun(chatGptSignOut)}>Sign out</button><span className="muted" role="status">{cgMsg}</span></div>
+            </div>) : (
+            <div className="cg" data-state="out"><button className="cg-btn" disabled={cgBusy} onClick={() => void cgRun(chatGptSignIn, "Finish signing in in your browser...")}>{cgBusy ? "Waiting for ChatGPT..." : "Continue with ChatGPT"}</button>
+              <p className="muted">Use your ChatGPT plan. No key to copy. Pip never sees your password or your chats.</p><span className="muted" role="status">{cgMsg}</span></div>))}
+          {isNative() && <p className="cg-or">Or use your own key</p>}
           <Dropdown label="Provider" value={PRESETS.find(pr => pr.baseUrl === aiBase)?.id ?? "custom"} placeholder="Custom"
             options={[...PRESETS.map(pr => ({ value: pr.id, label: pr.label, hint: pr.baseUrl.startsWith("http://") ? "no key" : "" })), { value: "custom", label: "Custom endpoint" }]}
             onChange={v => { const pr = PRESETS.find(x => x.id === v); setAiState(""); if (pr) { setAiBase(pr.baseUrl); setAiModel(pr.model); } else { setAiBase(""); setAiModel(""); } }} />
