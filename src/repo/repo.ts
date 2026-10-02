@@ -3,10 +3,12 @@ import { ConflictError, DEFAULT_PREFS, NotFoundError, ValidationError } from "..
 import type { Draft, Note, NoteInput, Prefs, View } from "../domain";
 
 /** Storage seam. Browser preview uses localStorage; the Windows app swaps in the Tauri/SQLite bridge. */
+/** Trim, collapse slashes and spaces, cap depth at 3 and length at 40 per level. */
+export const cleanFolder = (f?: string) => (f ?? "").split("/").map(x => x.trim().replace(/\s+/g, " ").slice(0, 40)).filter(Boolean).slice(0, 3).join("/");
 export interface KV { getItem(k: string): string | null; setItem(k: string, v: string): void }
 
 export interface NoteRepo {
-  list(opts: { view: View; query: string }): Promise<Note[]>;
+  list(opts: { view: View; query: string; folder?: string }): Promise<Note[]>;
   get(id: string): Promise<Note>;
   create(input: NoteInput): Promise<Note>;
   update(id: string, expectedRevision: number, patch: NoteInput): Promise<Note>;
@@ -70,11 +72,12 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
   const readBackups = (): Record<string, Store> => JSON.parse(kv.getItem(BACKUP_KEY) ?? "{}");
 
   return {
-    async list({ view, query }) {
+    async list({ view, query, folder }) {
       const s = load(); const today = dayKey(now());
       return s.notes
         .filter(n => view === "trash" ? n.deletedAt !== null : n.deletedAt === null)
         .filter(n => view === "pinned" ? n.pinned : view === "today" ? dayKey(n.createdAt) === today || dayKey(n.updatedAt) === today : true)
+        .filter(n => !folder || n.folder === folder || !!n.folder?.startsWith(folder + "/"))
         .filter(n => matches(n, query))
         .sort((a, b) => Number(b.pinned && view === "all") - Number(a.pinned && view === "all") || b.updatedAt - a.updatedAt)
         .map(n => ({ ...n }));
@@ -84,7 +87,7 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
       const body = input.body ?? ""; const checklist = input.checklist ?? [];
       if (!body.trim() && !checklist.length && !(input.title ?? "").trim()) throw new ValidationError("Write something first.");
       const s = load(); const t = now();
-      const n: Note = { id: uid(), title: deriveTitle(input.title ?? "", body), body, ...(input.rich ? { rich: input.rich } : {}), checklist, createdAt: t, updatedAt: t, pinned: !!input.pinned, deletedAt: null, revision: 1 };
+      const n: Note = { id: uid(), title: deriveTitle(input.title ?? "", body), body, ...(input.rich ? { rich: input.rich } : {}), checklist, createdAt: t, updatedAt: t, pinned: !!input.pinned, ...(cleanFolder(input.folder) ? { folder: cleanFolder(input.folder) } : {}), deletedAt: null, revision: 1 };
       s.notes.push(n); save(s); return { ...n };
     },
     async update(id, expected, patch) {
@@ -96,6 +99,7 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
         if (patch.rich !== undefined) m.rich = patch.rich || undefined;
         if (patch.checklist !== undefined) m.checklist = patch.checklist;
         if (patch.pinned !== undefined) m.pinned = patch.pinned;
+        if (patch.folder !== undefined) { const f = cleanFolder(patch.folder); if (f) m.folder = f; else delete m.folder; }
         if (patch.title !== undefined) m.title = patch.title.trim() ? patch.title.trim() : deriveTitle("", m.body);
       });
     },

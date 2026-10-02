@@ -78,3 +78,17 @@
 :root[data-theme=dark] .db input[type=checkbox]:not(.switch):checked::after{border-color:#F1F1F8}
 .db .rt-bubble{background:#1B1C26;color:#fff}
 :root[data-theme=dark] .db .rt-bubble{background:#F1F1F8;color:#1B1C26}
+
+/* Folders, toast */
+.db-folders{max-width:1180px;margin:0 auto 18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.db-folders i{width:1px;height:20px;background:var(--line);margin:0 4px}
+.db-chip{padding:8px 15px;border-radius:999px;background:var(--surface);color:var(--muted);font-weight:600;font-size:14px;box-shadow:0 0 0 1px var(--line);transition:background .15s,color .15s,transform .12s}
+.db-chip:hover{color:var(--ink)}.db-chip:active{transform:scale(.96)}
+.db-chip[aria-pressed=true]{background:var(--ink);color:var(--bg);box-shadow:none}
+.db-card time{display:flex;justify-content:space-between;gap:8px}
+.db-card .db-fold{font-style:normal;font-weight:600;background:rgba(27,28,38,.08);padding:2px 8px;border-radius:999px;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root[data-theme=dark] .db-card .db-fold{background:rgba(255,255,255,.1)}
+.db-toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;box-shadow:0 14px 34px -10px rgba(0,0,0,.45)}
+.ed-folder{display:flex;align-items:center;gap:10px;margin:2px 0 6px;color:var(--muted);font-size:13.5px;font-weight:600}
+.ed-folder input{flex:1;min-width:0;border:0;background:rgba(127,127,150,.1);border-radius:999px;padding:7px 14px;font-size:14px;color:var(--ink)}
+.ed-folder input:focus-visible{outline:2px solid var(--focus)}

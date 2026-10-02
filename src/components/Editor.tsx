@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChecklistItem, Note } from "../domain";
 import { ConflictError } from "../domain";
 import { repo } from "../useNotes";
+import { cleanFolder } from "../repo/repo";
 import { plainToRich, richToPlain, sanitizeRich } from "../rich";
 import { RichBody } from "./RichBody";
 
@@ -11,7 +12,7 @@ const download = (name: string, text: string, type: string) => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
 };
 
-export function Editor({ note, onChanged, onBack }: { note: Note; onChanged: () => void; onBack: () => void }) {
+export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; folders?: string[]; onChanged: () => void; onBack: () => void }) {
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
   const [rich, setRich] = useState(note.rich ?? plainToRich(note.body));
@@ -26,6 +27,9 @@ export function Editor({ note, onChanged, onBack }: { note: Note; onChanged: () 
   const latest = useRef({ title, body, rich, items });
   latest.current = { title, body, rich, items };
   const locked = note.deletedAt !== null;
+  const [folder, setFolder] = useState(note.folder ?? "");
+  useEffect(() => setFolder(note.folder ?? ""), [note.id, note.folder]);
+  const moveTo = async () => { const f = cleanFolder(folder); setFolder(f); if (f === (note.folder ?? "")) return; await flush(); try { const n = await repo.update(note.id, rev.current, { folder: f }); rev.current = n.revision; onChanged(); } catch { setErr("Couldn't move it."); setSave("error"); } };
 
   useEffect(() => { setTitle(note.title); setBody(note.body); setRich(note.rich ?? plainToRich(note.body)); setSeed(x => x + 1); setItems(note.checklist); rev.current = note.revision; setSave("idle"); setConflict(null); setErr(""); dirty.current = false; }, [note.id]);
   useEffect(() => {
@@ -73,6 +77,13 @@ export function Editor({ note, onChanged, onBack }: { note: Note; onChanged: () 
           </>)}
         </div>
       </div>
+      {!locked && (
+        <label className="ed-folder">
+          <span>Folder</span>
+          <input list="pip-folders" value={folder} placeholder="None. Use Work/Clients to nest" aria-label="Folder" maxLength={90}
+            onChange={e => setFolder(e.target.value)} onBlur={() => void moveTo()} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }} />
+          <datalist id="pip-folders">{folders.map(f => <option key={f} value={f} />)}</datalist>
+        </label>)}
       {conflict && (
         <div className="conflict" role="alert">
           <p>This note changed in another window. Your edits are still here.</p>

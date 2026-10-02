@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { answer } from "../calc";
+import { richToPlain } from "../rich";
 
 type Cmd = { id: string; label: string; title: string; run: () => void; on?: boolean };
 const exec = (c: string, v?: string) => document.execCommand(c, false, v);
@@ -59,7 +61,7 @@ export function RichBody({ html, onChange, disabled }: { html: string; onChange:
           <i />{cmds.map(Btn)}
         </div>)}
       {bubble && !disabled && <div className={`rt-bubble${bubble.below ? " below" : ""}`} role="toolbar" aria-label="Format selection" style={{ left: bubble.x, top: bubble.y }}>{cmds.slice(0, 4).map(Btn)}</div>}
-      <div ref={ref} className="ed-body rt-body" contentEditable={!disabled} suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label="Body" data-placeholder="Start typing" spellCheck
+      <div ref={ref} className="ed-body rt-body" contentEditable={!disabled} suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label="Body" data-placeholder="Start typing. End a sum with = for the answer" spellCheck
         onInput={e => {
           const el = e.currentTarget;
           const f = el.firstChild; if (f && (f.nodeType === 3 || !/^(DIV|P|UL|OL)$/.test((f as Element).tagName))) exec("formatBlock", "div");
@@ -69,6 +71,16 @@ export function RichBody({ html, onChange, disabled }: { html: string; onChange:
             const txt = t.textContent ?? ""; const m = /^(-|\*|1\.)\u00a0?\s?$/.exec(txt.replace(/\u00a0/g, " "));
             const prev = t.previousSibling; const lineStart = !prev || (prev as Element).nodeName === "BR" || (prev as Element).nodeName === "DIV";
             if (m && lineStart && (e.nativeEvent as InputEvent).data === " ") { for (let k = (t.textContent ?? "").length; k > 0; k--) exec("delete"); exec(m[1] === "1." ? "insertOrderedList" : "insertUnorderedList"); }
+          }
+          const ie = e.nativeEvent as InputEvent;
+          if (ie.inputType === "insertText" && ie.data === "=") {
+            const sl = getSelection();
+            if (sl && sl.rangeCount && sl.isCollapsed) {
+              const r = document.createRange(); r.selectNodeContents(el); r.setEnd(sl.anchorNode!, sl.anchorOffset);
+              const tmp = document.createElement("div"); tmp.appendChild(r.cloneContents());
+              const lines = richToPlain(tmp.innerHTML).split("\n");
+              const a = answer(lines); if (a) exec("insertText", " " + a);
+            }
           }
           onChange(el.innerHTML);
         }}

@@ -14,7 +14,7 @@ const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id:
 const tone = (n: Note) => n.pinned ? "lav" : n.checklist.length ? "mint" : Date.now() - n.updatedAt < 864e5 ? "peach" : "white";
 
 export default function DirB() {
-  const { view, setView, query, setQuery, notes, counts, prefs, setPrefs, refresh } = useNotes();
+  const { folder, setFolder, folders, view, setView, query, setQuery, notes, counts, prefs, setPrefs, refresh } = useNotes();
   const [selId, setSelId] = useState<string | null>(null);
   const [capture, setCapture] = useState(false);
   const [settings, setSettings] = useState(false);
@@ -28,6 +28,17 @@ export default function DirB() {
     };
     apply(); mq.addEventListener("change", apply); return () => mq.removeEventListener("change", apply);
   }, [prefs.theme, prefs.reducedMotion]);
+  const [toast, setToast] = useState("");
+  useEffect(() => {
+    const on = async (e: ClipboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (selId || capture || settings || t?.closest("input, textarea, [contenteditable=true]")) return;
+      const text = e.clipboardData?.getData("text/plain").trim(); if (!text) return;
+      e.preventDefault();
+      try { await repo.create({ body: text.slice(0, 20000), folder: view === "all" ? folder : "" }); await refresh(); setToast("Kept from clipboard"); window.setTimeout(() => setToast(""), 2200); } catch { setToast("Couldn't keep that"); window.setTimeout(() => setToast(""), 2200); }
+    };
+    window.addEventListener("paste", on); return () => window.removeEventListener("paste", on);
+  }, [selId, capture, settings, folder, view, refresh]);
   useTriggers(prefs, () => setCapture(true), capture || settings);
   const full = useFull(selId, notes);
   useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
@@ -44,6 +55,15 @@ export default function DirB() {
         <button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button>
       </header>
 
+      {(folders.length > 0 || folder) && view !== "trash" && (() => {
+        const top = [...new Set(folders.map(f => f.split("/")[0]))];
+        const root = folder.split("/")[0];
+        const kids = [...new Set(folders.filter(f => root && f.startsWith(root + "/")).map(f => f.split("/").slice(0, 2).join("/")))];
+        const chip = (id: string, label: string) => <button key={id || "all"} className="db-chip" aria-pressed={folder === id} onClick={() => setFolder(folder === id ? (id.includes("/") ? id.split("/").slice(0, -1).join("/") : "") : id)}>{label}</button>;
+        return (<div className="db-folders" role="group" aria-label="Folders">
+          {chip("", "All folders")}{top.map(f => chip(f, f))}{kids.length > 0 && <i aria-hidden />}{kids.map(f => chip(f, f.split("/")[1]))}
+        </div>);
+      })()}
       <LayoutGroup>
         <section className="db-board" aria-label="Notes">
           <AnimatePresence initial={false}>
@@ -54,7 +74,7 @@ export default function DirB() {
                 <b>{n.title}</b>
                 <span className="db-pre">{preview(n) || "Empty note"}</span>
                 {n.checklist.length > 0 && <span className="db-prog" aria-label={`${n.checklist.filter(c => c.done).length} of ${n.checklist.length} done`}>{n.checklist.map(c => <i key={c.id} className={c.done ? "d" : ""} />)}</span>}
-                <time>{when(n.updatedAt)}</time>
+                <time>{n.folder && <em className="db-fold">{n.folder.replace(/\//g, " / ")}</em>}{when(n.updatedAt)}</time>
               </motion.button>))}
           </AnimatePresence>
           {notes.length === 0 && <div className="db-empty"><Pip size={72} look /><p>{query ? "Nothing matches." : "Nothing kept yet."}</p></div>}
@@ -64,7 +84,7 @@ export default function DirB() {
           {selId && (
             <motion.div className="db-veil" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={e => { if (e.target === e.currentTarget) setSelId(null); }} onKeyDown={e => { if (e.key === "Escape") setSelId(null); }}>
               <motion.div layoutId={`card-${selId}`} className="db-sheet" transition={{ type: "spring", stiffness: 330, damping: 32 }}>
-                {full && <Editor key={full.id} note={full} onChanged={() => void refresh()} onBack={() => setSelId(null)} />}
+                {full && <Editor key={full.id} note={full} folders={folders} onChanged={() => void refresh()} onBack={() => setSelId(null)} />}
               </motion.div>
             </motion.div>)}
         </AnimatePresence>
@@ -82,6 +102,7 @@ export default function DirB() {
         <button className="db-add" onClick={() => setCapture(true)} aria-label="New capture">Capture</button>
       </nav>
 
+      <AnimatePresence>{toast && <motion.div className="db-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{toast}</motion.div>}</AnimatePresence>
       <Capture open={capture} onClose={() => setCapture(false)} onSaved={() => void refresh()} />
       {settings && <Settings prefs={prefs} setPrefs={setPrefs} onClose={() => setSettings(false)} onRestored={() => void refresh()} />}
     </div>

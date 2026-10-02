@@ -84,3 +84,17 @@ describe("repo", () => {
     expect(dayKey(t)).toMatch(/^\d{4}-\d\d-\d\d$/);
   });
 });
+
+import { cleanFolder } from "./repo";
+describe("folders", () => {
+  it("cleans paths", () => { expect(cleanFolder("  Work / Clients ")).toBe("Work/Clients"); expect(cleanFolder("a/b/c/d/e")).toBe("a/b/c"); expect(cleanFolder("///")).toBe(""); });
+  it("creates, filters (including children), moves and clears", async () => {
+    const kv = new Map<string, string>(); const r = createRepo({ getItem: k => kv.get(k) ?? null, setItem: (k, v) => void kv.set(k, v) });
+    const a = await r.create({ body: "a", folder: "Work" }); await r.create({ body: "b", folder: "Work/Clients" }); await r.create({ body: "c" });
+    expect((await r.list({ view: "all", query: "", folder: "Work" })).length).toBe(2);
+    expect((await r.list({ view: "all", query: "", folder: "Work/Clients" })).length).toBe(1);
+    expect((await r.list({ view: "all", query: "", folder: "Wor" })).length).toBe(0);
+    const m = await r.update(a.id, a.revision, { folder: "Home" }); expect(m.folder).toBe("Home");
+    const c = await r.update(a.id, m.revision, { folder: "" }); expect(c.folder).toBeUndefined();
+  });
+});
