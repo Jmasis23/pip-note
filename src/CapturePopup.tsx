@@ -13,7 +13,7 @@ export default function CapturePopup() {
     document.documentElement.classList.add("cap-win");
     const theme = async () => {
       const p = await repo.getPrefs(); const mq = matchMedia("(prefers-color-scheme: dark)");
-      const d = document.documentElement.dataset; d.theme = p.theme === "dark" || (p.theme === "system" && mq.matches) ? "dark" : "light"; d.accent = p.accent; d.motion = p.reducedMotion ? "reduced" : "full";
+      const d = document.documentElement.dataset; d.theme = p.theme === "dark" || (p.theme === "system" && mq.matches) ? "dark" : "light"; d.accent = p.accent; d.text = p.textSize; d.motion = p.reducedMotion ? "reduced" : "full";
     };
     void theme();
     let off = () => {}; let dead = false;
