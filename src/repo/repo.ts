@@ -1,0 +1,143 @@
+import { ConflictError, DEFAULT_PREFS, NotFoundError, ValidationError } from "../domain";
+import type { Draft, Note, NoteInput, Prefs, View } from "../domain";
+
+/** Storage seam. Browser preview uses localStorage; the Windows app swaps in the Tauri/SQLite bridge. */
+export interface KV { getItem(k: string): string | null; setItem(k: string, v: string): void }
+
+export interface NoteRepo {
+  list(opts: { view: View; query: string }): Promise<Note[]>;
+  get(id: string): Promise<Note>;
+  create(input: NoteInput): Promise<Note>;
+  update(id: string, expectedRevision: number, patch: NoteInput): Promise<Note>;
+  setPinned(id: string, pinned: boolean): Promise<Note>;
+  trash(id: string): Promise<Note>;
+  restore(id: string): Promise<Note>;
+  deleteForever(id: string): Promise<void>;
+  getDraft(): Promise<Draft | null>;
+  saveDraft(text: string): Promise<void>;
+  clearDraft(): Promise<void>;
+  getPrefs(): Promise<Prefs>;
+  setPrefs(p: Prefs): Promise<Prefs>;
+  exportJson(): Promise<string>;
+  exportMarkdown(id: string): Promise<{ filename: string; text: string }>;
+  runDailyBackup(): Promise<boolean>;
+  listBackups(): Promise<{ day: string; count: number }[]>;
+  restoreBackup(day: string): Promise<void>;
+}
+
+type Store = { v: 1; notes: Note[]; draft: Draft | null; prefs: Prefs };
+const KEY = "pip.store.v1";
+const BACKUP_KEY = "pip.backups.v1";
+const KEEP = 7;
+
+const uid = () => (globalThis.crypto?.randomUUID?.() ?? `id-${Math.random().toString(36).slice(2)}${Date.now()}`);
+export const dayKey = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+
+export function deriveTitle(title: string, body: string) {
+  if (title.trim()) return title.trim();
+  const first = body.split("\n").find(l => l.trim());
+  return first ? first.trim().slice(0, 80) : "Untitled";
+}
+
+function validBackup(s: unknown): s is Store {
+  const x = s as Store;
+  return !!x && x.v === 1 && Array.isArray(x.notes) && x.notes.every(n => typeof n.id === "string" && typeof n.revision === "number" && Array.isArray(n.checklist)) && !!x.prefs;
+}
+
+export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
+  const load = (): Store => {
+    const raw = kv.getItem(KEY);
+    if (!raw) return { v: 1, notes: [], draft: null, prefs: { ...DEFAULT_PREFS } };
+    const s = JSON.parse(raw) as Store;
+    if (!validBackup(s)) throw new Error("Stored notes could not be read. Nothing was changed.");
+    return { ...s, prefs: { ...DEFAULT_PREFS, ...s.prefs } };
+  };
+  const save = (s: Store) => {
+    const text = JSON.stringify(s);
+    kv.setItem(KEY, text);
+    if (kv.getItem(KEY) !== text) throw new Error("Couldn't write to storage.");
+  };
+  const find = (s: Store, id: string) => { const n = s.notes.find(n => n.id === id); if (!n) throw new NotFoundError(); return n; };
+  const mutate = (id: string, fn: (n: Note, s: Store) => void) => {
+    const s = load(); const n = find(s, id); fn(n, s); n.updatedAt = now(); n.revision += 1; save(s); return { ...n };
+  };
+  const matches = (n: Note, q: string) => {
+    if (!q.trim()) return true;
+    const hay = `${n.title}\n${n.body}\n${n.checklist.map(c => c.text).join("\n")}`.toLowerCase();
+    return q.toLowerCase().split(/\s+/).filter(Boolean).every(t => hay.includes(t));
+  };
+  const readBackups = (): Record<string, Store> => JSON.parse(kv.getItem(BACKUP_KEY) ?? "{}");
+
+  return {
+    async list({ view, query }) {
+      const s = load(); const today = dayKey(now());
+      return s.notes
+        .filter(n => view === "trash" ? n.deletedAt !== null : n.deletedAt === null)
+        .filter(n => view === "pinned" ? n.pinned : view === "today" ? dayKey(n.createdAt) === today || dayKey(n.updatedAt) === today : true)
+        .filter(n => matches(n, query))
+        .sort((a, b) => Number(b.pinned && view === "all") - Number(a.pinned && view === "all") || b.updatedAt - a.updatedAt)
+        .map(n => ({ ...n }));
+    },
+    async get(id) { return { ...find(load(), id) }; },
+    async create(input) {
+      const body = input.body ?? ""; const checklist = input.checklist ?? [];
+      if (!body.trim() && !checklist.length && !(input.title ?? "").trim()) throw new ValidationError("Write something first.");
+      const s = load(); const t = now();
+      const n: Note = { id: uid(), title: deriveTitle(input.title ?? "", body), body, checklist, createdAt: t, updatedAt: t, pinned: !!input.pinned, deletedAt: null, revision: 1 };
+      s.notes.push(n); save(s); return { ...n };
+    },
+    async update(id, expected, patch) {
+      const s = load(); const n = find(s, id);
+      if (n.deletedAt !== null) throw new ValidationError("Restore this note before editing it.");
+      if (n.revision !== expected) throw new ConflictError({ ...n });
+      return mutate(id, m => {
+        if (patch.body !== undefined) m.body = patch.body;
+        if (patch.checklist !== undefined) m.checklist = patch.checklist;
+        if (patch.pinned !== undefined) m.pinned = patch.pinned;
+        if (patch.title !== undefined) m.title = patch.title.trim() ? patch.title.trim() : deriveTitle("", m.body);
+      });
+    },
+    async setPinned(id, pinned) { return mutate(id, n => { n.pinned = pinned; }); },
+    async trash(id) { return mutate(id, n => { n.deletedAt = now(); }); },
+    async restore(id) { return mutate(id, n => { n.deletedAt = null; }); },
+    async deleteForever(id) {
+      const s = load(); const n = find(s, id);
+      if (n.deletedAt === null) throw new ValidationError("Move the note to Trash first.");
+      s.notes = s.notes.filter(x => x.id !== id); save(s);
+    },
+    async getDraft() { return load().draft; },
+    async saveDraft(text) { const s = load(); s.draft = text.trim() ? { text, updatedAt: now() } : null; save(s); },
+    async clearDraft() { const s = load(); s.draft = null; save(s); },
+    async getPrefs() { return load().prefs; },
+    async setPrefs(p) { const s = load(); s.prefs = p; save(s); return p; },
+    async exportJson() {
+      const s = load();
+      return JSON.stringify({ format: "pip-notes", version: 1, exportedAt: new Date(now()).toISOString(), notes: s.notes.filter(n => n.deletedAt === null) }, null, 2);
+    },
+    async exportMarkdown(id) {
+      const n = find(load(), id);
+      const list = n.checklist.map(c => `- [${c.done ? "x" : " "}] ${c.text}`).join("\n");
+      const text = `# ${n.title}\n\n${n.body}${n.body && list ? "\n\n" : ""}${list}\n`;
+      return { filename: `${n.title.replace(/[\\/:*?"<>|]/g, "-").slice(0, 60) || "note"}.md`, text };
+    },
+    async runDailyBackup() {
+      const day = dayKey(now()); const b = readBackups();
+      if (b[day]) return false;
+      b[day] = load();
+      Object.keys(b).sort().slice(0, Math.max(0, Object.keys(b).length - KEEP)).forEach(k => delete b[k]);
+      kv.setItem(BACKUP_KEY, JSON.stringify(b)); return true;
+    },
+    async listBackups() {
+      const b = readBackups();
+      return Object.keys(b).sort().reverse().map(day => ({ day, count: b[day].notes.length }));
+    },
+    async restoreBackup(day) {
+      const b = readBackups(); const snap = b[day];
+      if (!validBackup(snap)) throw new ValidationError("That backup is damaged. Your current notes were not touched.");
+      const current = load(); b[`${dayKey(now())}-before-restore`] = current; kv.setItem(BACKUP_KEY, JSON.stringify(b));
+      save(snap);
+    },
+  };
+}
+
+export const memoryKV = (): KV => { const m = new Map<string, string>(); return { getItem: k => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) }; };
