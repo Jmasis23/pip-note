@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import type { Prefs, Theme } from "../domain";
+import type { Accent, Prefs, Size, Theme } from "../domain";
+import { Dropdown } from "./Dropdown";
 import { repo } from "../useNotes";
 import { PRESETS, getAiRaw, normalizeBase, setAiConfig, testAi, validBase, AiError, aiHasStoredKey } from "../ai";
 import { exportFile, isNative } from "../native";
@@ -10,6 +11,11 @@ const keyName = (e: KeyboardEvent) => {
   return [e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", e.metaKey && "Win", k].filter(Boolean).join("+");
 };
 
+const SIZES: [Size, string][] = [["s", "Small"], ["m", "Medium"], ["l", "Large"]];
+const ACCENTS: [Accent, string, string][] = [["lavender", "#8A90FF", "Lavender"], ["sky", "#4FA8F5", "Sky"], ["mint", "#3DBE8C", "Mint"], ["peach", "#F59A6B", "Peach"], ["rose", "#EE6F96", "Rose"], ["graphite", "#6B6F82", "Graphite"]];
+function Seg<T extends string>({ label, value, opts, onChange }: { label: string; value: T; opts: [T, string][]; onChange: (v: T) => void }) {
+  return <div className="seg" role="radiogroup" aria-label={label}>{opts.map(([id, t]) => <button key={id} role="radio" aria-checked={value === id} className={value === id ? "on" : ""} onClick={() => onChange(id)}>{t}</button>)}</div>;
+}
 export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Prefs; setPrefs: (p: Prefs) => Promise<void>; onClose: () => void; onRestored: () => void }) {
   const [rec, setRec] = useState(false);
   const [msg, setMsg] = useState("");
@@ -49,11 +55,21 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
         {msg && <p className="status" role="status">{msg}</p>}
         <div className="row"><div><b>Theme</b></div>
           <div className="seg" role="radiogroup" aria-label="Theme">{(["system", "light", "dark"] as Theme[]).map(t => <button key={t} role="radio" aria-checked={prefs.theme === t} className={prefs.theme === t ? "on" : ""} onClick={() => void setPrefs({ ...prefs, theme: t })}>{t[0].toUpperCase() + t.slice(1)}</button>)}</div></div>
+        <div className="row col look"><div><b>Appearance</b><p>Taste settings. They apply right away and stay on this device.</p></div>
+          <div className="look-grid">
+            <span>Card size</span><Seg label="Card size" value={prefs.cardSize} opts={SIZES} onChange={v => void setPrefs({ ...prefs, cardSize: v })} />
+            <span>Text size</span><Seg label="Text size" value={prefs.textSize} opts={SIZES} onChange={v => void setPrefs({ ...prefs, textSize: v })} />
+            <span>Accent</span>
+            <div className="swatches" role="radiogroup" aria-label="Accent colour">{ACCENTS.map(([id, hex, name]) => <button key={id} role="radio" aria-checked={prefs.accent === id} aria-label={name} title={name} className={prefs.accent === id ? "on" : ""} style={{ background: hex }} onClick={() => void setPrefs({ ...prefs, accent: id })} />)}</div>
+            <span>Cards</span><Seg label="Card colours" value={prefs.tint} opts={[["color", "Colourful"], ["quiet", "Quiet"]]} onChange={v => void setPrefs({ ...prefs, tint: v })} />
+          </div></div>
         <label className="row"><div><b>Reduce motion</b><p>Swap movement for plain state changes.</p></div><input type="checkbox" className="switch" checked={prefs.reducedMotion} onChange={e => void setPrefs({ ...prefs, reducedMotion: e.target.checked })} /></label>
         <label className="row"><div><b>Open when I sign in</b><p>Windows app only. Off by default.</p></div><input type="checkbox" className="switch" checked={prefs.launchAtLogin} onChange={e => void setPrefs({ ...prefs, launchAtLogin: e.target.checked })} /></label>
         <div className="row"><div><b>Export</b><p>All active notes as one JSON file.</p></div><button className="ghost field" onClick={() => void exportAll()}>Export JSON</button></div>
         <div className="row col ai-set"><div><b>AI (bring your own key)</b><p>Optional. Pip works fully without it. {isNative() ? "Your key is kept in Windows Credential Manager and requests go straight to the provider you pick." : "Your key stays in this browser and requests go straight to the provider you pick."}  Notes you run through AI are sent to that provider.</p></div>
-          <div className="ai-presets" role="group" aria-label="Provider">{PRESETS.map(pr => <button key={pr.id} className={`ghost ${aiBase === pr.baseUrl ? "on" : ""}`} aria-pressed={aiBase === pr.baseUrl} onClick={() => { setAiBase(pr.baseUrl); setAiModel(pr.model); setAiState(""); }}>{pr.label}</button>)}</div>
+          <Dropdown label="Provider" value={PRESETS.find(pr => pr.baseUrl === aiBase)?.id ?? "custom"} placeholder="Custom"
+            options={[...PRESETS.map(pr => ({ value: pr.id, label: pr.label, hint: pr.baseUrl.startsWith("http://") ? "no key" : "" })), { value: "custom", label: "Custom endpoint" }]}
+            onChange={v => { const pr = PRESETS.find(x => x.id === v); setAiState(""); if (pr) { setAiBase(pr.baseUrl); setAiModel(pr.model); } else { setAiBase(""); setAiModel(""); } }} />
           <input aria-label="Base URL" placeholder="Base URL, e.g. https://api.openai.com/v1" value={aiBase} onChange={e => { setAiBase(e.target.value); setAiState(""); }} spellCheck={false} />
           <input aria-label="API key" type="password" autoComplete="off" placeholder={aiHasStoredKey() ? "Saved in Windows Credential Manager. Type to replace" : local ? "API key (not needed for local)" : "API key"} value={aiKey} onChange={e => { setAiKey(e.target.value); setAiState(""); }} />
           <input aria-label="Model" placeholder="Model, e.g. gpt-4o-mini" value={aiModel} onChange={e => { setAiModel(e.target.value); setAiState(""); }} spellCheck={false} />

@@ -6,6 +6,7 @@ import { cleanFolder } from "../repo/repo";
 import { exportFile } from "../native";
 import { plainToRich, richToPlain, sanitizeRich } from "../rich";
 import { RichBody } from "./RichBody";
+import { Dropdown, NewFolder } from "./Dropdown";
 import type { RichHandle } from "./RichBody";
 import { AiError, cleanUp, suggestMeta, useAi } from "../ai";
 
@@ -46,7 +47,7 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
   };
   const [folder, setFolder] = useState(note.folder ?? "");
   useEffect(() => setFolder(note.folder ?? ""), [note.id, note.folder]);
-  const moveTo = async () => { const f = cleanFolder(folder); setFolder(f); if (f === (note.folder ?? "")) return; await flush(); try { const n = await repo.update(note.id, rev.current, { folder: f }); rev.current = n.revision; onChanged(); } catch { setErr("Couldn't move it."); setSave("error"); } };
+  const moveTo = async (to?: string) => { const f = cleanFolder(to ?? folder); setFolder(f); if (f === (note.folder ?? "")) return; await flush(); try { const n = await repo.update(note.id, rev.current, { folder: f }); rev.current = n.revision; onChanged(); } catch { setErr("Couldn't move it."); setSave("error"); } };
 
   useEffect(() => { setTitle(note.title); setBody(note.body); setRich(note.rich ?? plainToRich(note.body)); setSeed(x => x + 1); setItems(note.checklist); rev.current = note.revision; setSave("idle"); setConflict(null); setErr(""); dirty.current = false; }, [note.id]);
   useEffect(() => {
@@ -95,12 +96,12 @@ export function Editor({ note, folders = [], onChanged, onBack }: { note: Note; 
         </div>
       </div>
       {!locked && (
-        <label className="ed-folder">
+        <div className="ed-folder">
           <span>Folder</span>
-          <input list="pip-folders" value={folder} placeholder="None. Use Work/Clients to nest" aria-label="Folder" maxLength={90}
-            onChange={e => setFolder(e.target.value)} onBlur={() => void moveTo()} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }} />
-          <datalist id="pip-folders">{folders.map(f => <option key={f} value={f} />)}</datalist>
-        </label>)}
+          <Dropdown label="Folder" value={folder} placeholder="None" options={[{ value: "", label: "None" }, ...folders.map(f => ({ value: f, label: f }))]}
+            onChange={v => { setFolder(v); void moveTo(v); }}
+            footer={close => <NewFolder onAdd={f => { const c = cleanFolder(f); if (c) { setFolder(c); void moveTo(c); } close(); }} />} />
+        </div>)}
       {ai && !locked && (
         <div className="ai-bar" aria-label="AI tools">
           <button className="ai-btn" disabled={!!busy} onClick={() => void runAi("meta")}>{busy === "meta" ? "Thinking" : "Title and folder"}</button>

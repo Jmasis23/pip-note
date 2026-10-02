@@ -18,8 +18,11 @@ struct AppState { kv: FileKv, shake: Arc<AtomicBool>, shortcut: Mutex<Option<Sho
 
 /// Bring the window forward and tell the web view to open Capture. Used by the shake, the hotkey and the tray.
 pub fn open_capture(app: &AppHandle) {
-    show_main(app);
-    let _ = app.emit("pip://capture", ());
+    // Only the small capture box comes up. The main window stays where it is (hidden in the tray or behind other apps).
+    if let Some(w) = app.get_webview_window("capture") {
+        let _ = w.center(); let _ = w.show(); let _ = w.set_focus();
+        let _ = app.emit_to("capture", "pip://capture-show", ());
+    }
 }
 fn show_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") { let _ = w.unminimize(); let _ = w.show(); let _ = w.set_focus(); }
@@ -77,6 +80,13 @@ async fn ai_complete(st: State<'_, AppState>, messages: Vec<Msg>, max_tokens: Op
 }
 
 #[tauri::command]
+fn capture_hide(app: AppHandle) { if let Some(w) = app.get_webview_window("capture") { let _ = w.hide(); } }
+#[tauri::command]
+fn capture_saved(app: AppHandle) {
+    if let Some(w) = app.get_webview_window("capture") { let _ = w.hide(); }
+    let _ = app.emit_to("main", "pip://notes-changed", ());
+}
+#[tauri::command]
 fn win_minimize(w: tauri::WebviewWindow) { let _ = w.minimize(); }
 #[tauri::command]
 fn win_toggle_max(w: tauri::WebviewWindow) -> bool {
@@ -132,6 +142,10 @@ pub fn run() {
             app.manage(st);
             shake::start(handle.clone(), shake);
 
+            // The capture box: a small always-on-top window that stays hidden until the shake, hotkey or tray asks for it.
+            tauri::WebviewWindowBuilder::new(app, "capture", tauri::WebviewUrl::App("index.html?capture=1".into()))
+                .title("Pip capture").inner_size(600.0, 330.0).decorations(false).resizable(false).always_on_top(true).skip_taskbar(true).visible(false).center().build()?;
+
             let open = MenuItem::with_id(app, "open", "Open Pip", true, None::<&str>)?;
             let cap = MenuItem::with_id(app, "capture", "Capture a thought", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -145,7 +159,7 @@ pub fn run() {
         })
         // Closing the window keeps Pip in the tray so the shake and hotkey still work.
         .on_window_event(|w, ev| { if let WindowEvent::CloseRequested { api, .. } = ev { api.prevent_close(); let _ = w.hide(); } })
-        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, set_shake_enabled, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close])
+        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, set_shake_enabled, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }

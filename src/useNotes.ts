@@ -24,7 +24,7 @@ export function useNotes() {
       repo.list({ view: "pinned", query: "" }), repo.list({ view: "trash", query: "" }), repo.getPrefs(),
     ]);
     if (my !== seq.current) return;
-    setNotes(list); setFolders([...new Set(a.map(n => n.folder).filter((f): f is string => !!f))].sort()); setCounts({ all: a.length, today: t.length, pinned: p.length, trash: tr.length }); setPrefsState(pr);
+    setNotes(list); setFolders([...new Set([...a.map(n => n.folder).filter((f): f is string => !!f), ...(pr.extraFolders ?? [])])].sort()); setCounts({ all: a.length, today: t.length, pinned: p.length, trash: tr.length }); setPrefsState(pr);
   }, [view, query, folder]);
 
   useEffect(() => { void refresh(); }, [refresh]);

@@ -16,10 +16,16 @@ export type Note = {
 };
 export type Draft = { text: string; updatedAt: number };
 export type Theme = "light" | "dark" | "system";
-export type Prefs = { shortcut: string; theme: Theme; reducedMotion: boolean; launchAtLogin: boolean; shakeToCapture: boolean };
+export type Size = "s" | "m" | "l";
+export type Accent = "lavender" | "sky" | "mint" | "peach" | "rose" | "graphite";
+export type Prefs = {
+  shortcut: string; theme: Theme; reducedMotion: boolean; launchAtLogin: boolean; shakeToCapture: boolean;
+  cardSize: Size; textSize: Size; accent: Accent; /** "quiet" turns the tinted cards neutral. */ tint: "color" | "quiet";
+  /** Folders created before any note is in them. */ extraFolders: string[];
+};
 export type View = "all" | "today" | "pinned" | "trash";
 export type NoteInput = Partial<Pick<Note, "title" | "body" | "rich" | "checklist" | "pinned" | "folder">>;
-export const DEFAULT_PREFS: Prefs = { shortcut: "Ctrl+Shift+Space", theme: "system", reducedMotion: false, launchAtLogin: false, shakeToCapture: true };
+export const DEFAULT_PREFS: Prefs = { shortcut: "Ctrl+Shift+Space", theme: "system", reducedMotion: false, launchAtLogin: false, shakeToCapture: true, cardSize: "m", textSize: "m", accent: "lavender", tint: "color", extraFolders: [] };
 export class ConflictError extends Error {
   constructor(public latest: Note) { super("This note changed somewhere else."); this.name = "ConflictError"; }
 }

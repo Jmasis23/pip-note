@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { Pip } from "../components/Pip";
 import { Capture } from "../components/Capture";
@@ -6,8 +6,9 @@ import { Editor } from "../components/Editor";
 import { Settings } from "../components/Settings";
 import { AskPanel } from "../components/AskPanel";
 import { Titlebar } from "../components/Titlebar";
+import { cleanFolder } from "../repo/repo";
 import { useAi } from "../ai";
-import { isNative, onNativeEvent, syncDesktopPrefs } from "../native";
+import { initStorage, isNative, onNativeEvent, syncDesktopPrefs } from "../native";
 import { repo, useNotes } from "../useNotes";
 import type { Note, View } from "../domain";
 import { preview, useFull, useTriggers, when } from "./util";
@@ -30,13 +31,18 @@ export default function DirB() {
       const dark = prefs.theme === "dark" || (prefs.theme === "system" && mq.matches);
       document.documentElement.dataset.theme = dark ? "dark" : "light";
       document.documentElement.dataset.motion = prefs.reducedMotion ? "reduced" : "full";
+      const d = document.documentElement.dataset; d.accent = prefs.accent; d.cards = prefs.cardSize; d.text = prefs.textSize; d.tint = prefs.tint;
       document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#12131A" : "#F7F7FB");
     };
     apply(); mq.addEventListener("change", apply); return () => mq.removeEventListener("change", apply);
-  }, [prefs.theme, prefs.reducedMotion]);
+  }, [prefs.theme, prefs.reducedMotion, prefs.accent, prefs.cardSize, prefs.textSize, prefs.tint]);
   const [toast, setToast] = useState("");
-  // Desktop: the Rust side owns the global shake and hotkey and tells us when to open capture.
-  useEffect(() => { if (!isNative()) return; let off = () => {}; let dead = false; void onNativeEvent("pip://capture", () => { setSelId(null); setSettings(false); setAsk(false); setCapture(true); }).then(f => { if (dead) f(); else off = f; }); return () => { dead = true; off(); }; }, []);
+  const [newFolder, setNewFolder] = useState<string | null>(null);
+  const addFolder = async () => { const f = cleanFolder(newFolder ?? ""); setNewFolder(null); if (!f) return; if (!folders.includes(f)) await setPrefs({ ...prefs, extraFolders: [...new Set([...(prefs.extraFolders ?? []), f])] }); setView("all"); setFolder(f); await refresh(); };
+  // Desktop: the capture box is its own small window. When it saves, reload the store and redraw the board.
+  const refreshRef = useRef(refresh); refreshRef.current = refresh;
+  useEffect(() => { if (!isNative()) return; let off = () => {}; let dead = false; void onNativeEvent("pip://notes-changed", () => { void initStorage().then(() => refreshRef.current()); }).then(f => { if (dead) f(); else off = f; }); return () => { dead = true; off(); }; }, []);
+
   useEffect(() => { syncDesktopPrefs(prefs.shakeToCapture, prefs.shortcut); }, [prefs.shakeToCapture, prefs.shortcut]);
   useEffect(() => {
     const on = async (e: ClipboardEvent) => {
@@ -65,13 +71,16 @@ export default function DirB() {
         <button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button>
       </header>
 
-      {(folders.length > 0 || folder) && view !== "trash" && (() => {
+      {view !== "trash" && (() => {
         const top = [...new Set(folders.map(f => f.split("/")[0]))];
         const root = folder.split("/")[0];
         const kids = [...new Set(folders.filter(f => root && f.startsWith(root + "/")).map(f => f.split("/").slice(0, 2).join("/")))];
         const chip = (id: string, label: string) => <button key={id || "all"} className="db-chip" aria-pressed={folder === id} onClick={() => setFolder(folder === id ? (id.includes("/") ? id.split("/").slice(0, -1).join("/") : "") : id)}>{label}</button>;
         return (<div className="db-folders" role="group" aria-label="Folders">
           {chip("", "All folders")}{top.map(f => chip(f, f))}{kids.length > 0 && <i aria-hidden />}{kids.map(f => chip(f, f.split("/")[1]))}
+          {newFolder === null
+            ? <button className="db-chip db-chip-add" onClick={() => setNewFolder("")} aria-label="New folder"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>Folder</button>
+            : <input className="db-chip-in" autoFocus value={newFolder} maxLength={60} placeholder="Folder name" aria-label="New folder name" onChange={e => setNewFolder(e.target.value)} onBlur={() => void addFolder()} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setNewFolder(null); }} />}
         </div>);
       })()}
       <LayoutGroup>

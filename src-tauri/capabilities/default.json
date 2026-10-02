@@ -2,6 +2,6 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Pip main window. Commands are explicit Rust functions; there is no shell, file-system or HTTP access from the web view.",
-  "windows": ["main"],
+  "windows": ["main", "capture"],
   "permissions": ["core:default", "core:window:allow-start-dragging", "core:window:allow-toggle-maximize", "core:window:allow-internal-toggle-maximize"]
 }
