@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { Pip } from "../components/Pip";
 import { Capture } from "../components/Capture";
@@ -20,6 +20,7 @@ export default function DirB() {
   const [settings, setSettings] = useState(false);
   useTriggers(prefs, () => setCapture(true), capture || settings);
   const full = useFull(selId, notes);
+  useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
 
   return (
     <div className="db">

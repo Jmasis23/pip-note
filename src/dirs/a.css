@@ -55,3 +55,4 @@
   .da[data-pane=edit] .da-main{transform:none}.da-main .editor{padding:10px 20px 24px;max-width:none}
   .da .capture.island{max-width:calc(100vw - 24px)}
 }
+@media (max-width:760px){.da[data-pane=edit] .da-island-slot{display:none}}
