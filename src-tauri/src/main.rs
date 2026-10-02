@@ -1,0 +1,1 @@
+fn main(){ pip_note_lib::run() }
