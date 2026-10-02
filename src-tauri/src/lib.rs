@@ -121,9 +121,8 @@ fn update_install(app: AppHandle, pending: State<'_, Pending>) -> Result<(), Str
     app.restart()
 }
 #[tauri::command]
-fn set_shake_level(st: State<AppState>, level: String) {
-    let n = match level.as_str() { "gentle" => 0, "eager" => 2, _ => 1 };
-    st.level.store(n, Ordering::Relaxed);
+fn set_shake_level(st: State<AppState>, level: u8) {
+    st.level.store(level.min(100), Ordering::Relaxed);
 }
 #[tauri::command]
 fn set_shake_enabled(st: State<AppState>, enabled: bool) { st.shake.store(enabled, Ordering::Relaxed); }
@@ -167,7 +166,7 @@ pub fn run() {
             let dir = app.path().app_data_dir()?;
             let kv = FileKv::open(dir.join("store")).map_err(|e| e.to_string())?;
             let shake = Arc::new(AtomicBool::new(true));
-            let level = Arc::new(std::sync::atomic::AtomicU8::new(1));
+            let level = Arc::new(std::sync::atomic::AtomicU8::new(50));
             let st = AppState { kv, shake: shake.clone(), level: level.clone(), shortcut: Mutex::new(None) };
             let handle = app.handle().clone();
             let _ = register_shortcut(&handle, &st, parse_shortcut("Ctrl+Shift+Space")?); // default until the web view says otherwise

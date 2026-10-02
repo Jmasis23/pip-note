@@ -4,13 +4,11 @@ pub struct ShakeOpts { pub window_ms: f64, pub min_swing: f64, pub reversals: u3
 pub const DEFAULT_SHAKE: ShakeOpts = ShakeOpts { window_ms: 700.0, min_swing: 40.0, reversals: 4, min_speed: 0.6 };
 
 impl ShakeOpts {
-    /// Same numbers as SHAKE_LEVELS in src/gesture.ts. 0 gentle, 2 hair-trigger, anything else normal.
-    pub fn level(l: u8) -> ShakeOpts {
-        match l {
-            0 => ShakeOpts { window_ms: 800.0, min_swing: 60.0, reversals: 5, min_speed: 0.8 },
-            2 => ShakeOpts { window_ms: 700.0, min_swing: 24.0, reversals: 3, min_speed: 0.35 },
-            _ => DEFAULT_SHAKE,
-        }
+    /// Sensitivity 0 (firm shake) to 100 (hair-trigger), 50 = default. Same maths as shakeOpts in src/gesture.ts.
+    pub fn from_sens(sens: u8) -> ShakeOpts {
+        let t = sens.min(100) as f64 / 100.0;
+        let l3 = |a: f64, b: f64, c: f64| if t <= 0.5 { a + (b - a) * (t / 0.5) } else { b + (c - b) * ((t - 0.5) / 0.5) };
+        ShakeOpts { window_ms: l3(800.0, 700.0, 700.0), min_swing: l3(60.0, 40.0, 24.0), reversals: l3(5.0, 4.0, 3.0).round() as u32, min_speed: l3(0.8, 0.6, 0.35) }
     }
 }
 
@@ -75,11 +73,11 @@ mod tests {
         for (i, (x, y)) in path.iter().enumerate() { if d.moved(*x, *y, i as f64 * step, down) { n += 1; } } n
     }
     fn run_l(path: &[(f64, f64)], level: u8) -> u32 {
-        let mut d = ShakeDetector::new(); d.set_opts(ShakeOpts::level(level)); let mut n = 0;
+        let mut d = ShakeDetector::new(); d.set_opts(ShakeOpts::from_sens(level)); let mut n = 0;
         for (i, (x, y)) in path.iter().enumerate() { if d.moved(*x, *y, i as f64 * 14.0, false) { n += 1; } } n
     }
-    #[test] fn hair_trigger_fires_on_small_wiggle_normal_does_not() { let p = shake(4, 30.0, 4); assert_eq!(run_l(&p, 1), 0); assert_eq!(run_l(&p, 2), 1); }
-    #[test] fn gentle_needs_a_bigger_shake_than_normal() { let p = shake(6, 65.0, 5); let (n, g, big) = (run_l(&p, 1), run_l(&p, 0), run_l(&shake(10, 90.0, 5), 0)); assert_eq!((n, g, big), (1, 0, 1)); }
+    #[test] fn hair_trigger_fires_on_small_wiggle_normal_does_not() { let p = shake(4, 30.0, 4); assert_eq!(run_l(&p, 50), 0); assert_eq!(run_l(&p, 100), 1); }
+    #[test] fn gentle_needs_a_bigger_shake_than_normal() { let p = shake(6, 65.0, 5); let (n, g, big) = (run_l(&p, 50), run_l(&p, 0), run_l(&shake(10, 90.0, 5), 0)); assert_eq!((n, g, big), (1, 0, 1)); }
     #[test] fn fires_on_back_and_forth() { assert_eq!(run(&shake(6, 80.0, 5), 14.0, false), 1); }
     #[test] fn fires_on_vertical() { let v: Vec<_> = shake(6, 80.0, 5).into_iter().map(|(x, y)| (y, x)).collect(); assert_eq!(run(&v, 14.0, false), 1); }
     #[test] fn ignores_single_sweep() { assert_eq!(run(&shake(1, 400.0, 30), 10.0, false), 0); }

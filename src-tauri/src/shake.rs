@@ -30,7 +30,7 @@ pub fn start(app: AppHandle, enabled: Arc<AtomicBool>, level: Arc<AtomicU8>) {
                             // A missed button-up must not disable the gesture forever.
                             if c.buttons > 0 && c.last_button.elapsed().as_secs() > 8 { c.buttons = 0; }
                             let want = c.level.load(Ordering::Relaxed);
-                            if want != c.applied { c.applied = want; c.det.set_opts(ShakeOpts::level(want)); }
+                            if want != c.applied { c.applied = want; c.det.set_opts(ShakeOpts::from_sens(want)); }
                             if c.enabled.load(Ordering::Relaxed) {
                                 let ms = &*(l.0 as *const MSLLHOOKSTRUCT);
                                 let t = c.t0.elapsed().as_secs_f64() * 1000.0;
@@ -49,7 +49,7 @@ pub fn start(app: AppHandle, enabled: Arc<AtomicBool>, level: Arc<AtomicU8>) {
         CallNextHookEx(HHOOK::default(), code, w, l)
     }
 
-    let _ = CTX.set(Mutex::new(Ctx { app, enabled, level, applied: 1, det: ShakeDetector::new(), t0: Instant::now(), buttons: 0, last_button: Instant::now() }));
+    let _ = CTX.set(Mutex::new(Ctx { app, enabled, level, applied: 50, det: ShakeDetector::new(), t0: Instant::now(), buttons: 0, last_button: Instant::now() }));
     std::thread::spawn(|| unsafe {
         let module = GetModuleHandleW(None).map(|m| HINSTANCE(m.0)).unwrap_or_default();
         if SetWindowsHookExW(WH_MOUSE_LL, Some(hook), module, 0).is_err() { return; }

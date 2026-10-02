@@ -35,9 +35,9 @@ export const updater = {
   download: () => call<string>("update_download"),
   install: () => call<void>("update_install"),
 };
-export const syncDesktopPrefs = (shakeEnabled: boolean, shortcut: string, level: string = "normal") => {
+export const syncDesktopPrefs = (shakeEnabled: boolean, shortcut: string, sens: number = 50) => {
   if (!isNative()) return;
   void call("set_shake_enabled", { enabled: shakeEnabled }).catch(() => {});
-  void call("set_shake_level", { level }).catch(() => {});
+  void call("set_shake_level", { level: Math.round(sens) }).catch(() => {});
   void call("set_shortcut", { shortcut }).catch(() => {});
 };

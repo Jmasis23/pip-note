@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createShakeDetector, SHAKE_LEVELS } from "../gesture";
+import { createShakeDetector, shakeOpts } from "../gesture";
 import { repo } from "../useNotes";
 import type { Note, Prefs } from "../domain";
 import { isNative } from "../native";
@@ -19,10 +19,10 @@ export function useTriggers(prefs: Prefs, trigger: () => void, paused: boolean) 
   const native = isNative(); // the desktop app owns shake and hotkey system-wide in Rust
   useEffect(() => {
     if (native || !prefs.shakeToCapture || paused) return;
-    const det = createShakeDetector(trigger, SHAKE_LEVELS[prefs.shakeLevel ?? "normal"]);
+    const det = createShakeDetector(trigger, shakeOpts(prefs.shakeSens ?? 50));
     const on = (e: PointerEvent) => { if (e.pointerType === "mouse") det.move(e.clientX, e.clientY, e.timeStamp, e.buttons); };
     window.addEventListener("pointermove", on, { passive: true }); return () => window.removeEventListener("pointermove", on);
-  }, [prefs.shakeToCapture, prefs.shakeLevel, paused]);
+  }, [prefs.shakeToCapture, prefs.shakeSens, paused]);
   useEffect(() => {
     if (native) return;
     const parts = prefs.shortcut.split("+"), key = parts[parts.length - 1];

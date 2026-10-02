@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createShakeDetector, SHAKE_LEVELS } from "./gesture";
-import type { ShakeLevel } from "./gesture";
+import { createShakeDetector, shakeOpts } from "./gesture";
 
 const run = (path: [number, number][], stepMs: number, buttons = 0) => {
   let fired = 0; const d = createShakeDetector(() => fired++, undefined, 1200);
@@ -23,7 +22,9 @@ describe("shake detector", () => {
 });
 
 describe("shake sensitivity", () => {
-  const at = (l: ShakeLevel, path: [number, number][]) => { let n = 0; const d = createShakeDetector(() => n++, SHAKE_LEVELS[l], 1200); path.forEach(([x, y], i) => d.move(x, y, i * 14, 0)); return n; };
-  it("hair-trigger fires on a small wiggle that normal ignores", () => { const p = shake(4, 30, 4); expect(at("normal", p)).toBe(0); expect(at("eager", p)).toBe(1); });
-  it("gentle ignores a normal shake but fires on a big one", () => { expect(at("normal", shake(6, 65))).toBe(1); expect(at("gentle", shake(6, 65))).toBe(0); expect(at("gentle", shake(10, 90))).toBe(1); });
+  const at = (v: number, path: [number, number][]) => { let n = 0; const d = createShakeDetector(() => n++, shakeOpts(v), 1200); path.forEach(([x, y], i) => d.move(x, y, i * 14, 0)); return n; };
+  it("50 equals the old default", () => { expect(shakeOpts(50)).toEqual({ windowMs: 700, minSwing: 40, reversals: 4, minSpeed: 0.6 }); });
+  it("hair-trigger end fires on a small wiggle that the middle ignores", () => { const p = shake(4, 30, 4); expect(at(50, p)).toBe(0); expect(at(100, p)).toBe(1); });
+  it("firm end ignores a normal shake but fires on a big one", () => { expect(at(50, shake(6, 65))).toBe(1); expect(at(0, shake(6, 65))).toBe(0); expect(at(0, shake(10, 90))).toBe(1); });
+  it("is monotonic and clamps", () => { expect(shakeOpts(-20)).toEqual(shakeOpts(0)); expect(shakeOpts(500)).toEqual(shakeOpts(100)); expect(shakeOpts(75).minSwing).toBeLessThan(shakeOpts(25).minSwing); });
 });

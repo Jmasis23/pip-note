@@ -2,13 +2,13 @@
 export type ShakeOpts = { windowMs: number; minSwing: number; reversals: number; minSpeed: number };
 export const DEFAULT_SHAKE: ShakeOpts = { windowMs: 700, minSwing: 40, reversals: 4, minSpeed: 0.6 };
 
-export type ShakeLevel = "gentle" | "normal" | "eager";
-/** Same numbers live in src-tauri/core/src/gesture.rs. Keep both in step. */
-export const SHAKE_LEVELS: Record<ShakeLevel, ShakeOpts> = {
-  gentle: { windowMs: 800, minSwing: 60, reversals: 5, minSpeed: 0.8 },
-  normal: DEFAULT_SHAKE,
-  eager: { windowMs: 700, minSwing: 24, reversals: 3, minSpeed: 0.35 },
-};
+
+/** 0 = firm shake needed, 50 = default, 100 = hair-trigger. Same maths lives in src-tauri/core/src/gesture.rs (ShakeOpts::from_sens). */
+const lerp3 = (a: number, b: number, c: number, t: number) => (t <= 0.5 ? a + (b - a) * (t / 0.5) : b + (c - b) * ((t - 0.5) / 0.5));
+export function shakeOpts(sens: number): ShakeOpts {
+  const t = Math.min(100, Math.max(0, Number.isFinite(sens) ? sens : 50)) / 100;
+  return { windowMs: lerp3(800, 700, 700, t), minSwing: lerp3(60, 40, 24, t), reversals: Math.round(lerp3(5, 4, 3, t)), minSpeed: lerp3(0.8, 0.6, 0.35, t) };
+}
 
 type Pt = { x: number; y: number; t: number };
 

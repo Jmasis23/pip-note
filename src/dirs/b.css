@@ -187,3 +187,18 @@
 .db-draft-del:hover{opacity:1;color:#c0392b}
 :root[data-theme=dark] .db-draft{background:#232433;box-shadow:0 8px 24px -12px rgba(0,0,0,.5)}
 .sheet .ghost.field.primary{background:var(--accent,#8A90FF);color:#fff;border-color:transparent}.sheet [data-update=current] .ghost.field{opacity:.7}
+
+/* Compact header: one slim row so the board gets the space. */
+.db-hero{padding:12px 0 10px;gap:12px;min-height:0}
+.db-native .db-hero{padding-top:10px}
+.db-mascot{width:40px;height:40px;border-radius:14px;transform:rotate(-4deg)}
+.db-mascot svg{width:30px;height:30px}
+.db-hero h1{font-size:22px;line-height:1.1;letter-spacing:-.03em;white-space:nowrap}
+.db-hero h1 span{color:var(--muted)}
+.db-hero p{margin:3px 0 0;font-size:12.5px;display:block}
+.db-hero kbd{padding:1px 6px;font-size:11.5px}
+.db-gear{top:50%;transform:translateY(-50%);right:0}
+@media (max-width:760px){.db-hero h1{font-size:19px}.db-hero p{display:none}.db-gear{top:50%;right:0}}
+
+.sens{display:flex;align-items:center;gap:12px;width:100%;font-size:12.5px;color:var(--muted)}
+.sens input{flex:1;accent-color:var(--accent,#8A90FF);height:4px}

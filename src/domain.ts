@@ -16,17 +16,16 @@ export type Note = {
 };
 export type Draft = { id: string; text: string; updatedAt: number };
 export type Theme = "light" | "dark" | "system";
-export type ShakeLevel = "gentle" | "normal" | "eager";
 export type Size = "s" | "m" | "l";
 export type Accent = "lavender" | "sky" | "mint" | "peach" | "rose" | "graphite";
 export type Prefs = {
-  shortcut: string; theme: Theme; reducedMotion: boolean; launchAtLogin: boolean; shakeToCapture: boolean; shakeLevel: ShakeLevel;
+  shortcut: string; theme: Theme; reducedMotion: boolean; launchAtLogin: boolean; shakeToCapture: boolean; /** 0 to 100, 50 is the default. */ shakeSens: number;
   cardSize: Size; textSize: Size; accent: Accent; /** "quiet" turns the tinted cards neutral. */ tint: "color" | "quiet";
   /** Folders created before any note is in them. */ extraFolders: string[];
 };
 export type View = "all" | "today" | "pinned" | "drafts" | "trash";
 export type NoteInput = Partial<Pick<Note, "title" | "body" | "rich" | "checklist" | "pinned" | "folder">>;
-export const DEFAULT_PREFS: Prefs = { shortcut: "Ctrl+Shift+Space", theme: "system", reducedMotion: false, launchAtLogin: false, shakeToCapture: true, shakeLevel: "normal", cardSize: "m", textSize: "m", accent: "lavender", tint: "color", extraFolders: [] };
+export const DEFAULT_PREFS: Prefs = { shortcut: "Ctrl+Shift+Space", theme: "system", reducedMotion: false, launchAtLogin: false, shakeToCapture: true, shakeSens: 50, cardSize: "m", textSize: "m", accent: "lavender", tint: "color", extraFolders: [] };
 export class ConflictError extends Error {
   constructor(public latest: Note) { super("This note changed somewhere else."); this.name = "ConflictError"; }
 }

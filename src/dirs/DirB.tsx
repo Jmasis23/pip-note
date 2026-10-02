@@ -46,7 +46,7 @@ export default function DirB() {
   const refreshRef = useRef(refresh); refreshRef.current = refresh;
   useEffect(() => { if (!isNative()) return; let off = () => {}; let dead = false; void onNativeEvent("pip://notes-changed", () => { void initStorage().then(() => refreshRef.current()); }).then(f => { if (dead) f(); else off = f; }); return () => { dead = true; off(); }; }, []);
 
-  useEffect(() => { syncDesktopPrefs(prefs.shakeToCapture, prefs.shortcut, prefs.shakeLevel); }, [prefs.shakeToCapture, prefs.shortcut, prefs.shakeLevel]);
+  useEffect(() => { syncDesktopPrefs(prefs.shakeToCapture, prefs.shortcut, prefs.shakeSens ?? 50); }, [prefs.shakeToCapture, prefs.shortcut, prefs.shakeSens]);
   useEffect(() => {
     const on = async (e: ClipboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -68,7 +68,7 @@ export default function DirB() {
       <header className="db-hero">
         <div className="db-mascot"><Pip size={92} look /></div>
         <div>
-          <h1>Thought it?<br />Keep it.</h1>
+          <h1>Thought it? <span>Keep it.</span></h1>
           <p>Shake the mouse, or press <kbd>{prefs.shortcut.replace(/\+/g, " + ")}</kbd></p>
         </div>
         <button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button>

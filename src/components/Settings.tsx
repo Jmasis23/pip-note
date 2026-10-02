@@ -50,14 +50,13 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Settings">
         <header><h2>Settings</h2><button className="ghost" onClick={onClose}>Done</button></header>
         <label className="row"><div><b>Shake to capture</b><p>Shake the mouse side to side to open capture. Ignored while a button is held.</p></div><input type="checkbox" className="switch" checked={prefs.shakeToCapture} onChange={e => void setPrefs({ ...prefs, shakeToCapture: e.target.checked })} /></label>
-        {prefs.shakeToCapture && <div className="row"><div><b>Shake sensitivity</b><p>{({ gentle: "Needs a firm, deliberate shake.", normal: "A quick back and forth.", eager: "Fires on a small wiggle. May trigger by accident." } as const)[prefs.shakeLevel ?? "normal"]}</p></div>
-          <div className="seg" role="radiogroup" aria-label="Shake sensitivity">{([["gentle", "Gentle"], ["normal", "Normal"], ["eager", "Hair-trigger"]] as const).map(([id, t]) => <button key={id} role="radio" aria-checked={(prefs.shakeLevel ?? "normal") === id} className={(prefs.shakeLevel ?? "normal") === id ? "on" : ""} onClick={() => void setPrefs({ ...prefs, shakeLevel: id })}>{t}</button>)}</div></div>}
+        {prefs.shakeToCapture && <div className="row col"><div><b>Shake sensitivity</b><p role="status" aria-live="polite">{(() => { const v = prefs.shakeSens ?? 50; return v < 25 ? "Needs a firm, deliberate shake." : v < 45 ? "A little firmer than usual." : v <= 55 ? "A quick back and forth." : v <= 75 ? "Picks up smaller shakes." : "Fires on a small wiggle. May trigger by accident."; })()}</p></div>
+          <div className="sens"><span>Firm</span><input type="range" min={0} max={100} step={1} value={prefs.shakeSens ?? 50} aria-label="Shake sensitivity" onChange={e => void setPrefs({ ...prefs, shakeSens: Number(e.target.value) })} /><span>Hair-trigger</span></div></div>}
         <div className="row"><div><b>Capture shortcut</b><p>Second way in, same panel.</p></div>
           <button className="ghost field" onClick={() => { setRec(true); setMsg("Press the new keys"); }}>{rec ? "Press keys" : prefs.shortcut}</button></div>
         {msg && <p className="status" role="status">{msg}</p>}
         <div className="row"><div><b>Theme</b></div>
           <div className="seg" role="radiogroup" aria-label="Theme">{(["system", "light", "dark"] as Theme[]).map(t => <button key={t} role="radio" aria-checked={prefs.theme === t} className={prefs.theme === t ? "on" : ""} onClick={() => void setPrefs({ ...prefs, theme: t })}>{t[0].toUpperCase() + t.slice(1)}</button>)}</div></div>
-        {isNative() && <UpdateRow />}
         <div className="row col look"><div><b>Appearance</b><p>Taste settings. They apply right away and stay on this device.</p></div>
           <div className="look-grid">
             <span>Card size</span><Seg label="Card size" value={prefs.cardSize} opts={SIZES} onChange={v => void setPrefs({ ...prefs, cardSize: v })} />
@@ -85,6 +84,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
             <div className="bk" key={b.day}><span>{b.day}</span><span className="muted">{b.count} {b.count === 1 ? "note" : "notes"}</span>
               <button className="ghost" onClick={async () => { if (!confirm(`Restore ${b.day}? Your current notes are backed up first.`)) return; try { await repo.restoreBackup(b.day); onRestored(); setMsg("Restored."); } catch (e) { setMsg((e as Error).message); } }}>Restore</button></div>))}
         </div>
+        {isNative() && <UpdateRow />}
       </div>
     </div>
   );
