@@ -280,8 +280,14 @@
 .cp-btn,.cp-sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);transition:transform .15s,box-shadow .15s}
 .cp-btn:hover,.cp-sw:hover{transform:scale(1.1)}.cp-btn:active,.cp-sw:active{transform:scale(.94)}
 .cp-btn:focus-visible,.cp-sw:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.cp-btn.lav,.cp-sw.lav{background:#E1E4FF}.cp-btn.mint,.cp-sw.mint{background:#D5F2E5}.cp-btn.peach,.cp-sw.peach{background:#FFE3D3}.cp-btn.white,.cp-sw.white{background:#fff}
-.cp-btn.auto,.cp-sw.auto{background:conic-gradient(#E1E4FF 0 33%,#D5F2E5 0 66%,#FFE3D3 0)}
-:root[data-theme=dark] .cp-btn.lav,:root[data-theme=dark] .cp-sw.lav{background:#2D3169}:root[data-theme=dark] .cp-btn.mint,:root[data-theme=dark] .cp-sw.mint{background:#1C3A2F}:root[data-theme=dark] .cp-btn.peach,:root[data-theme=dark] .cp-sw.peach{background:#47302A}
+.cp-btn.yellow,.cp-sw.yellow{background:#FFF3B0}.cp-btn.green,.cp-sw.green{background:#D4F5C4}.cp-btn.pink,.cp-sw.pink{background:#FFD6E8}.cp-btn.purple,.cp-sw.purple{background:#E3D4FF}.cp-btn.blue,.cp-sw.blue{background:#CFE6FF}.cp-btn.gray,.cp-sw.gray{background:#E4E5EA}.cp-btn.charcoal,.cp-sw.charcoal{background:#4A4D57}
+.cp-btn.auto,.cp-sw.auto{background:conic-gradient(#FFF3B0 0 25%,#D4F5C4 0 50%,#FFD6E8 0 75%,#CFE6FF 0)}
+:root[data-theme=dark] .cp-btn.yellow,:root[data-theme=dark] .cp-sw.yellow{background:#4A4220}:root[data-theme=dark] .cp-btn.green,:root[data-theme=dark] .cp-sw.green{background:#27422B}:root[data-theme=dark] .cp-btn.pink,:root[data-theme=dark] .cp-sw.pink{background:#4F2A3E}:root[data-theme=dark] .cp-btn.purple,:root[data-theme=dark] .cp-sw.purple{background:#3A2C63}:root[data-theme=dark] .cp-btn.blue,:root[data-theme=dark] .cp-sw.blue{background:#233B58}:root[data-theme=dark] .cp-btn.gray,:root[data-theme=dark] .cp-sw.gray{background:#43475A}:root[data-theme=dark] .cp-btn.charcoal,:root[data-theme=dark] .cp-sw.charcoal{background:#2A2D39}
 .cp-sw[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
 .cp-pop{position:fixed;display:flex;gap:8px;padding:8px 10px;border-radius:999px;background:var(--surface);box-shadow:0 1px 2px rgba(20,20,40,.08),0 12px 32px -8px rgba(20,20,40,.28);z-index:9999;transform-origin:bottom right}
+/* Sticky Notes style card colors, picked per note */
+.db-card.yellow{background:#FFF3B0}.db-card.green{background:#D4F5C4}.db-card.pink{background:#FFD6E8}.db-card.purple{background:#E3D4FF}.db-card.blue{background:#CFE6FF}.db-card.gray{background:#E4E5EA}.db-card.charcoal{background:#4A4D57}
+:root[data-theme=dark] .db-card.yellow{background:#4A4220}:root[data-theme=dark] .db-card.green{background:#27422B}:root[data-theme=dark] .db-card.pink{background:#4F2A3E}:root[data-theme=dark] .db-card.purple{background:#3A2C63}:root[data-theme=dark] .db-card.blue{background:#233B58}:root[data-theme=dark] .db-card.gray{background:#43475A}:root[data-theme=dark] .db-card.charcoal{background:#2A2D39}
+.db-card.charcoal{--ink:#F1F1F8;--muted:#C9CBD8;color:#F1F1F8}:root[data-theme=dark] .db-card.charcoal{--ink:#F1F1F8}
+.cp-pop{flex-wrap:nowrap}
+.db-card.charcoal time{color:rgba(241,241,248,.6)}.db-card.charcoal,.db-card.charcoal *{color:#F1F1F8}.db-card.charcoal time{color:rgba(241,241,248,.6)}

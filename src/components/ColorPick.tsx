@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 
-export type Tone = "lav" | "mint" | "peach" | "white";
-export const TONES: { id: Tone; label: string }[] = [{ id: "lav", label: "Lavender" }, { id: "mint", label: "Mint" }, { id: "peach", label: "Peach" }, { id: "white", label: "White" }];
+export type Tone = "yellow" | "green" | "pink" | "purple" | "blue" | "gray" | "charcoal";
+export const TONES: { id: Tone; label: string }[] = [{ id: "yellow", label: "Yellow" }, { id: "green", label: "Green" }, { id: "pink", label: "Pink" }, { id: "purple", label: "Purple" }, { id: "blue", label: "Blue" }, { id: "gray", label: "Gray" }, { id: "charcoal", label: "Charcoal" }];
 
 /** One round swatch button. Click it and the card colors fan out above it. */
 export function ColorPick({ value, onChange }: { value: Tone | null; onChange: (t: Tone | null) => void }) {
