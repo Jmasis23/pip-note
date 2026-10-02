@@ -7,4 +7,4 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - run: curl -fsS "https://ovkfjiciwuhcqqpmdgaa.supabase.co/rest/v1/notes?select=id&limit=1" -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92a2ZqaWNpd3VoY3FxcG1kZ2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NTc4MDcsImV4cCI6MjEwNjUzMzgwN30.AW0bwt7Lg69R51tQpM4IMLPqHy4GtDEzKmuoZMSjR_4" -o /dev/null -w "%{http_code}\n"
+      - run: curl -fsS -X POST "https://ovkfjiciwuhcqqpmdgaa.supabase.co/rest/v1/rpc/ping" -H "Content-Type: application/json" -d "{}" -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92a2ZqaWNpd3VoY3FxcG1kZ2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NTc4MDcsImV4cCI6MjEwNjUzMzgwN30.AW0bwt7Lg69R51tQpM4IMLPqHy4GtDEzKmuoZMSjR_4" -o /dev/null -w "%{http_code}\n"
