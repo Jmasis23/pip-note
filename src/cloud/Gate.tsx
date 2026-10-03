@@ -50,7 +50,7 @@ function Back({ s, n, onGo }: { s: Session; n: number; onGo: () => void }) {
   </Frame>;
 }
 
-const WELCOME = { title: "Welcome to Pip", body: "Pip catches a thought the moment you have it. Try the list below.", checklist: ["Press Ctrl+Shift+Space anywhere to capture", "Shake the mouse to open the capture box", "Drag a note card to a folder in the dock", "Search from the dock, it looks inside every note", "Connect ChatGPT in Settings to unlock Ask, which can organize your notes"] };
+const WELCOME = { title: "Welcome to Pip", body: "Pip catches a thought the moment you have it. Try the list below.", checklist: ["Press Ctrl+Shift+Space anywhere to capture", "Shake the mouse to open the capture box", "Drag a note card to a folder in the dock", "Search from the dock, it looks inside every note"] };
 
 function Tour({ s, onDone }: { s: Session; onDone: () => void }) {
   const [step, setStep] = useState(0); const [text, setText] = useState(""); const [err, setErr] = useState(""); const ta = useRef<HTMLTextAreaElement>(null);

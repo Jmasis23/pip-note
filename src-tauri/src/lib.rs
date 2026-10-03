@@ -1,10 +1,8 @@
 mod shake;
 mod clipboard;
 
-use pip_core::ai::{self, Endpoint, Msg};
 use pip_core::chatgpt::{self, Cred};
-use pip_core::{kv::FileKv, secrets};
-use serde::Serialize;
+use pip_core::kv::FileKv;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -14,9 +12,8 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-const ENDPOINT_KEY: &str = "ai-endpoint"; // not a "pip." key, so the web view cannot read or write it
 
-struct AppState { chatgpt_lock: tauri::async_runtime::Mutex<()>, kv: FileKv, shake: Arc<AtomicBool>, level: Arc<std::sync::atomic::AtomicU8>, shortcut: Mutex<Option<Shortcut>> }
+struct AppState { kv: FileKv, shake: Arc<AtomicBool>, level: Arc<std::sync::atomic::AtomicU8>, shortcut: Mutex<Option<Shortcut>> }
 
 /// Bring the window forward and tell the web view to open Capture. Used by the shake, the hotkey and the tray.
 pub fn open_capture(app: &AppHandle) {
@@ -53,66 +50,8 @@ fn store_set(st: State<AppState>, key: String, value: String) -> Result<(), Stri
 
 const CRED_KEY: &str = "chatgpt-cred"; // none of these are "pip." keys, so the web view cannot read them
 const HOST_KEY: &str = "chatgpt-host";
-const MODE_KEY: &str = "ai-mode";
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AiStatus { configured: bool, base_url: String, model: String, has_key: bool, mode: String, chatgpt_email: String, chatgpt_model: String }
-
-fn endpoint(st: &AppState) -> Option<Endpoint> { st.kv.get(ENDPOINT_KEY).ok().flatten().and_then(|s| serde_json::from_str(&s).ok()) }
 fn cred(st: &AppState) -> Option<Cred> { st.kv.get(CRED_KEY).ok().flatten().and_then(|s| serde_json::from_str(&s).ok()).filter(|c: &Cred| c.has_plan()) }
 fn save_cred(st: &AppState, c: &Cred) -> Result<(), String> { st.kv.set(CRED_KEY, &serde_json::to_string(c).map_err(|e| e.to_string())?).map_err(|e| e.to_string()) }
-fn chatgpt_active(st: &AppState) -> bool { st.kv.get(MODE_KEY).ok().flatten().as_deref() == Some("chatgpt") && cred(st).map_or(false, |c| !c.model.is_empty()) }
-
-#[tauri::command]
-fn ai_status(st: State<AppState>) -> AiStatus {
-    let ep = endpoint(&st); let has_key = secrets::get().ok().flatten().map_or(false, |k| !k.is_empty());
-    let c = cred(&st); let mode = if chatgpt_active(&st) { "chatgpt" } else { "key" }.to_string();
-    let (ce, cm) = c.map(|c| (c.email, c.model)).unwrap_or_default();
-    match ep {
-        Some(e) => { let ok = ai::valid_base(&e.base_url) && !e.model.trim().is_empty() && (has_key || ai::is_local(&e.base_url)); AiStatus { configured: ok || mode == "chatgpt", base_url: e.base_url, model: e.model, has_key, mode, chatgpt_email: ce, chatgpt_model: cm } }
-        None => AiStatus { configured: mode == "chatgpt", base_url: String::new(), model: String::new(), has_key, mode, chatgpt_email: ce, chatgpt_model: cm },
-    }
-}
-#[tauri::command]
-fn ai_configure(st: State<AppState>, base_url: String, model: String, key: Option<String>) -> Result<(), String> {
-    if !ai::valid_base(&base_url) { return Err("The address must be https, or http for a local model.".into()); }
-    if let Some(k) = key.as_deref().map(str::trim).filter(|k| !k.is_empty()) { secrets::set(k)?; }
-    let ep = Endpoint { base_url: ai::normalize_base(&base_url), model: model.trim().to_string() };
-    st.kv.set(MODE_KEY, "key").map_err(|e| e.to_string())?;
-    st.kv.set(ENDPOINT_KEY, &serde_json::to_string(&ep).map_err(|e| e.to_string())?).map_err(|e| e.to_string())
-}
-#[tauri::command]
-fn ai_clear(st: State<AppState>) -> Result<(), String> { secrets::delete()?; st.kv.remove(ENDPOINT_KEY).map_err(|e| e.to_string()) }
-
-/// Test an endpoint without saving it. Uses the stored key when none is typed.
-#[tauri::command]
-async fn ai_test(base_url: String, model: String, key: Option<String>) -> Result<(), String> {
-    let key = match key.filter(|k| !k.trim().is_empty()) { Some(k) => Some(k), None => secrets::get().ok().flatten() };
-    let msgs = [Msg { role: "user".into(), content: "Reply with the word ok.".into() }];
-    ai::complete(&Endpoint { base_url, model }, key.as_deref(), &msgs, 5, 20_000).await.map(|_| ())
-}
-/// Always uses the saved endpoint and key. The web view cannot point it elsewhere.
-#[tauri::command]
-async fn ai_complete(st: State<'_, AppState>, messages: Vec<Msg>, max_tokens: Option<u32>, timeout_ms: Option<u64>) -> Result<String, String> {
-    if chatgpt_active(&st) {
-        let c = fresh_cred(&st).await?;
-        return chatgpt::respond(&c.access_token, &c.model, &messages, timeout_ms.unwrap_or(45_000).min(120_000)).await;
-    }
-    let ep = endpoint(&st).ok_or("AI isn't set up.")?;
-    let key = secrets::get().ok().flatten();
-    ai::complete(&ep, key.as_deref(), &messages, max_tokens.unwrap_or(800).min(4000), timeout_ms.unwrap_or(45_000).min(120_000)).await
-}
-
-/// The saved ChatGPT credential with a valid access token, refreshing it first when it is about to expire.
-async fn fresh_cred(st: &AppState) -> Result<Cred, String> {
-    let _g = st.chatgpt_lock.lock().await;
-    let c = cred(st).ok_or("Sign in with ChatGPT first.")?;
-    if !chatgpt::needs_refresh(&c, chatgpt::now()) { return Ok(c); }
-    let t = chatgpt::refresh(&c.client_id, &c.refresh_token).await?;
-    let n = chatgpt::cred_from(t, &c.client_id, &c.host_id, None, Some(&c), chatgpt::now())?;
-    save_cred(st, &n)?; Ok(n)
-}
 fn open_url(url: &str) -> Result<(), String> {
     #[cfg(windows)] let r = std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", url]).spawn();
     #[cfg(not(windows))] let r = std::process::Command::new("xdg-open").arg(url).spawn();
@@ -134,8 +73,7 @@ async fn chatgpt_sign_in(st: State<'_, AppState>) -> Result<String, String> {
     let t = chatgpt::exchange_code(&client_id, &cb.code, &a.verifier, port).await?;
     let mut c = chatgpt::cred_from(t, &client_id, &host, Some(&a.nonce), None, chatgpt::now())?;
     if let Some(p) = prev { if p.subject == c.subject { c.model = p.model; } }
-    if c.model.is_empty() { if let Ok(m) = chatgpt::list_models(&c.access_token).await { if let Some(f) = m.first() { c.model = f.slug.clone(); } } }
-    save_cred(&st, &c)?; st.kv.set(MODE_KEY, "chatgpt").map_err(|e| e.to_string())?;
+    save_cred(&st, &c)?;
     Ok(c.email)
 }
 
@@ -153,19 +91,6 @@ async fn oauth_browser(url_template: String, state: String) -> Result<String, St
     let cb = chatgpt::wait_for_callback(listener, &state, std::time::Duration::from_secs(300)).await?;
     Ok(cb.code)
 }
-
-#[tauri::command]
-fn chatgpt_sign_out(st: State<AppState>) -> Result<(), String> {
-    st.kv.remove(CRED_KEY).map_err(|e| e.to_string())?; st.kv.set(MODE_KEY, "key").map_err(|e| e.to_string())
-}
-#[tauri::command]
-async fn chatgpt_models(st: State<'_, AppState>) -> Result<Vec<chatgpt::Model>, String> { let c = fresh_cred(&st).await?; chatgpt::list_models(&c.access_token).await }
-#[tauri::command]
-fn chatgpt_set_model(st: State<AppState>, model: String) -> Result<(), String> {
-    let mut c = cred(&st).ok_or("Sign in with ChatGPT first.")?; c.model = model.trim().to_string(); save_cred(&st, &c)?; st.kv.set(MODE_KEY, "chatgpt").map_err(|e| e.to_string())
-}
-#[tauri::command]
-fn ai_use_key(st: State<AppState>) -> Result<(), String> { st.kv.set(MODE_KEY, "key").map_err(|e| e.to_string()) }
 
 async fn tokio_sleep(ms: u64) { let _ = tauri::async_runtime::spawn_blocking(move || std::thread::sleep(std::time::Duration::from_millis(ms))).await; }
 
@@ -260,7 +185,7 @@ pub fn run() {
             let kv = FileKv::open(dir.join("store")).map_err(|e| e.to_string())?;
             let shake = Arc::new(AtomicBool::new(true));
             let level = Arc::new(std::sync::atomic::AtomicU8::new(50));
-            let st = AppState { chatgpt_lock: tauri::async_runtime::Mutex::new(()), kv, shake: shake.clone(), level: level.clone(), shortcut: Mutex::new(None) };
+            let st = AppState { kv, shake: shake.clone(), level: level.clone(), shortcut: Mutex::new(None) };
             let handle = app.handle().clone();
             let _ = register_shortcut(&handle, &st, parse_shortcut("Ctrl+Shift+Space")?); // default until the web view says otherwise
             app.manage(st);
@@ -298,7 +223,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, chatgpt_sign_in, chatgpt_id_token, oauth_browser, chatgpt_sign_out, chatgpt_models, chatgpt_set_model, ai_use_key, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .invoke_handler(tauri::generate_handler![clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }

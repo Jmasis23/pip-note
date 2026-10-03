@@ -149,6 +149,9 @@ pub fn cred_from(t: TokenResponse, client_id: &str, host_id: &str, nonce: Option
 
 pub fn needs_refresh(c: &Cred, at: u64) -> bool { c.expires_at <= at + 120 }
 
+#[cfg(feature = "ai")]
+mod inference {
+use super::*;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Model { pub slug: String, pub name: String }
 
@@ -158,7 +161,7 @@ pub fn parse_models(v: &serde_json::Value) -> Vec<Model> {
     }).collect()).unwrap_or_default()
 }
 
-fn api_error(status: u16, body: &str) -> String {
+pub fn api_error(status: u16, body: &str) -> String {
     let v: serde_json::Value = serde_json::from_str(body).unwrap_or_default();
     let code = v["error"]["code"].as_str().unwrap_or("");
     match (status, code) {
@@ -217,6 +220,10 @@ pub async fn respond(access: &str, model: &str, messages: &[crate::ai::Msg], tim
     parse_stream(&body)
 }
 
+}
+#[cfg(feature = "ai")]
+pub use inference::*;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,10 +276,12 @@ mod tests {
         assert!(cred_from(other, "oaiapp_1", "h", Some("no"), Some(&c), 2000).unwrap_err().contains("different"));
         assert!(needs_refresh(&c, 4500)); assert!(!needs_refresh(&c, 1000));
     }
+    #[cfg(feature = "ai")]
     #[test] fn models_keep_only_listed_in_order() {
         let v = serde_json::json!({"models": [{"slug": "a", "display_name": "A", "visibility": "list"}, {"slug": "b", "visibility": "hide"}, {"slug": "c", "visibility": "list"}]});
         assert_eq!(parse_models(&v), vec![Model { slug: "a".into(), name: "A".into() }, Model { slug: "c".into(), name: "c".into() }]);
     }
+    #[cfg(feature = "ai")]
     #[test] fn request_body_follows_the_preview_rules() {
         let m = vec![crate::ai::Msg { role: "system".into(), content: "be brief".into() }, crate::ai::Msg { role: "user".into(), content: "hi".into() }];
         let b = responses_body("m1", &m);
@@ -280,12 +289,14 @@ mod tests {
         for k in ["max_output_tokens", "temperature", "previous_response_id", "metadata", "user"] { assert!(b.get(k).is_none(), "{k}"); }
         assert!(!b["input"].to_string().contains("\"system\""));
     }
+    #[cfg(feature = "ai")]
     #[test] fn stream_needs_completed_and_surfaces_failures() {
         let ok = "event: x\ndata: {\"type\":\"response.output_text.delta\",\"delta\":\"Hel\"}\n\ndata: {\"type\":\"response.output_text.delta\",\"delta\":\"lo \"}\n\ndata: {\"type\":\"response.completed\"}\n\n"; assert_eq!(parse_stream(ok).unwrap(), "Hello");
         assert!(parse_stream("data: {\"type\":\"response.output_text.delta\",\"delta\":\"Hi\"}\n").unwrap_err().contains("cut off"));
         let lim = "data: {\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"subscription_sharing_usage_limit_exceeded\"}}}\n"; assert!(parse_stream(lim).unwrap_err().contains("used up"));
         assert!(parse_stream("data: {\"type\":\"response.completed\"}\n").unwrap_err().contains("nothing"));
     }
+    #[cfg(feature = "ai")]
     #[test] fn http_errors_map_to_plain_words() {
         assert!(api_error(429, r#"{"error":{"code":"subscription_sharing_usage_limit_exceeded"}}"#).contains("Usage")); assert!(api_error(403, r#"{"error":{"code":"subscription_sharing_user_not_eligible"}}"#).contains("can't be used"));
         assert!(api_error(401, r#"{"detail":"x"}"#).contains("Sign in again")); assert!(api_error(500, "{}").contains("500"));

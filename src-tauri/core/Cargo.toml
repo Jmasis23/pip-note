@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "Pip desktop logic that does not depend on Tauri: shake detection, durable key-value files, AI requests, credential storage."
 
+[features]
+default = []
+ai = []
+
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
