@@ -108,7 +108,7 @@ export default function DirB() {
         <section className="db-board" aria-label="Notes">
           <AnimatePresence initial={false}>
             {notes.map((n, i) => (
-              <motion.button key={n.id} layoutId={`card-${n.id}`} className={`db-card ${tone(n, prefs.noteColors?.[n.id])}`} onClick={() => setSelId(n.id)}
+              <motion.button key={n.id} className={`db-card ${tone(n, prefs.noteColors?.[n.id])}`} onClick={() => setSelId(n.id)}
                 initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
                 whileHover={{ y: -4, rotate: i % 2 ? 0.5 : -0.5 }} transition={{ type: "spring", stiffness: 380, damping: 30 }}>
                 <b>{n.title}</b>
@@ -124,8 +124,8 @@ export default function DirB() {
         <AnimatePresence>
           {selId && (
             <motion.div className="db-veil" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={e => { if (e.target === e.currentTarget) setSelId(null); }} onKeyDown={e => { if (e.key === "Escape") setSelId(null); }}>
-              <motion.div layoutId={`card-${selId}`} className="db-sheet" transition={{ type: "spring", stiffness: 330, damping: 32 }}>
-                {full && <Editor key={full.id} note={full} folders={folders} color={prefs.noteColors?.[full.id] ?? null} onColor={c => { const m = { ...(prefs.noteColors ?? {}) }; if (c) m[full.id] = c; else delete m[full.id]; void setPrefs({ ...prefs, noteColors: m }); }} onChanged={() => void refresh()} onBack={() => setSelId(null)} />}
+              <motion.div className="db-sheet" initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}>
+                {full && <motion.div className="db-sheet-in" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18, ease: "easeOut" }}><Editor key={full.id} note={full} folders={folders} color={prefs.noteColors?.[full.id] ?? null} onColor={c => { const m = { ...(prefs.noteColors ?? {}) }; if (c) m[full.id] = c; else delete m[full.id]; void setPrefs({ ...prefs, noteColors: m }); }} onChanged={() => void refresh()} onBack={() => setSelId(null)} /></motion.div>}
               </motion.div>
             </motion.div>)}
         </AnimatePresence>

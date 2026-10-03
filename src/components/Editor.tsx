@@ -12,6 +12,7 @@ import { plainToRich, richToPlain, sanitizeRich } from "../rich";
 import { RichBody } from "./RichBody";
 import { Dropdown, NewFolder } from "./Dropdown";
 import type { RichHandle } from "./RichBody";
+import { Pip } from "./Pip";
 import { AiError, cleanUp, suggestMeta, useAi } from "../ai";
 
 type Save = "idle" | "pending" | "saved" | "error";
@@ -107,7 +108,7 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
           <Dropdown label="Folder" value={folder} placeholder="None" options={[{ value: "", label: "None" }, ...folders.map(f => ({ value: f, label: f }))]}
             onChange={v => { setFolder(v); void moveTo(v); }}
             footer={close => <NewFolder onAdd={f => { const c = cleanFolder(f); if (c) { setFolder(c); void moveTo(c); } close(); }} />} />
-          {ai && <button className="ask-orb" onClick={() => setAskNote(true)} aria-label="Ask this note" title="Ask this note"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden><path d="M12 1.5c.7 5.6 2.4 8.1 4.8 9.2 1.6.8 3.6 1.2 5.7 1.3-5.6.7-8.1 2.4-9.2 4.8-.8 1.6-1.2 3.6-1.3 5.7-.7-5.6-2.4-8.1-4.8-9.2C6.1 12.5 4.1 12.1 2 12c5.6-.7 8.1-2.4 9.2-4.8.8-1.6 1.2-3.6 1.3-5.7z" fill="currentColor"/></svg></button>}
+          {ai && <button className="ask-pip" onClick={() => setAskNote(true)} aria-label="Ask Pip about this note" title="Ask Pip"><span className="ask-pip-tag">Ask Pip</span><Pip cyber size={84} /></button>}
           <LiveTextStepper className="ed-ts" />
         </div>)}
       <AnimatePresence>{askNote && <AskPanel scope={{ ...note, title, body: latest.current.body }} onClose={() => setAskNote(false)} onOpen={() => {}} />}</AnimatePresence>

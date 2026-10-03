@@ -86,7 +86,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
             </div>) : (
             <div className="cg" data-state="out"><button className="cg-btn" disabled={cgBusy} onClick={() => void cgRun(chatGptSignIn, "Finish signing in in your browser...")}>{cgBusy ? "Waiting for ChatGPT..." : "Continue with ChatGPT"}</button>
               <p className="muted">Use your ChatGPT plan. No key to copy. Pip never sees your password or your chats.</p><span className="muted" role="status">{cgMsg}</span></div>))}
-          {isNative() && <p className="cg-or">Or use your own key</p>}
+          {!cg?.active && (<>{isNative() && <p className="cg-or">Or use your own key</p>}
           <Dropdown label="Provider" value={PRESETS.find(pr => pr.baseUrl === aiBase)?.id ?? "custom"} placeholder="Custom"
             options={[...PRESETS.map(pr => ({ value: pr.id, label: pr.label, hint: pr.baseUrl.startsWith("http://") ? "no key" : "" })), { value: "custom", label: "Custom endpoint" }]}
             onChange={v => { const pr = PRESETS.find(x => x.id === v); setAiState(""); if (pr) { setAiBase(pr.baseUrl); setAiModel(pr.model); } else { setAiBase(""); setAiModel(""); } }} />
@@ -95,7 +95,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
           <input aria-label="Model" placeholder="Model, e.g. gpt-4o-mini" value={aiModel} onChange={e => { setAiModel(e.target.value); setAiState(""); }} spellCheck={false} />
           <div className="ai-act"><button className="ghost field" disabled={!aiReady} onClick={() => void saveAi(true)}>Test and save</button>
             {(raw.key || raw.baseUrl) && <button className="ghost danger" onClick={() => { void setAiConfig(null); setAiBase(""); setAiKey(""); setAiModel(""); setAiState("AI is off. Key removed."); }}>Remove key</button>}
-            <span className="muted" role="status">{aiState}</span></div>
+            <span className="muted" role="status">{aiState}</span></div></>)}
         </div>
         <div className="row col"><div><b>Backups</b><p>One a day, last seven kept. Restoring saves your current notes first.</p></div>
           {backups.length === 0 ? <p className="muted">No backups yet.</p> : backups.filter(b => !b.day.includes("before-restore")).map(b => (
@@ -134,19 +134,33 @@ function UpdateRow() {
 /** Who is signed in, whether the last sync worked, and sign out. */
 function AccountRow() {
   const [st, setSt] = useState(syncStatus());
+  const [ask, setAsk] = useState<"" | "confirm" | "force">(""); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState("");
   useEffect(() => onSyncStatus(setSt), []);
   const me = loadSession(); if (!me) return null;
   const when = st.at ? new Date(st.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
   const line = st.state === "syncing" ? "Syncing..." : st.state === "error" || st.state === "offline" ? st.message : st.state === "idle" ? `Synced at ${when}` : "Waiting to sync";
+  const out = async () => {
+    const id = me.user.id;
+    try { await repo.wipeNotes(); } catch { /* the backup copy is made first; keep going */ }
+    await signOut(); localStorage.removeItem(`pip.sync.cursor.${id}`); localStorage.removeItem(`pip.sync.push.${id}`); location.reload();
+  };
+  const start = async () => {
+    setBusy(true); setMsg("Saving your latest notes...");
+    try { await syncNow(); } catch { /* handled below */ }
+    const r = syncStatus(); setBusy(false);
+    if (r.state === "idle" || r.state === "off") { setMsg("Signing out..."); await out(); return; }
+    setMsg(`Couldn't save your latest notes (${r.message || "offline"}).`); setAsk("force");
+  };
   return (
     <div className="row col" data-sync={st.state}><div><b>Account</b><p>{me.user.email}</p></div>
-      <div className="ai-act"><button className="ghost field" disabled={st.state === "syncing"} onClick={() => void syncNow()}>Sync now</button>
-        <button className="ghost danger" onClick={async () => {
-          if (!confirm("Sign out of Pip? Your notes are saved to your account first, then removed from this PC. Sign back in to get them back.")) return;
-          await syncNow(); const r = syncStatus();
-          if (r.state !== "idle") { alert("Couldn't save your latest notes to your account (" + (r.message || "offline") + "). You're still signed in. Try again when you're online."); return; }
-          const id = me.user.id; await repo.wipeNotes(); await signOut(); localStorage.removeItem(`pip.sync.cursor.${id}`); localStorage.removeItem(`pip.sync.push.${id}`); location.reload();
-        }}>Sign out</button>
-        <span className="muted" role="status">{line}</span></div></div>
+      <div className="ai-act"><button className="ghost field" disabled={st.state === "syncing" || busy} onClick={() => void syncNow()}>Sync now</button>
+        {ask === "" && <button className="ghost danger" onClick={() => { setMsg(""); setAsk("confirm"); }}>Sign out</button>}
+        {ask === "confirm" && (<><span className="muted" role="status">Your notes are saved to your account first, then removed from this PC.</span>
+          <button className="ghost danger" disabled={busy} onClick={() => void start()}>{busy ? "Saving..." : "Yes, sign out"}</button>
+          <button className="ghost field" disabled={busy} onClick={() => { setAsk(""); setMsg(""); }}>Cancel</button></>)}
+        {ask === "force" && (<><span className="muted" role="alert">{msg} Signing out now keeps a backup on this PC, but changes since the last sync won't reach your account.</span>
+          <button className="ghost danger" onClick={() => void out()}>Sign out anyway</button>
+          <button className="ghost field" onClick={() => { setAsk(""); setMsg(""); }}>Stay signed in</button></>)}
+        {ask !== "force" && <span className="muted" role="status">{msg || line}</span>}</div></div>
   );
 }

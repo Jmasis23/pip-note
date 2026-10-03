@@ -305,11 +305,19 @@
 .db-hero p.db-sub{font-size:calc(14px*var(--ts,1));margin:0}
 .db-hero p:not(.db-sub){margin-top:2px;font-size:calc(12.5px*var(--ts,1))}
 @media (max-width:760px){.db-sub{display:none!important}.db-mascot{width:44px;height:44px}.db-mascot svg{width:38px;height:38px}.db-hero h1{font-size:calc(26px*var(--ts,1))}}
-.ask-orb{position:relative;margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#FFB48F,#FF9EC0 55%,#9CC4FF);box-shadow:0 0 0 1px rgba(255,255,255,.55) inset,0 0 14px 2px rgba(255,170,150,.55),0 0 26px 6px rgba(156,196,255,.35);animation:orbpulse 3.2s ease-in-out infinite;transition:transform .15s}
-.ask-orb svg{filter:drop-shadow(0 0 3px rgba(255,255,255,.9))}
-.ask-orb::after{content:"";position:absolute;inset:-5px;border-radius:50%;background:conic-gradient(from 0deg,#D7E9FF,#FFD1DC,#FFC78B,#D7E9FF);filter:blur(9px);opacity:.45;z-index:-1;animation:aspin 6s linear infinite}
-.ask-orb:hover{transform:scale(1.08)}.ask-orb:active{transform:scale(.94)}
-.ask-orb+.ed-ts{margin-left:10px}
-@keyframes orbpulse{50%{box-shadow:0 0 0 1px rgba(255,255,255,.55) inset,0 0 20px 4px rgba(255,170,150,.7),0 0 34px 10px rgba(156,196,255,.45)}}
-@media (prefers-reduced-motion:reduce){.ask-orb,.ask-orb::after{animation:none!important}}
-html[data-motion=reduced] .ask-orb,html[data-motion=reduced] .ask-orb::after{animation:none!important}
+.ask-pip{position:relative;margin-left:auto;display:flex;align-items:center;gap:6px;height:34px;padding:0;background:none}
+.ask-pip .pipx{margin:-26px -6px -22px 0;animation:cybob 3.4s ease-in-out infinite;transition:transform .18s}
+.ask-pip:hover .pipx{transform:scale(1.08) rotate(-3deg)}.ask-pip:active .pipx{transform:scale(.94)}
+.ask-pip-tag{position:relative;padding:5px 12px;border-radius:999px;font-size:calc(12.5px*var(--ts,1));font-weight:750;letter-spacing:.02em;color:#E9FDFF;background:linear-gradient(135deg,#171A2B,#0B0C16);box-shadow:0 0 0 1.5px #19F0FF inset,0 0 12px rgba(25,240,255,.55),0 0 22px rgba(255,46,196,.35);text-shadow:0 0 8px rgba(25,240,255,.9);animation:cytag 3.4s ease-in-out infinite}
+.ask-pip-tag::after{content:"";position:absolute;right:-5px;top:50%;margin-top:-5px;width:10px;height:10px;background:#0B0C16;transform:rotate(45deg);box-shadow:2px -2px 0 0 #19F0FF inset}
+.pipx.cyber{filter:drop-shadow(0 0 5px rgba(25,240,255,.5)) drop-shadow(0 0 12px rgba(255,46,196,.3))}
+.pipx .cy-eye{animation:cyblink 4.6s infinite;transform-box:fill-box;transform-origin:50% 50%}
+.pipx .cy-scan{animation:cyscan 3.6s ease-in-out infinite}.pipx .cy-led{animation:cyled 1.6s ease-in-out infinite}.pipx .cy-trace{animation:cytr 2.8s ease-in-out infinite}
+@keyframes cybob{50%{transform:translateY(-4px)}}@keyframes cytag{50%{transform:translateY(-3px)}}
+@keyframes cyblink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.12)}}
+@keyframes cyscan{0%{transform:translateX(0) skewX(-14deg)}100%{transform:translateX(330px) skewX(-14deg)}}
+@keyframes cyled{50%{opacity:.25}}@keyframes cytr{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.ask-pip .pipx,.ask-pip-tag,.pipx .cy-eye,.pipx .cy-scan,.pipx .cy-led,.pipx .cy-trace{animation:none!important}}
+html[data-motion=reduced] .ask-pip .pipx,html[data-motion=reduced] .ask-pip-tag{animation:none!important}
+.ask-pip+.ed-ts{margin-left:10px}
+.db-sheet:not(.ask){min-height:min(420px,88vh)}.db-sheet-in{flex:1;min-width:0}
