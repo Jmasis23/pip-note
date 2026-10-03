@@ -82,10 +82,10 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
           {isNative() && (cg ? (
             <div className="cg" data-state="in"><div className="cg-who"><span className="cg-dot" aria-hidden /><div><b>{cg.active ? "Using your ChatGPT plan" : "ChatGPT connected"}</b><p>{cg.email}</p></div></div>
               <Dropdown label="Model" value={cg.model} placeholder="Choose a model" options={cgModels.map(m => ({ value: m.slug, label: m.name, hint: "" }))} onChange={v => void cgRun(() => chatGptUse(v))} />
-              <div className="ai-act">{!cg.active && <button className="ghost field primary" disabled={cgBusy || !cg.model} onClick={() => void cgRun(() => chatGptUse(cg.model))}>Use ChatGPT <Beta /></button>}
-                <button className="ghost danger" disabled={cgBusy} onClick={() => void cgRun(chatGptSignOut)}>Sign out <Beta /></button><span className="muted" role="status">{cgMsg}</span></div>
+              <div className="ai-act">{!cg.active && <button className="ghost field primary" disabled={cgBusy || !cg.model} onClick={() => void cgRun(() => chatGptUse(cg.model))}>Use ChatGPT</button>}
+                <button className="ghost danger" disabled={cgBusy} onClick={() => void cgRun(chatGptSignOut)}>Sign out</button><span className="muted" role="status">{cgMsg}</span></div>
             </div>) : (
-            <div className="cg" data-state="out"><button className="cg-btn" disabled={cgBusy} onClick={() => void cgRun(chatGptSignIn, "Finish signing in in your browser...")}>{cgBusy ? "Waiting for ChatGPT..." : "Continue with ChatGPT"} <Beta /></button>
+            <div className="cg" data-state="out"><button className="cg-btn" disabled={cgBusy} onClick={() => void cgRun(chatGptSignIn, "Finish signing in in your browser...")}>{cgBusy ? "Waiting for ChatGPT..." : "Continue with ChatGPT"}</button>
               <p className="muted">Use your ChatGPT plan. No key to copy. Pip never sees your password or your chats.</p><span className="muted" role="status">{cgMsg}</span></div>))}
           {!cg?.active && (<>{isNative() && <p className="cg-or">Or use your own key</p>}
           <Dropdown label="Provider" value={PRESETS.find(pr => pr.baseUrl === aiBase)?.id ?? "custom"} placeholder="Custom"
@@ -94,8 +94,8 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
           <input aria-label="Base URL" placeholder="Base URL, e.g. https://api.openai.com/v1" value={aiBase} onChange={e => { setAiBase(e.target.value); setAiState(""); }} spellCheck={false} />
           <input aria-label="API key" type="password" autoComplete="off" placeholder={aiHasStoredKey() ? "Saved in Windows Credential Manager. Type to replace" : local ? "API key (not needed for local)" : "API key"} value={aiKey} onChange={e => { setAiKey(e.target.value); setAiState(""); }} />
           <input aria-label="Model" placeholder="Model, e.g. gpt-4o-mini" value={aiModel} onChange={e => { setAiModel(e.target.value); setAiState(""); }} spellCheck={false} />
-          <div className="ai-act"><button className="ghost field" disabled={!aiReady} onClick={() => void saveAi(true)}>Test and save <Beta /></button>
-            {(raw.key || raw.baseUrl) && <button className="ghost danger" onClick={() => { void setAiConfig(null); setAiBase(""); setAiKey(""); setAiModel(""); setAiState("AI is off. Key removed."); }}>Remove key <Beta /></button>}
+          <div className="ai-act"><button className="ghost field" disabled={!aiReady} onClick={() => void saveAi(true)}>Test and save</button>
+            {(raw.key || raw.baseUrl) && <button className="ghost danger" onClick={() => { void setAiConfig(null); setAiBase(""); setAiKey(""); setAiModel(""); setAiState("AI is off. Key removed."); }}>Remove key</button>}
             <span className="muted" role="status">{aiState}</span></div></>)}
         </div>
         <div className="row col"><div><b>Backups</b><p>One a day, last seven kept. Restoring saves your current notes first.</p></div>

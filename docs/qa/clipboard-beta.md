@@ -4,8 +4,9 @@ Base: windows/pip-app at 6f2ca90 (released as v0.2.16).
 Feature branch: feature/ai-beta-clipboard. No remote push or release.
 
 ## Behavior
-- AI action buttons show a small Beta label, including Ask, suggestions, apply,
-  title/folder, connection and key controls. Existing design tokens preserved.
+- Beta labels appear only on the main Ask entry points (dock and note mascot)
+  and the AI section heading in Settings. No labels on small sub-buttons.
+  Existing design tokens preserved.
 - Clipboard button in the dock opens history with search, copy, Keep as note,
   delete and clear. Copy does not inject keystrokes into another app; use Ctrl+V.
 - Default off. Explicit enable, pause, and clear. Enabled preference survives
