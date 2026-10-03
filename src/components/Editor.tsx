@@ -108,8 +108,7 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
           <Dropdown label="Folder" value={folder} placeholder="None" options={[{ value: "", label: "None" }, ...folders.map(f => ({ value: f, label: f }))]}
             onChange={v => { setFolder(v); void moveTo(v); }}
             footer={close => <NewFolder onAdd={f => { const c = cleanFolder(f); if (c) { setFolder(c); void moveTo(c); } close(); }} />} />
-          {ai && <button className="ask-pip" onClick={() => setAskNote(true)} aria-label="Ask Pip about this note" title="Ask Pip"><span className="ask-pip-tag">Ask Pip</span><Pip cyber size={84} /></button>}
-          <LiveTextStepper className="ed-ts" />
+                    <LiveTextStepper className="ed-ts" />
         </div>)}
       <AnimatePresence>{askNote && <AskPanel scope={{ ...note, title, body: latest.current.body }} onClose={() => setAskNote(false)} onOpen={() => {}} />}</AnimatePresence>
       {ai && !locked && (
@@ -142,6 +141,7 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
         ))}
         {!locked && <button className="ghost add" onClick={add}>Add checklist item</button>}
       </div>
+      {ai && !locked && <div className="ask-pip-dock"><button className="ask-pip" onClick={() => setAskNote(true)} aria-label="Ask Pip about this note" title="Ask Pip"><span className="ask-pip-tag">Ask Pip</span><Pip cyber size={52} /></button></div>}
     </section>
   );
 }
