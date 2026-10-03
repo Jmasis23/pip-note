@@ -18,7 +18,7 @@ export interface NoteRepo {
   deleteForever(id: string): Promise<void>;
   listDrafts(): Promise<Draft[]>;
   /** Keeps (or updates) an unfinished capture. Returns its id. Empty text removes it. */
-  saveDraft(text: string, id?: string): Promise<string>;
+  saveDraft(text: string, id?: string, folder?: string): Promise<string>;
   deleteDraft(id: string): Promise<void>;
   getPrefs(): Promise<Prefs>;
   setPrefs(p: Prefs): Promise<Prefs>;
@@ -124,10 +124,10 @@ export function createRepo(kv: KV, now: () => number = Date.now): NoteRepo {
       s.notes = s.notes.filter(x => x.id !== id); s.tombstones = [...new Set([...(s.tombstones ?? []), id])]; save(s);
     },
     async listDrafts() { return [...(load().drafts ?? [])].sort((a, b) => b.updatedAt - a.updatedAt); },
-    async saveDraft(text, id) {
+    async saveDraft(text, id, folder) {
       const s = load(); const list = (s.drafts ?? []).filter(d => d.id !== id);
       const nid = id ?? uid();
-      s.drafts = text.trim() ? [...list, { id: nid, text, updatedAt: now() }] : list; save(s); return nid;
+      s.drafts = text.trim() ? [...list, { id: nid, text, folder: cleanFolder(folder ?? s.drafts?.find(d => d.id === id)?.folder), updatedAt: now() }] : list; save(s); return nid;
     },
     async deleteDraft(id) { const s = load(); s.drafts = (s.drafts ?? []).filter(d => d.id !== id); save(s); },
     async getPrefs() { return load().prefs; },

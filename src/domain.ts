@@ -14,7 +14,7 @@ export type Note = {
   deletedAt: number | null;
   revision: number;
 };
-export type Draft = { id: string; text: string; updatedAt: number };
+export type Draft = { id: string; text: string; folder?: string; updatedAt: number };
 export type Theme = "light" | "dark" | "system";
 export type Size = "s" | "m" | "l";
 /** Text size has one extra, smaller step. */

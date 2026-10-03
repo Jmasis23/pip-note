@@ -326,17 +326,5 @@ html[data-motion=reduced] .ask-pip .pipx,html[data-motion=reduced] .ask-pip-tag{
 .ask-pip-nudge b{display:block;font-size:calc(14px*var(--ts,1))}.ask-pip-nudge p{margin:4px 0 10px;font-size:calc(13px*var(--ts,1));opacity:.75}.ask-pip-nudge div{display:flex;gap:8px}
 :root[data-theme=dark] .ask-pip-nudge{background:#1C1E28;color:#FFF8EE}
 .ask-pip-nudge{width:290px}.ask-pip-nudge div{align-items:center}.ask-pip-nudge button{white-space:nowrap;padding:8px 14px;font-size:calc(13px*var(--ts,1))}
-
-/* Functional status label, using Desk's existing quiet blue accent. */
-.ai-beta{display:inline-block;vertical-align:middle;font-size:10px;line-height:1.45;font-weight:650;letter-spacing:0;border:1px solid currentColor;border-radius:5px;padding:0 4px;opacity:.78;margin-left:5px;white-space:nowrap}
-.clip{width:min(760px,calc(100vw - 32px));padding:28px;max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);color:var(--ink)}
-.clip-head,.clip-control,.clip-tools,.clip-item footer{display:flex;align-items:center;justify-content:space-between;gap:14px}
-.clip-head h2{font-size:30px;letter-spacing:-.035em}.clip-head p,.clip-control p{color:var(--muted);font-size:13px}
-.clip-control{padding:18px 0 12px;border-bottom:1px solid var(--line)}.clip-control button{white-space:nowrap}
-.clip-warning{font-size:12px;color:var(--muted);margin:12px 0;line-height:1.6}
-.clip-tools{padding:6px 0 14px}.clip-tools input{min-width:0;flex:1;border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:var(--bg)}.clip-tools span{font-size:12px;color:var(--muted);white-space:nowrap}
-.clip-list{overflow:auto;min-height:140px}.clip-item{padding:18px 0;border-top:1px solid var(--line)}.clip-item pre{margin:0 0 14px;font:inherit;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;max-height:140px;overflow:auto}.clip-item footer time{font-size:12px;color:var(--muted)}.clip-item footer div{display:flex;align-items:center;gap:5px}.clip-item button{font-size:12px;padding:7px 9px}
-.clip-empty{padding:30px 8px;text-align:center}.clip-empty h3{font-size:18px}.clip-empty p{font-size:13px;color:var(--muted);max-width:360px;margin:8px auto}.clip-status{color:var(--muted);font-size:12px;margin-top:14px;min-height:36px}
-.db-dock .db-clipboard{white-space:nowrap}
-@media(max-width:600px){.clip{padding:20px}.clip-item footer{align-items:flex-start;flex-direction:column}.clip-control{align-items:flex-start}.db-dock{flex-wrap:wrap}.db-dock input{max-width:110px}.clip-tools{gap:8px}}
-.clip-image{display:block;width:auto;height:auto;max-width:100%;max-height:180px;object-fit:contain;border-radius:10px;margin:0 0 14px;background:var(--bg)}
+.capture-destination{padding:8px 22px 0;font-size:13px;color:var(--muted)}.capture-destination b{color:var(--ink);font-weight:600}
+.db-context{max-width:1180px;margin:0 auto 20px;display:flex;justify-content:space-between;align-items:center;gap:16px}.db-context h2{font-size:24px;letter-spacing:-.025em}.db-context p{font-size:12px;color:var(--muted)}.db-empty .primary{margin-top:14px}.db-empty{break-inside:avoid}

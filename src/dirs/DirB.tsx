@@ -1,4 +1,3 @@
-import { Beta } from "../components/Beta";
 import { Clipboard } from "../components/Clipboard";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
@@ -61,8 +60,11 @@ export default function DirB() {
       try { await repo.create(text ? { body: text.slice(0, 20000), folder: view === "all" ? folder : "" } : { ...imageNote(await toDataUrl(img!)), folder: view === "all" ? folder : "" }); await refresh(); setToast("Kept from clipboard"); window.setTimeout(() => setToast(""), 2200); } catch { setToast("Couldn't keep that"); window.setTimeout(() => setToast(""), 2200); }
     };
     window.addEventListener("paste", on); return () => window.removeEventListener("paste", on);
-  }, [selId, capture, settings, ask, clips, folder, view, refresh]);
+  }, [selId, capture, settings, ask, folder, view, refresh]);
   useTriggers(prefs, () => openCapture(), capture || settings || ask || clips);
+  const clearFilters = () => { setFolder(""); setQuery(""); setView("all"); };
+  const viewName = VIEWS.find(v => v.id === view)?.label ?? "All";
+  const context = `${folder ? folder + " / " : ""}${view === "all" ? "All notes" : viewName}`;
   const full = useFull(selId, notes);
   useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
 
@@ -77,7 +79,7 @@ export default function DirB() {
           <p className="db-sub">Quick notes, right where you are.</p></div>
           <p>Shake the mouse, or press <kbd>{prefs.shortcut.replace(/\+/g, " + ")}</kbd></p>
         </div>
-        <div className="db-tools"><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button></div>
+        <div className="db-tools"><button className="ghost field" onClick={() => setClips(true)}>Clipboard</button><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button></div>
       </header>
 
       {view !== "trash" && view !== "drafts" && (() => {
@@ -92,6 +94,7 @@ export default function DirB() {
             : <input className="db-chip-in" autoFocus value={newFolder} maxLength={60} placeholder="Folder name" aria-label="New folder name" onChange={e => setNewFolder(e.target.value)} onBlur={() => void addFolder()} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setNewFolder(null); }} />}
         </div>);
       })()}
+      <div className="db-context"><div><h2>{context}</h2><p>{view === "drafts" ? drafts.length : notes.length} {view === "drafts" ? "drafts" : "notes"} shown{query ? ` matching "${query}"` : ""}. Navigation counts include all folders.</p></div>{(folder || query || view !== "all") && <button className="ghost field" onClick={clearFilters}>Show all notes</button>}</div>
       <LayoutGroup>
         {view === "drafts" ? (
           <section className="db-drafts" aria-label="Drafts">
@@ -122,7 +125,7 @@ export default function DirB() {
                 <time>{n.folder && <em className="db-fold">{n.folder.replace(/\//g, " / ")}</em>}{when(n.updatedAt)}</time>
               </motion.button>))}
           </AnimatePresence>
-          {notes.length === 0 && <div className="db-empty"><Pip size={72} look /><p>{query ? "Nothing matches." : "Nothing kept yet."}</p></div>}
+          {notes.length === 0 && <div className="db-empty"><Pip size={72} look /><p>{query ? `No results for "${query}"` : view === "trash" ? "Trash is empty" : folder ? `No notes in ${folder}` : view === "pinned" ? "No pinned notes" : view === "today" ? "No notes today" : "Capture your first thought"}</p>{query ? <button className="primary" onClick={() => setQuery("")}>Clear search</button> : view !== "trash" ? <button className="primary" onClick={() => openCapture()}>{folder ? "Capture here" : "New capture"}</button> : <button className="ghost field" onClick={clearFilters}>Show all notes</button>}</div>}
         </section>)}
 
         <AnimatePresence>
@@ -144,15 +147,14 @@ export default function DirB() {
             </button>))}
         </LayoutGroup>
         <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" aria-label="Search notes" />
-        {ai && <button className="db-ask" onClick={() => setAsk(true)} aria-label="Ask your notes">Ask <Beta /></button>}
-        <button className="db-clipboard" onClick={() => setClips(true)}>Clipboard</button>
+        {ai && <button className="db-ask" onClick={() => setAsk(true)} aria-label="Ask your notes">Ask</button>}
         <button className="db-add" onClick={() => openCapture()} aria-label="New capture">Capture</button>
       </nav>
 
-      {clips && <Clipboard onClose={() => setClips(false)} onKept={() => void refresh()} />}
       <AnimatePresence>{ask && <AskPanel onClose={() => setAsk(false)} onOpen={id => setSelId(id)} />}</AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="db-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{toast}</motion.div>}</AnimatePresence>
-      <Capture open={capture} draftId={draftId} textSize={prefs.textSize} onTextSize={v => void setPrefs({ ...prefs, textSize: v })} onClose={() => { setCapture(false); void refresh(); }} onSaved={() => void refresh()} />
+      <Capture open={capture} draftId={draftId} folder={folder} textSize={prefs.textSize} onTextSize={v => void setPrefs({ ...prefs, textSize: v })} onClose={() => { setCapture(false); void refresh(); }} onSaved={() => void refresh()} />
+      {clips && <Clipboard onClose={() => setClips(false)} onKept={() => void refresh()} />}
       {settings && <Settings prefs={prefs} setPrefs={setPrefs} onClose={() => setSettings(false)} onRestored={() => void refresh()} />}
     </div>
     </MotionConfig>

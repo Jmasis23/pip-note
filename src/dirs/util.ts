@@ -29,14 +29,14 @@ export function useTriggers(prefs: Prefs, trigger: () => void, paused: boolean) 
     window.addEventListener("pointermove", on, { passive: true }); return () => window.removeEventListener("pointermove", on);
   }, [prefs.shakeToCapture, prefs.shakeSens, paused]);
   useEffect(() => {
-    if (native) return;
+    if (native || paused) return;
     const parts = prefs.shortcut.split("+"), key = parts[parts.length - 1];
     const on = (e: KeyboardEvent) => {
       const k = e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key;
       if (k === key && e.ctrlKey === parts.includes("Ctrl") && e.shiftKey === parts.includes("Shift") && e.altKey === parts.includes("Alt")) { e.preventDefault(); trigger(); }
     };
     window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on);
-  }, [prefs.shortcut]);
+  }, [prefs.shortcut, paused, trigger]);
 }
 export function useFull(selId: string | null, notes: Note[]) {
   const [full, setFull] = useState<Note | null>(null);
