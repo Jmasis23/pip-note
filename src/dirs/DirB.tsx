@@ -27,6 +27,7 @@ export default function DirB() {
   const [draftId, setDraftId] = useState<string | undefined>(undefined);
   const openCapture = (id?: string) => { setDraftId(id); setCapture(true); };
   const [settings, setSettings] = useState(false);
+  useEffect(() => { const f = () => setSettings(true); window.addEventListener("pip:open-settings", f); return () => window.removeEventListener("pip:open-settings", f); }, []);
   const [ask, setAsk] = useState(false);
   const ai = useAi();
   useEffect(() => {

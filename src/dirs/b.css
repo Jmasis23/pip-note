@@ -322,3 +322,7 @@
 @media (prefers-reduced-motion:reduce){.ask-pip .pipx,.ask-pip-tag,.pipx .cy-eye,.pipx .cy-scan,.pipx .cy-led,.pipx .cy-trace{animation:none!important}}
 html[data-motion=reduced] .ask-pip .pipx,html[data-motion=reduced] .ask-pip-tag{animation:none!important}
 .db-sheet:not(.ask){min-height:min(420px,88vh)}.db-sheet-in{flex:1;min-width:0}
+.ask-pip-nudge{pointer-events:auto;position:absolute;right:0;bottom:70px;width:250px;padding:14px 16px;border-radius:20px;background:#FFF8EE;color:#2D2D31;box-shadow:0 0 0 1.5px #FFC78B inset,0 18px 40px -16px rgba(255,160,120,.6)}
+.ask-pip-nudge b{display:block;font-size:calc(14px*var(--ts,1))}.ask-pip-nudge p{margin:4px 0 10px;font-size:calc(13px*var(--ts,1));opacity:.75}.ask-pip-nudge div{display:flex;gap:8px}
+:root[data-theme=dark] .ask-pip-nudge{background:#1C1E28;color:#FFF8EE}
+.ask-pip-nudge{width:290px}.ask-pip-nudge div{align-items:center}.ask-pip-nudge button{white-space:nowrap;padding:8px 14px;font-size:calc(13px*var(--ts,1))}
