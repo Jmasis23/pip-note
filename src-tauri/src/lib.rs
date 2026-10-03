@@ -1,4 +1,5 @@
 mod shake;
+mod clipboard;
 
 use pip_core::ai::{self, Endpoint, Msg};
 use pip_core::chatgpt::{self, Cred};
@@ -263,6 +264,7 @@ pub fn run() {
             let handle = app.handle().clone();
             let _ = register_shortcut(&handle, &st, parse_shortcut("Ctrl+Shift+Space")?); // default until the web view says otherwise
             app.manage(st);
+            clipboard::start(handle.clone())?;
             shake::start(handle.clone(), shake, level);
 
             // The capture box: a small always-on-top window that stays hidden until the shake, hotkey or tray asks for it.
@@ -296,7 +298,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, chatgpt_sign_in, chatgpt_id_token, oauth_browser, chatgpt_sign_out, chatgpt_models, chatgpt_set_model, ai_use_key, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .invoke_handler(tauri::generate_handler![clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, chatgpt_sign_in, chatgpt_id_token, oauth_browser, chatgpt_sign_out, chatgpt_models, chatgpt_set_model, ai_use_key, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }

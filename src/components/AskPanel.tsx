@@ -1,3 +1,4 @@
+import { Beta } from "./Beta";
 import { Pip } from "./Pip";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
@@ -65,15 +66,15 @@ export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOp
         <motion.div layout className={`db-sheet ask as ${busy ? "is-busy" : ""}`} role="dialog" aria-modal="true" aria-label="Ask your notes" initial={{ y: 22, scale: 0.96, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 340, damping: 30 }}>
           <span className="as-glow" aria-hidden />
           <motion.div layout className="ask-in">
-            <div className="as-head"><h2>{scope ? "Ask this note" : "Ask Pip"}</h2><Spark size={20} className={busy ? "live" : ""} /><LiveTextStepper className="as-ts" /></div>
+            <div className="as-head"><h2>{scope ? "Ask this note" : "Ask Pip"} <Beta /></h2><Spark size={20} className={busy ? "live" : ""} /><LiveTextStepper className="as-ts" /></div>
             <form className="as-form" onSubmit={e => { e.preventDefault(); void go(); }}>
               <div className="as-field">
                 <input ref={input} value={q} onChange={e => setQ(e.target.value)} aria-label="Question" maxLength={500} disabled={busy} placeholder="" />
                 <AnimatePresence>{showIdeas && <motion.span key={idea} className="as-ph" aria-hidden initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.4 }}>{IDEAS[idea]}</motion.span>}</AnimatePresence>
               </div>
-              <motion.button whileTap={{ scale: 0.94 }} className="primary as-go" type="submit" disabled={busy || !q.trim()} aria-label="Ask">{busy ? <span className="as-dots"><i /><i /><i /></span> : "Ask"}</motion.button>
+              <motion.button whileTap={{ scale: 0.94 }} className="primary as-go" type="submit" disabled={busy || !q.trim()} aria-label="Ask">{busy ? <span className="as-dots"><i /><i /><i /></span> : <>Ask <Beta /></>}</motion.button>
             </form>
-            <AnimatePresence>{showIdeas && <motion.div className="as-ideas" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>{IDEAS.slice(0, 3).map((t, i) => <motion.button key={t} type="button" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }} onClick={() => { setQ(t); void go(t); }}>{t}</motion.button>)}</motion.div>}</AnimatePresence>
+            <AnimatePresence>{showIdeas && <motion.div className="as-ideas" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>{IDEAS.slice(0, 3).map((t, i) => <motion.button key={t} type="button" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }} onClick={() => { setQ(t); void go(t); }}>{t} <Beta /></motion.button>)}</motion.div>}</AnimatePresence>
 
             <AnimatePresence initial={false}>{busy && <motion.div className="as-think" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} role="status">
               <div className="as-thinkrow"><Pip state="thinking" size={56} /><ul>{steps.map(s => <motion.li key={s.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: s.done ? 0.5 : 1, x: 0 }} transition={spring}>{s.done ? <svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 8.500l3.200 3L13 4.500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> : <span className="as-spin" />}<span>{s.text}</span></motion.li>)}
@@ -91,7 +92,7 @@ export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOp
                   <OpView o={o} />
                 </motion.div>)}
                 <motion.div className="as-bar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 + res.ops.length * 0.12 }}>
-                  <div className="as-btnwrap"><motion.button whileTap={{ scale: 0.95 }} className={`primary as-apply ${phase === "done" ? "done" : ""}`} onClick={() => void apply()} disabled={phase !== "idle"}>{phase === "done" ? "Done" : phase === "applying" ? "Applying" : `Apply ${res.ops.length}`}</motion.button>{phase === "done" && <Burst />}</div>
+                  <div className="as-btnwrap"><motion.button whileTap={{ scale: 0.95 }} className={`primary as-apply ${phase === "done" ? "done" : ""}`} onClick={() => void apply()} disabled={phase !== "idle"}>{phase === "done" ? "Done" : phase === "applying" ? "Applying" : `Apply ${res.ops.length}`} <Beta /></motion.button>{phase === "done" && <Burst />}</div>
                   {phase === "idle" && <button className="as-quiet" onClick={discard}>Discard</button>}
                 </motion.div>
               </div>}

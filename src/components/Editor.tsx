@@ -1,3 +1,4 @@
+import { Beta } from "./Beta";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { LiveTextStepper } from "./LiveTextStepper";
@@ -112,13 +113,13 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
       <AnimatePresence>{askNote && <AskPanel scope={{ ...note, title, body: latest.current.body }} onClose={() => setAskNote(false)} onOpen={() => {}} />}</AnimatePresence>
       {ai && !locked && (
         <div className="ai-bar" aria-label="AI tools">
-          <button className="ai-btn" disabled={!!busy} onClick={() => void runAi("meta")}>{busy === "meta" ? "Thinking" : "Title and folder"}</button>
+          <button className="ai-btn" disabled={!!busy} onClick={() => void runAi("meta")}>{busy === "meta" ? "Thinking" : "Title and folder"} <Beta /></button>
           {aiMsg && <span className="ai-msg" role="status">{aiMsg}</span>}
         </div>)}
       {sug && (sug.title || sug.folder) && (
         <div className="ai-sug" role="group" aria-label="Suggestion">
-          {sug.title && <button onClick={() => { setTitle(sug.title); touch(); setSug(s => s && { ...s, title: "" }); }}>Title: <b>{sug.title}</b></button>}
-          {sug.folder && <button onClick={() => { setFolder(sug.folder); setSug(s => s && { ...s, folder: "" }); void (async () => { await flush(); try { const n = await repo.update(note.id, rev.current, { folder: cleanFolder(sug.folder) }); rev.current = n.revision; onChanged(); } catch { setAiMsg("Couldn't move it."); } })(); }}>Folder: <b>{sug.folder}</b></button>}
+          {sug.title && <button onClick={() => { setTitle(sug.title); touch(); setSug(s => s && { ...s, title: "" }); }}>Title: <b>{sug.title}</b> <Beta /></button>}
+          {sug.folder && <button onClick={() => { setFolder(sug.folder); setSug(s => s && { ...s, folder: "" }); void (async () => { await flush(); try { const n = await repo.update(note.id, rev.current, { folder: cleanFolder(sug.folder) }); rev.current = n.revision; onChanged(); } catch { setAiMsg("Couldn't move it."); } })(); }}>Folder: <b>{sug.folder}</b> <Beta /></button>}
           <button className="ghost" onClick={() => setSug(null)}>Dismiss</button>
         </div>)}
       {conflict && (
@@ -139,7 +140,7 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
         ))}
         {!locked && <button className="ghost add" onClick={add}>Add checklist item</button>}
       </div>
-      {!locked && <div className="ask-pip-dock">{!ai && nudge && <div className="ask-pip-nudge" role="dialog" aria-label="Connect an AI"><b>Pip needs an AI to answer</b><p>Connect ChatGPT in Settings and Ask Pip will work on your notes.</p><div><button className="ghost field primary" onClick={() => { setNudge(false); window.dispatchEvent(new Event("pip:open-settings")); }}>Connect ChatGPT</button><button className="ghost" onClick={() => setNudge(false)}>Not now</button></div></div>}<button className="ask-pip" onClick={() => (ai ? setAskNote(true) : setNudge(n => !n))} aria-label={ai ? "Ask Pip about this note" : "Ask Pip. Connect an AI first"} title="Ask Pip"><span className="ask-pip-tag">Ask Pip</span><Pip cyber size={52} /></button></div>}
+      {!locked && <div className="ask-pip-dock">{!ai && nudge && <div className="ask-pip-nudge" role="dialog" aria-label="Connect an AI"><b>Pip needs an AI to answer</b><p>Connect ChatGPT in Settings and Ask Pip will work on your notes.</p><div><button className="ghost field primary" onClick={() => { setNudge(false); window.dispatchEvent(new Event("pip:open-settings")); }}>Connect ChatGPT <Beta /></button><button className="ghost" onClick={() => setNudge(false)}>Not now</button></div></div>}<button className="ask-pip" onClick={() => (ai ? setAskNote(true) : setNudge(n => !n))} aria-label={ai ? "Ask Pip about this note" : "Ask Pip. Connect an AI first"} title="Ask Pip"><span className="ask-pip-tag">Ask Pip <Beta /></span><Pip cyber size={52} /></button></div>}
     </section>
   );
 }

@@ -1,3 +1,5 @@
+import { Beta } from "../components/Beta";
+import { Clipboard } from "../components/Clipboard";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { Pip } from "../components/Pip";
@@ -28,6 +30,7 @@ export default function DirB() {
   const openCapture = (id?: string) => { setDraftId(id); setCapture(true); };
   const [settings, setSettings] = useState(false);
   useEffect(() => { const f = () => setSettings(true); window.addEventListener("pip:open-settings", f); return () => window.removeEventListener("pip:open-settings", f); }, []);
+  const [clips, setClips] = useState(false);
   const [ask, setAsk] = useState(false);
   const ai = useAi();
   useEffect(() => {
@@ -52,14 +55,14 @@ export default function DirB() {
   useEffect(() => {
     const on = async (e: ClipboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (selId || capture || settings || ask || t?.closest("input, textarea, [contenteditable=true]")) return;
+      if (selId || capture || settings || ask || clips || t?.closest("input, textarea, [contenteditable=true]")) return;
       const text = e.clipboardData?.getData("text/plain").trim(); const img = imageFrom(e.clipboardData ?? null); if (!text && !img) return;
       e.preventDefault();
       try { await repo.create(text ? { body: text.slice(0, 20000), folder: view === "all" ? folder : "" } : { ...imageNote(await toDataUrl(img!)), folder: view === "all" ? folder : "" }); await refresh(); setToast("Kept from clipboard"); window.setTimeout(() => setToast(""), 2200); } catch { setToast("Couldn't keep that"); window.setTimeout(() => setToast(""), 2200); }
     };
     window.addEventListener("paste", on); return () => window.removeEventListener("paste", on);
-  }, [selId, capture, settings, ask, folder, view, refresh]);
-  useTriggers(prefs, () => openCapture(), capture || settings || ask);
+  }, [selId, capture, settings, ask, clips, folder, view, refresh]);
+  useTriggers(prefs, () => openCapture(), capture || settings || ask || clips);
   const full = useFull(selId, notes);
   useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
 
@@ -141,10 +144,12 @@ export default function DirB() {
             </button>))}
         </LayoutGroup>
         <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" aria-label="Search notes" />
-        {ai && <button className="db-ask" onClick={() => setAsk(true)} aria-label="Ask your notes">Ask</button>}
+        {ai && <button className="db-ask" onClick={() => setAsk(true)} aria-label="Ask your notes">Ask <Beta /></button>}
+        <button className="db-clipboard" onClick={() => setClips(true)}>Clipboard</button>
         <button className="db-add" onClick={() => openCapture()} aria-label="New capture">Capture</button>
       </nav>
 
+      {clips && <Clipboard onClose={() => setClips(false)} onKept={() => void refresh()} />}
       <AnimatePresence>{ask && <AskPanel onClose={() => setAsk(false)} onOpen={id => setSelId(id)} />}</AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="db-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{toast}</motion.div>}</AnimatePresence>
       <Capture open={capture} draftId={draftId} textSize={prefs.textSize} onTextSize={v => void setPrefs({ ...prefs, textSize: v })} onClose={() => { setCapture(false); void refresh(); }} onSaved={() => void refresh()} />
