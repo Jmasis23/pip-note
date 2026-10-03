@@ -1,16 +1,15 @@
 import { Pip } from "./Pip";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { judge, JevError } from "../jev";
 import { LiveTextStepper } from "./LiveTextStepper";
-import { runJev } from "../askjev";
-import { getAiConfig, writeFromNotes, AiError } from "../ai";
-import { applyOps, type AgentResult, type Op } from "../agent";
+import { AiError, useAi } from "../ai";
+import { applyOps, runAgent, type AgentResult, type Op } from "../agent";
 import { repo } from "../useNotes";
 import type { Note } from "../domain";
 
 const IDEAS = ["File my loose notes where they belong", "When did I plan the tram?", "Tidy my travel notes", "Pull this week's tasks into one note"];
 type Step = { id: number; text: string; done: boolean };
+const hostOf = (u: string) => { if (u === "chatgpt") return "ChatGPT"; try { return new URL(u).host; } catch { return "your AI provider"; } };
 const spring = { type: "spring", stiffness: 420, damping: 34 } as const;
 
 function Spark({ size = 16, className = "" }: { size?: number; className?: string }) {
@@ -28,6 +27,7 @@ function Typed({ text }: { text: string }) {
 }
 
 export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOpen: (id: string) => void; scope?: Note }) {
+  const ai = useAi();
   const [q, setQ] = useState(""); const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<AgentResult | null>(null); const [err, setErr] = useState("");
   const [steps, setSteps] = useState<Step[]>([]); const [peek, setPeek] = useState<Note[]>([]);
@@ -37,15 +37,18 @@ export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOp
   useEffect(() => { input.current?.focus(); return () => ctl.current?.abort(); }, []);
   useEffect(() => { if (q || busy || res) return; const t = setInterval(() => setIdea(i => (i + 1) % IDEAS.length), 3200); return () => clearInterval(t); }, [q, busy, res]);
 
+  if (!ai) return null;
+
   const go = async (text = q) => {
     if (!text.trim() || busy) return; setBusy(true); setErr(""); setRes(null); setApplied(""); setPhase("idle"); setSteps([]); setPeek([]); ctl.current = new AbortController();
     try {
-      const r = await runJev(text, repo, { judge, scope, gen: getAiConfig() ? (i, ns, sg) => writeFromNotes(getAiConfig()!, i, ns, sg) : undefined, signal: ctl.current.signal, onStep: (t, notes) => {
+      const store = scope ? { list: async () => [scope] } : repo;
+      const r = await runAgent(ai, text, store, { signal: ctl.current.signal, onStep: (t, notes) => {
         setSteps(s => [...s.map(x => ({ ...x, done: true })), { id: ++seq.current, text: t, done: false }].slice(-4));
         if (notes?.length) setPeek(p => { const m = new Map(p.map(n => [n.id, n])); notes.forEach(n => m.set(n.id, n)); return [...m.values()].slice(-5); });
       } });
       setSteps(s => s.map(x => ({ ...x, done: true }))); setRes(r);
-    } catch (e) { setErr(e instanceof JevError || e instanceof AiError ? e.message : "Couldn't get an answer."); } finally { setBusy(false); }
+    } catch (e) { setErr(e instanceof AiError ? e.message : "Couldn't get an answer."); } finally { setBusy(false); }
   };
   const apply = async () => {
     if (!res || phase !== "idle") return; setPhase("applying");
@@ -95,7 +98,7 @@ export function AskPanel({ onClose, onOpen, scope }: { onClose: () => void; onOp
               {applied && <motion.p className="ask-done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{applied}</motion.p>}
               {res.looked.length > 0 && phase === "idle" && <div className="ask-src"><span>Looked at</span>{res.looked.map((n, i) => <button key={n.id} onClick={() => { onClose(); onOpen(n.id); }}><em>{i + 1}</em>{n.title}</button>)}</div>}
             </motion.div>}</AnimatePresence>
-            <p className="ask-note">{scope ? `Only "${scope.title || "Untitled"}" is read.` : "Pip reads only the notes it needs."} Short excerpts go to Pip's judgment service (Jev). Only if you ask Pip to write something do the notes it picked go to your connected ChatGPT. It proposes, you decide. Nothing saves until you apply.</p>
+            <p className="ask-note">{scope ? `Only "${scope.title || "Untitled"}" is read` : "Pip reads only the notes it needs"} and sent to {hostOf(ai.baseUrl)}. It proposes, you decide. Nothing saves until you apply.</p>
           </motion.div>
         </motion.div>
       </motion.div>
