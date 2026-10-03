@@ -339,3 +339,4 @@ html[data-motion=reduced] .ask-pip .pipx,html[data-motion=reduced] .ask-pip-tag{
 .clip-empty{padding:30px 8px;text-align:center}.clip-empty h3{font-size:18px}.clip-empty p{font-size:13px;color:var(--muted);max-width:360px;margin:8px auto}.clip-status{color:var(--muted);font-size:12px;margin-top:14px;min-height:36px}
 .db-dock .db-clipboard{white-space:nowrap}
 @media(max-width:600px){.clip{padding:20px}.clip-item footer{align-items:flex-start;flex-direction:column}.clip-control{align-items:flex-start}.db-dock{flex-wrap:wrap}.db-dock input{max-width:110px}.clip-tools{gap:8px}}
+.clip-image{display:block;width:auto;height:auto;max-width:100%;max-height:180px;object-fit:contain;border-radius:10px;margin:0 0 14px;background:var(--bg)}

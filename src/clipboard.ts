@@ -1,5 +1,5 @@
 import { call, isNative, onNativeEvent } from "./native";
-export type ClipItem = { id: number; text: string; copiedAt: number };
+export type ClipItem = { id: number; text: string; image?: string; copiedAt: number };
 export type ClipStatus = { enabled: boolean; items: ClipItem[]; supported: boolean };
 export const clipboard = {
   status: (): Promise<ClipStatus> => isNative() ? call("clipboard_status") : Promise.resolve({ enabled: false, items: [], supported: false }),

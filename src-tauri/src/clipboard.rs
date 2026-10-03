@@ -23,18 +23,18 @@ fn save(app: &AppHandle, h: &History) -> Result<(), String> {
     save(&app, &next)?; *h = next; Ok(())
 }
 #[tauri::command] pub fn clipboard_copy(st: State<ClipboardState>, id: u64) -> Result<(), String> {
-    let text = st.0.lock().map_err(|_| "Clipboard history is busy")?.items.iter().find(|i| i.id == id).map(|i| i.text.clone()).ok_or("That item was removed")?;
-    platform::copy(&text)
+    let item = st.0.lock().map_err(|_| "Clipboard history is busy")?.items.iter().find(|i| i.id == id).cloned().ok_or("That item was removed")?;
+    platform::copy(&item)
 }
 pub fn start(app: AppHandle) -> Result<(), String> {
     let raw = app.state::<crate::AppState>().kv.get(KEY).map_err(|e| e.to_string())?;
     let h: History = match raw { Some(s) => serde_json::from_str(&s).map_err(|e| format!("Clipboard history could not be read: {e}"))?, None => History::default() };
     app.manage(ClipboardState(Mutex::new(h), std::sync::atomic::AtomicBool::new(false))); platform::start(app); Ok(())
 }
-fn record(app: &AppHandle, text: String) {
+fn record(app: &AppHandle, text: Option<String>, png: Option<Vec<u8>>) {
     let st = app.state::<ClipboardState>(); if let Ok(mut h) = st.0.lock() {
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
-        let mut next = h.clone(); if next.record(text, now) {
+        let mut next = h.clone(); if if let Some(png) = png { next.record_image(&png, now) } else if let Some(text) = text { next.record(text, now) } else { false } {
             match save(app, &next) { Ok(()) => { *h = next; let _ = app.emit("pip://clipboard-changed", ()); }, Err(_) => { h.enabled = false; let _ = app.emit("pip://clipboard-error", ()); } }
         }
     };
@@ -42,7 +42,7 @@ fn record(app: &AppHandle, text: String) {
 #[cfg(not(windows))] mod platform {
     use super::*;
     pub fn start(_: AppHandle) {}
-    pub fn copy(_: &str) -> Result<(), String> { Err("Clipboard history requires Windows".into()) }
+    pub fn copy(_: &pip_core::clipboard::Item) -> Result<(), String> { Err("Clipboard history requires Windows".into()) }
 }
 #[cfg(windows)] mod platform {
     use super::*;
@@ -72,33 +72,60 @@ fn record(app: &AppHandle, text: String) {
         let hwnd = window(); if hwnd.is_null() || AddClipboardFormatListener(hwnd) == 0 { app.state::<ClipboardState>().0.lock().map(|mut h| h.enabled = false).ok(); let _ = app.emit("pip://clipboard-error", ()); return; }
         app.state::<ClipboardState>().1.store(true, std::sync::atomic::Ordering::Relaxed);
         let _ = app.emit("pip://clipboard-changed", ());
+        let png_format = RegisterClipboardFormatW(wide("PNG").as_ptr());
         let exclude = RegisterClipboardFormatW(wide("ExcludeClipboardContentFromMonitorProcessing").as_ptr());
         let mut msg: Msg = std::mem::zeroed();
         while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
             if msg.message == 0x031D && app.state::<ClipboardState>().0.lock().map(|h| h.enabled).unwrap_or(false) && open(hwnd) {
-                let mut text = None;
-                if IsClipboardFormatAvailable(13) != 0 && (exclude == 0 || IsClipboardFormatAvailable(exclude) == 0) {
-                    let data = GetClipboardData(13); let size = GlobalSize(data) / 2;
-                    if !data.is_null() && size > 0 && size <= 40_002 {
-                        let ptr = GlobalLock(data) as *const u16;
-                        if !ptr.is_null() { let slice = std::slice::from_raw_parts(ptr, size); let len = slice.iter().position(|c| *c == 0).unwrap_or(size); text = Some(String::from_utf16_lossy(&slice[..len])); GlobalUnlock(data); }
+                let mut text = None; let mut png = None;
+                if exclude == 0 || IsClipboardFormatAvailable(exclude) == 0 {
+                    // Prefer images over incidental text offered by browsers alongside an image.
+                    if png_format != 0 && IsClipboardFormatAvailable(png_format) != 0 {
+                        if let Some(data) = read_bytes(png_format, pip_core::clipboard::MAX_IMAGE_BYTES) { png = pip_core::clipboard_image::normalize_png(&data).ok(); }
+                    }
+                    if png.is_none() {
+                        for format in [17,8] { // CF_DIBV5, CF_DIB. Snipping Tool normally supplies these.
+                            if IsClipboardFormatAvailable(format) != 0 { if let Some(data) = read_bytes(format, 32_001_024) { png = pip_core::clipboard_image::dib_to_png(&data).ok(); } if png.is_some() { break; } }
+                        }
+                    }
+                    if png.is_none() && IsClipboardFormatAvailable(13) != 0 {
+                        if let Some(data) = read_bytes(13, 80_004) { let units: Vec<u16> = data.chunks_exact(2).map(|b|u16::from_le_bytes([b[0],b[1]])).take_while(|c|*c!=0).collect(); text = Some(String::from_utf16_lossy(&units)); }
                     }
                 }
-                CloseClipboard(); if let Some(text) = text { record(&app, text); }
+                CloseClipboard(); record(&app, text, png);
             }
             DispatchMessageW(&msg);
         }
         DestroyWindow(hwnd);
     }); }
-    pub fn copy(text: &str) -> Result<(), String> { unsafe {
-        let hwnd = window(); if hwnd.is_null() { return Err("Couldn't open the clipboard".into()); }
-        let result = (|| {
-            let data = wide(text); let mem = GlobalAlloc(2, data.len() * 2); if mem.is_null() { return Err("Couldn't copy this item".into()); }
-            let ptr = GlobalLock(mem) as *mut u16; if ptr.is_null() { GlobalFree(mem); return Err("Couldn't copy this item".into()); }
-            std::ptr::copy_nonoverlapping(data.as_ptr(), ptr, data.len()); GlobalUnlock(mem);
-            if !open(hwnd) { GlobalFree(mem); return Err("Clipboard is busy. Try again".into()); }
-            let ok = EmptyClipboard() != 0 && !SetClipboardData(13, mem).is_null(); CloseClipboard();
-            if !ok { GlobalFree(mem); return Err("Couldn't copy this item".into()); } Ok(())
-        })(); DestroyWindow(hwnd); result
-    } }
+    unsafe fn read_bytes(format: u32, max: usize) -> Option<Vec<u8>> {
+        let mem = GetClipboardData(format); if mem.is_null() { return None; } let size = GlobalSize(mem); if size == 0 || size > max { return None; }
+        let ptr = GlobalLock(mem) as *const u8; if ptr.is_null() { return None; }
+        let bytes = std::slice::from_raw_parts(ptr, size).to_vec(); GlobalUnlock(mem); Some(bytes)
+    }
+    unsafe fn allocate(bytes: &[u8]) -> Result<Handle, String> {
+        let mem = GlobalAlloc(2, bytes.len()); if mem.is_null() { return Err("Couldn't copy this item".into()); }
+        let ptr = GlobalLock(mem) as *mut u8; if ptr.is_null() { GlobalFree(mem); return Err("Couldn't copy this item".into()); }
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr, bytes.len()); GlobalUnlock(mem); Ok(mem)
+    }
+    pub fn copy(item: &pip_core::clipboard::Item) -> Result<(), String> {
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        let formats: Vec<(u32,Vec<u8>)> = if let Some(image) = &item.image {
+            let png = STANDARD.decode(image.strip_prefix("data:image/png;base64,").ok_or("Invalid image")?).map_err(|_| "Invalid image")?;
+            let dib = pip_core::clipboard_image::png_to_dib(&png)?;
+            let format = unsafe { RegisterClipboardFormatW(wide("PNG").as_ptr()) };
+            if format == 0 { return Err("Couldn't copy this image".into()); }
+            vec![(format,png),(17,dib)]
+        } else { vec![(13,wide(&item.text).iter().flat_map(|c| c.to_le_bytes()).collect())] };
+        unsafe {
+            let hwnd = window(); if hwnd.is_null() { return Err("Couldn't open the clipboard".into()); }
+            let result = (|| {
+                let mut owned=Vec::new(); for (format,bytes) in &formats { match allocate(bytes) { Ok(mem)=>owned.push((*format,mem)), Err(e)=>{for (_,mem) in owned {GlobalFree(mem);}return Err(e);} } }
+                if !open(hwnd) { for (_,mem) in owned {GlobalFree(mem);} return Err("Clipboard is busy. Try again".into()); }
+                if EmptyClipboard()==0 { CloseClipboard();for (_,mem) in owned {GlobalFree(mem);}return Err("Couldn't copy this item".into()); }
+                let mut all=true; for (format,mem) in owned { if SetClipboardData(format,mem).is_null() { GlobalFree(mem);all=false; } }
+                CloseClipboard(); if all {Ok(())} else {Err("Couldn't copy all image formats. Try again".into())}
+            })(); DestroyWindow(hwnd); result
+        }
+    }
 }
