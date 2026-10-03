@@ -11,10 +11,11 @@ Feature branch: feature/ai-beta-clipboard. No remote push or release.
   delete and clear. Copy does not inject keystrokes into another app; use Ctrl+V.
 - Default off. Explicit enable, pause, and clear. Enabled preference survives
   restart. Listener lives in Rust, including when the main webview is unloaded.
-- Windows event-driven clipboard listener, not polling. Text and images, 50 distinct
-  items, newest first. Duplicates move to the top. Items over 20,000 characters
+- Windows event-driven clipboard listener, not polling. Separate pools: 50 distinct texts plus up to 10 images
+  (60 entries total), newest first. Duplicates move to the top. Items over 20,000 characters
   are skipped. Images: up to 10, 4 MiB encoded PNG each, 20 MiB combined
-  payload budget, 8 megapixels decoded. Oldest images evicted at the budget.
+  payload budget, 8 megapixels decoded. Oldest images evicted at the budget, never a text item.
+  Text eviction only replaces older text; image slots stay independent.
   Image data URLs add roughly 33% base64 overhead to disk usage.
   Whitespace and Unicode preserved. Initial clipboard not imported.
 - Stored in a separate local file, excluded from generic frontend store and sync.
@@ -27,9 +28,9 @@ Feature branch: feature/ai-beta-clipboard. No remote push or release.
 ## Verification
 - TypeScript check + production web build passed.
 - 60 web unit tests passed.
-- 45 Rust core tests passed, including text and image clipboard tests covering
+- 48 Rust core tests passed, including text and image clipboard tests covering
   default-off, cap, duplicates, Unicode/whitespace/size, serialization and pause,
-  image budgets, old text-only history migration, PNG/DIB roundtrip with alpha,
+  independent text/image count and byte eviction, image budgets, old text-only history migration, PNG/DIB roundtrip with alpha,
   bottom-up padded 24-bit DIB and malformed/oversized inputs.
 - Browser smoke with mocked clipboard bridge passed: enable/pause, copy,
   Keep as note (image preserved in note rich content), image search, delete, clear,
