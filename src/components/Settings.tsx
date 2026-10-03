@@ -55,6 +55,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
           </div></div>
         <label className="row"><div><b>Reduce motion</b><p>Swap movement for plain state changes.</p></div><input type="checkbox" className="switch" checked={prefs.reducedMotion} onChange={e => void setPrefs({ ...prefs, reducedMotion: e.target.checked })} /></label>
         <label className="row"><div><b>Open when I sign in</b><p>Windows app only. Off by default.</p></div><input type="checkbox" className="switch" checked={prefs.launchAtLogin} onChange={e => void setPrefs({ ...prefs, launchAtLogin: e.target.checked })} /></label>
+        <div className="row"><div><b>Capture suggestions</b><p>Jev selects titles and folders. Capture text and folder names are sent to TypeSafe.</p></div></div>
         <div className="row"><div><b>Export</b><p>All active notes as one JSON file.</p></div><button className="ghost field" onClick={() => void exportAll()}>Export JSON</button></div>
         <div className="row col"><div><b>Backups</b><p>One a day, last seven kept. Restoring saves your current notes first.</p></div>
           {backups.length === 0 ? <p className="muted">No backups yet.</p> : backups.filter(b => !b.day.includes("before-restore")).map(b => (
