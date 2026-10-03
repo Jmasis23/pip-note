@@ -7,7 +7,7 @@ import { applyOps, runAgent, type AgentResult, type Op } from "../agent";
 import { repo } from "../useNotes";
 import type { Note } from "../domain";
 
-const IDEAS = ["File my loose notes where they belong", "When did I plan the tram?", "Tidy my travel notes", "Pull this week's tasks into one note"];
+const IDEAS = ["File my loose notes where they belong", "When did I plan the tram?", "Which notes mention a deadline?", "Pull this week's tasks into one note"];
 type Step = { id: number; text: string; done: boolean };
 const hostOf = (u: string) => { if (u === "chatgpt") return "ChatGPT"; try { return new URL(u).host; } catch { return "your AI provider"; } };
 const spring = { type: "spring", stiffness: 420, damping: 34 } as const;

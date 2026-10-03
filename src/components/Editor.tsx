@@ -13,7 +13,7 @@ import { RichBody } from "./RichBody";
 import { Dropdown, NewFolder } from "./Dropdown";
 import type { RichHandle } from "./RichBody";
 import { Pip } from "./Pip";
-import { AiError, cleanUp, suggestMeta, useAi } from "../ai";
+import { AiError, suggestMeta, useAi } from "../ai";
 
 type Save = "idle" | "pending" | "saved" | "error";
 const uid = () => crypto.randomUUID();
@@ -37,18 +37,17 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
   const [info, setInfo] = useState("");
   useEffect(() => setInfo(""), [note.id]);
   const richRef = useRef<RichHandle>(null);
-  const [busy, setBusy] = useState<"" | "meta" | "clean">("");
+  const [busy, setBusy] = useState<"" | "meta">("");
   const [askNote, setAskNote] = useState(false); const [nudge, setNudge] = useState(false);
   const [aiMsg, setAiMsg] = useState("");
   const [sug, setSug] = useState<{ title: string; folder: string } | null>(null);
   useEffect(() => { setSug(null); setAiMsg(""); setBusy(""); }, [note.id]);
-  const runAi = async (kind: "meta" | "clean") => {
+  const runAi = async (kind: "meta") => {
     if (!ai || busy) return; setBusy(kind); setAiMsg(""); setSug(null);
     try {
       const text = latest.current.body.trim() || latest.current.items.map(i => i.text).join("\n");
       if (!text) { setAiMsg("Write something first."); return; }
-      if (kind === "meta") { const all = await repo.list({ view: "all", query: "" }); const r = await suggestMeta(ai, text, [...new Set(all.map(n => n.folder).filter((f): f is string => !!f))]); if (!r.title && !r.folder) setAiMsg("No suggestion this time."); else setSug(r); }
-      else { const out = await cleanUp(ai, latest.current.body); if (out) { richRef.current?.replaceAll(out); setAiMsg("Tidied. Ctrl+Z puts it back."); } }
+      { const all = await repo.list({ view: "all", query: "" }); const r = await suggestMeta(ai, text, [...new Set(all.map(n => n.folder).filter((f): f is string => !!f))]); if (!r.title && !r.folder) setAiMsg("No suggestion this time."); else setSug(r); }
     } catch (e) { setAiMsg(e instanceof AiError ? e.message : "AI hit a snag. Your note is untouched."); } finally { setBusy(""); }
   };
   const [folder, setFolder] = useState(note.folder ?? "");
@@ -114,7 +113,6 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
       {ai && !locked && (
         <div className="ai-bar" aria-label="AI tools">
           <button className="ai-btn" disabled={!!busy} onClick={() => void runAi("meta")}>{busy === "meta" ? "Thinking" : "Title and folder"}</button>
-          <button className="ai-btn" disabled={!!busy} onClick={() => void runAi("clean")}>{busy === "clean" ? "Thinking" : "Tidy up"}</button>
           {aiMsg && <span className="ai-msg" role="status">{aiMsg}</span>}
         </div>)}
       {sug && (sug.title || sug.folder) && (

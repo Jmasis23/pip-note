@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AiError, askNotes, cleanUp, complete, normalizeBase, parseJsonObject, rankNotes, suggestMeta, validBase } from "./ai";
+import { AiError, askNotes, complete, normalizeBase, parseJsonObject, rankNotes, suggestMeta, validBase } from "./ai";
 import type { Note } from "./domain";
 
 const cfg = { baseUrl: "https://api.example.com/v1", key: "sk-test", model: "m" };
@@ -35,7 +35,6 @@ describe("ai", () => {
     expect(await suggestMeta(cfg, "flights", ["Home"])).toEqual({ title: "Trip to Lisbon", folder: "Travel Plans" });
     vi.stubGlobal("fetch", async () => ok("no json")); await expect(suggestMeta(cfg, "x", [])).rejects.toThrow("expected form");
   });
-  it("cleanUp strips code fences", async () => { vi.stubGlobal("fetch", async () => ok("```\nHello.\n```")); expect(await cleanUp(cfg, "hello")).toBe("Hello."); });
   it("ranks notes by terms and ignores trash; ask returns used notes", async () => {
     const ns = [note("1", "Groceries", "oat milk lemons"), note("2", "Trip to Lisbon", "book tram 28"), { ...note("3", "Lisbon old", "tram"), deletedAt: 5 }];
     expect(rankNotes("when is the tram in lisbon", ns).map(n => n.id)).toEqual(["2"]);
