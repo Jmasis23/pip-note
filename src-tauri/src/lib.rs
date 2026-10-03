@@ -26,7 +26,16 @@ pub fn open_capture(app: &AppHandle) {
     }
 }
 fn show_main(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window("main") { let _ = w.unminimize(); let _ = w.show(); let _ = w.set_focus(); }
+    if let Some(w) = app.get_webview_window("main") { let _ = w.unminimize(); let _ = w.show(); let _ = w.set_focus(); return; }
+    // The main window's web view is released while Pip sits in the tray (see the close handler). Build it again with the same settings.
+    // Built off the event-loop thread so it cannot deadlock on Windows.
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if app.get_webview_window("main").is_some() { return; }
+        if let Ok(w) = tauri::WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::App("index.html".into()))
+            .title("Pip").inner_size(1180.0, 780.0).min_inner_size(420.0, 520.0).resizable(true).decorations(false).build()
+        { let _ = w.set_focus(); }
+    });
 }
 
 fn web_key_ok(k: &str) -> bool { k.starts_with("pip.") && !k.starts_with("pip.ai") }
@@ -157,6 +166,8 @@ fn chatgpt_set_model(st: State<AppState>, model: String) -> Result<(), String> {
 #[tauri::command]
 fn ai_use_key(st: State<AppState>) -> Result<(), String> { st.kv.set(MODE_KEY, "key").map_err(|e| e.to_string()) }
 
+async fn tokio_sleep(ms: u64) { let _ = tauri::async_runtime::spawn_blocking(move || std::thread::sleep(std::time::Duration::from_millis(ms))).await; }
+
 #[tauri::command]
 fn capture_hide(app: AppHandle) { if let Some(w) = app.get_webview_window("capture") { let _ = w.hide(); } }
 #[tauri::command]
@@ -270,7 +281,21 @@ pub fn run() {
             Ok(())
         })
         // Closing the window keeps Pip in the tray so the shake and hotkey still work.
-        .on_window_event(|w, ev| { if let WindowEvent::CloseRequested { api, .. } = ev { api.prevent_close(); let _ = w.hide(); } })
+        // The main window's web view (the biggest memory cost) is released a few seconds later, after any pending note save has flushed,
+        // and rebuilt on demand by show_main. The small capture box stays loaded so the shake still opens it instantly.
+        .on_window_event(|w, ev| {
+            if let WindowEvent::CloseRequested { api, .. } = ev {
+                api.prevent_close();
+                let _ = w.hide();
+                if w.label() == "main" {
+                    let w = w.clone();
+                    tauri::async_runtime::spawn(async move {
+                        tokio_sleep(3000).await;
+                        if !w.is_visible().unwrap_or(true) { let _ = w.destroy(); }
+                    });
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![store_load, store_set, ai_status, ai_configure, ai_clear, ai_test, ai_complete, chatgpt_sign_in, chatgpt_id_token, oauth_browser, chatgpt_sign_out, chatgpt_models, chatgpt_set_model, ai_use_key, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
