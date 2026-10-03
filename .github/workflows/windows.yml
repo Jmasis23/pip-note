@@ -36,6 +36,7 @@ jobs:
     permissions:
       contents: write
     env:
+      VITE_CAPTURE_JEV: "true"
       # Updates are signed and published only when the signing key is set as a repo secret.
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
