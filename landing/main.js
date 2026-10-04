@@ -6,3 +6,9 @@ document.querySelectorAll(".panel,.demo,.more dl,.know>div").forEach(el => { el.
 // demo video: play only while on screen, never show controls
 const dv = document.querySelector(".demo-video video");
 if (dv) { if (reduce) { dv.removeAttribute("autoplay"); dv.pause(); } else new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? dv.play().catch(() => {}) : dv.pause()), { threshold: .25 }).observe(dv); }
+
+// Pip spark cues: one playful hop on the hero tile, and a saved burst when the closing CTA scrolls in.
+const hs = document.querySelector(".pip-hero .pipm");
+if (hs && !reduce) setTimeout(() => hs.classList.add("bounce"), 4500);
+const fs = document.querySelector(".final-spark");
+if (fs) { fs.dataset.state = "idle"; if (!reduce) new IntersectionObserver((es, o) => es.forEach(e => { if (e.isIntersecting) { fs.dataset.state = "saved"; o.disconnect(); } }), { threshold: .6 }).observe(fs); }

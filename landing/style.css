@@ -12,7 +12,7 @@ a{color:inherit}
 :focus-visible{outline:3px solid #7fb0ee;outline-offset:3px;border-radius:10px}
 
 .nav{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:32px;padding:14px clamp(20px,4vw,48px);background:rgba(255,248,238,.78);backdrop-filter:saturate(1.6) blur(18px);border-bottom:1px solid transparent}
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;letter-spacing:-.02em;text-decoration:none}
+.brand{display:flex;align-items:center;text-decoration:none}
 .nav nav{display:flex;gap:26px;margin-left:auto;font-size:15px;font-weight:500;color:var(--ink2)}
 .nav nav a{text-decoration:none}.nav nav a:hover{color:var(--ink)}
 
@@ -35,7 +35,7 @@ section{padding:clamp(64px,10vw,130px) clamp(20px,5vw,72px);max-width:1280px;mar
 .win-bar{display:flex;gap:7px;padding:12px 16px;background:#fbf6ee;border-bottom:1px solid var(--line)}
 .win-bar i{width:11px;height:11px;border-radius:50%;background:#e9dfd0}
 .win img{width:100%}
-.pip-hero{position:absolute;right:-26px;bottom:-54px;width:clamp(120px,15vw,210px);filter:drop-shadow(0 18px 18px rgba(90,60,20,.22))}
+.pip-hero{position:absolute;right:-22px;bottom:-40px;width:clamp(92px,11vw,132px);aspect-ratio:1;border-radius:22.5%;display:grid;place-items:center;background:linear-gradient(#fff,#ffeedf);border:1.5px solid rgba(255,138,58,.22);box-shadow:0 18px 30px rgba(90,60,20,.18)}.pip-hero .pipm{width:66%;height:66%}
 .win-hero{transform:rotate(-1.2deg)}
 
 /* hero load sequence: the one orchestrated moment */
@@ -95,7 +95,7 @@ dd{margin:4px 0 0;color:var(--ink2)}
 .know a{border-bottom:2px solid var(--peach);text-decoration:none}
 
 .final{text-align:center;display:grid;justify-items:center;gap:22px}
-.final img{width:150px}
+.final-mark{width:96px;height:96px}
 footer{display:flex;gap:28px;justify-content:center;padding:36px 20px 60px;font-size:14px;color:var(--ink2)}
 footer span{font-weight:800;color:var(--ink)}
 footer a{text-decoration:none}footer a:hover{color:var(--ink)}
@@ -147,3 +147,25 @@ footer .made{font-weight:500;color:var(--ink2)}
 .demo-video figcaption{font-weight:600;font-size:16px;color:var(--ink2)}
 
 section[id]{scroll-margin-top:84px}
+
+/* Pip brand: wordmark + spark. 150-300ms, one-shot. */
+.pipw,.pipm{overflow:visible;display:block}
+.pipw .ink{fill:#201E22}
+.pipw .s,.pipm .s{stroke:#FF8A3A;stroke-width:26;stroke-linecap:round;fill:none;transform-box:fill-box;transform-origin:center;transition:transform .15s cubic-bezier(.2,.7,.3,1)}
+.s1{--dx:2.4px;--dy:-9.4px}.s2{--dx:6.6px;--dy:-7.5px}.s3{--dx:9.5px;--dy:-3px}
+.pipw:hover .s,.pipm:hover .s,.pip-hero:hover .s{transform:translate(calc(var(--dx)*.45),calc(var(--dy)*.45))}
+@keyframes pip-fire{0%{opacity:0;transform:translate(calc(var(--dx)*-.8),calc(var(--dy)*-.8)) scale(.55)}60%{opacity:1;transform:translate(calc(var(--dx)*.35),calc(var(--dy)*.35)) scale(1.06)}100%{opacity:1;transform:none}}
+.pipw .s{animation:pip-fire .26s cubic-bezier(.2,.8,.3,1) both}.pipw .s2{animation-delay:.055s}.pipw .s3{animation-delay:.11s}
+.hero-wm{margin:0 0 26px;height:clamp(56px,6vw,76px);width:auto}.hero-wm .s{animation-delay:.5s}.hero-wm .s2{animation-delay:.555s}.hero-wm .s3{animation-delay:.61s}
+.nav-wm{height:30px;width:auto}.foot-wm{height:18px;width:auto;align-self:center}.nf-wm{height:64px;width:auto}
+.hero-spark .s{animation:pip-fire .26s cubic-bezier(.2,.8,.3,1) 1.5s both}.hero-spark .s2{animation-delay:1.555s}.hero-spark .s3{animation-delay:1.61s}
+@keyframes pip-hop{0%{transform:none}30%{transform:translateY(-6px) scale(.98,1.04)}60%{transform:scale(1.04,.95)}100%{transform:none}}
+.bounce{animation:pip-hop .3s cubic-bezier(.3,.7,.3,1) 1}
+.bounce .s{animation:pip-fire .26s cubic-bezier(.2,.8,.3,1) .12s both}
+.pipm .glow{fill:#FF8A3A;filter:blur(9px);opacity:0;transform-box:fill-box;transform-origin:center}
+@keyframes pip-burst{0%{transform:none}38%{transform:translate(calc(var(--dx)*1.5),calc(var(--dy)*1.5)) scale(1.12)}100%{transform:none}}
+@keyframes pip-glow{0%{opacity:0;transform:scale(.6)}35%{opacity:.3}100%{opacity:0;transform:scale(1.15)}}
+.pipm[data-state=saved] .s{animation:pip-burst .3s cubic-bezier(.2,.8,.3,1) both}.pipm[data-state=saved] .s2{animation-delay:.03s}.pipm[data-state=saved] .s3{animation-delay:.06s}
+.pipm[data-state=saved] .glow{animation:pip-glow .36s ease-out both}
+.not-found .nf-wm{width:auto}
+@media (prefers-reduced-motion:reduce){.pipw *,.pipm *,.pipm,.pipw{animation:none!important;transition:none!important}}
