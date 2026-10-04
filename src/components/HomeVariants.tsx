@@ -35,17 +35,17 @@ export function HomeA({ name, notes, drafts, loaded, shortcut, now, onCapture, o
 type Size = "s" | "m" | "l";
 type Slot = { id: string; size: Size };
 const WIDGETS: Record<string, { label: string; sizes: Size[] }> = {
-  capture: { label: "Capture", sizes: ["m", "l"] },
+  capture: { label: "Capture", sizes: ["s", "m"] },
   pinned: { label: "Pinned note", sizes: ["l", "m"] },
   latest: { label: "Latest note", sizes: ["m", "l"] },
   todo: { label: "To do ring", sizes: ["s", "m"] },
   kept: { label: "Kept this week", sizes: ["s", "m"] },
   list: { label: "Checklist", sizes: ["l", "m"] },
-  recent: { label: "Recent", sizes: ["m", "l"] },
+  recent: { label: "Recent", sizes: ["l", "m"] },
   date: { label: "Today", sizes: ["s", "m"] },
 };
-const DEFAULT: Slot[] = [{ id: "capture", size: "m" }, { id: "pinned", size: "l" }, { id: "todo", size: "s" }, { id: "kept", size: "s" }, { id: "list", size: "l" }, { id: "recent", size: "m" }];
-const KEY = "pip.home.layout.v1";
+const DEFAULT: Slot[] = [{ id: "pinned", size: "l" }, { id: "todo", size: "s" }, { id: "kept", size: "s" }, { id: "capture", size: "s" }, { id: "date", size: "s" }, { id: "list", size: "l" }, { id: "recent", size: "l" }];
+const KEY = "pip.home.layout.v2";
 const loadLayout = (): Slot[] => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); if (Array.isArray(v)) return v.filter((x: Slot) => WIDGETS[x?.id] && WIDGETS[x.id].sizes.includes(x.size)); } catch { /* ignore */ } return DEFAULT; };
 
 export function HomeB({ name, notes, drafts, loaded, shortcut, now, onCapture, onOpen, onView }: HomeProps) {
@@ -72,7 +72,7 @@ export function HomeB({ name, notes, drafts, loaded, shortcut, now, onCapture, o
   const hidden = Object.keys(WIDGETS).filter(id => !layout.some(x => x.id === id));
   const rm = (id: string) => save(layout.filter(x => x.id !== id));
   const resize = (id: string) => save(layout.map(x => { if (x.id !== id) return x; const z = WIDGETS[id].sizes; return { ...x, size: z[(z.indexOf(x.size) + 1) % z.length] }; }));
-  const slots = empty ? [layout.find(x => x.id === "capture") ?? DEFAULT[0]] : layout;
+  const slots = empty ? [{ id: "capture", size: "m" as Size }] : layout;
   return <main className="hv hv-b" aria-label="Your dashboard" data-empty={empty || undefined} data-edit={edit || undefined}>
     <header><h1>{first(name) ? `Hi, ${first(name)}` : "Hi there"}</h1><p>{new Date(now).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p>{!empty && <button className="hv-edit" onClick={() => setEdit(e => !e)} aria-pressed={edit}>{edit ? "Done" : "Customize"}</button>}</header>
     <div className="hv-bento">
