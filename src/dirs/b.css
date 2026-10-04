@@ -346,3 +346,9 @@
 .capture-destination select{margin-left:6px;border:1px solid var(--line);border-radius:9px;padding:5px 9px;background:var(--surface);color:var(--ink);max-width:75%}
 .capture-arrangement{padding:8px 22px;font-size:12px;color:var(--muted)}.capture-arrangement p{margin:0;overflow-wrap:anywhere}.capture-arrangement b{color:var(--ink)}
 .capture-disclosure{display:block;margin-top:4px;line-height:1.4}
+
+/* brand wordmark in hero + settings */
+.db-hero h1 .pipw{display:block}.db-hero h1{display:block}
+.set-wm{margin-left:auto;margin-right:12px;opacity:.9}
+.db-wm{align-items:center;gap:18px}.db-hero h1 .pipw{height:calc(46px*var(--ts,1));width:auto}
+@media (max-width:760px){.db-hero h1 .pipw{height:calc(34px*var(--ts,1))}}

@@ -31,7 +31,7 @@ export type Prefs = {
 };
 export type View = "all" | "today" | "pinned" | "drafts" | "trash";
 export type NoteInput = Partial<Pick<Note, "title" | "body" | "rich" | "checklist" | "pinned" | "folder">>;
-export const DEFAULT_PREFS: Prefs = { shortcut: "Ctrl+Shift+Space", theme: "system", reducedMotion: false, launchAtLogin: false, shakeToCapture: true, shakeSens: 50, cardSize: "m", textSize: "m", accent: "lavender", tint: "color", extraFolders: [] };
+export const DEFAULT_PREFS: Prefs = { shortcut: "Ctrl+Shift+Space", theme: "light", reducedMotion: false, launchAtLogin: false, shakeToCapture: true, shakeSens: 50, cardSize: "m", textSize: "m", accent: "lavender", tint: "color", extraFolders: [] };
 export class ConflictError extends Error {
   constructor(public latest: Note) { super("This note changed somewhere else."); this.name = "ConflictError"; }
 }
