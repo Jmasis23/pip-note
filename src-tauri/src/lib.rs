@@ -237,7 +237,9 @@ pub fn run() {
             let mut tray = TrayIconBuilder::new().tooltip("Pip").menu(&menu).show_menu_on_left_click(false)
                 .on_menu_event(|app, ev| match ev.id.as_ref() { "open" => show_main(app), "capture" => open_capture(app), "quit" => app.exit(0), _ => {} })
                 .on_tray_icon_event(|tray, ev| { if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = ev { show_main(tray.app_handle()); } });
-            if let Some(icon) = app.default_window_icon() { tray = tray.icon(icon.clone()); }
+            // Tray: the bare orange spark (32x32 RGBA, no tile) so it reads on light and dark taskbars. Falls back to the app icon.
+            let spark = tauri::image::Image::new(include_bytes!("../icons/tray32.rgba"), 32, 32);
+            tray = tray.icon(spark);
             tray.build(app)?;
             Ok(())
         })

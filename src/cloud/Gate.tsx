@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { Pip } from "../components/Pip";
+import { Pip, PipWord } from "../components/Pip";
 import { repo } from "../useNotes";
 import { isNative } from "../native";
 import { AuthError, finishRedirect, freshSession, loadSession, signInChatGpt, signInGoogle } from "./auth";
@@ -26,8 +26,7 @@ function Wall({ onIn }: { onIn: (s: Session) => void }) {
     catch (e) { setErr(e instanceof AuthError ? e.message : "Something went wrong. Try again."); setBusy(""); }
   };
   return <Frame k="wall">
-    <div className="gt-mascot"><Pip size={72} look /></div>
-    <h1>Pip</h1>
+    <div className="gt-mascot"><PipWord height={64} attn={6000} /></div>
     <p className="gt-tag">Need it later? Pip it.</p>
     <div className="gt-btns">
       <button className="gt-btn main" disabled={!!busy} onClick={() => run("google")}><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.100 3.600l6.800-6.800C35.800 2.400 30.300 0 24 0 14.600 0 6.500 5.400 2.600 13.200l7.900 6.100C12.400 13.600 17.700 9.500 24 9.500z"/><path fill="#4285F4" d="M46.500 24.500c0-1.600-.1-3.100-.4-4.500H24v9h12.700c-.6 3-2.300 5.500-4.800 7.200l7.500 5.800c4.400-4.100 7.100-10.100 7.100-17.500z"/><path fill="#FBBC05" d="M10.500 28.700A14.500 14.500 0 0 1 9.500 24c0-1.600.3-3.200.8-4.700l-7.900-6.100A24 24 0 0 0 0 24c0 3.900.9 7.500 2.600 10.800l7.900-6.100z"/><path fill="#34A853" d="M24 48c6.500 0 11.900-2.100 15.900-5.800l-7.500-5.800c-2.100 1.400-4.800 2.300-8.400 2.300-6.300 0-11.600-4.100-13.500-9.800l-7.900 6.100C6.500 42.600 14.600 48 24 48z"/></svg>{busy === "google" ? "Waiting for your browser..." : "Continue with Google"}</button>

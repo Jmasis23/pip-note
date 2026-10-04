@@ -1,3 +1,4 @@
+import { PipWord } from "./Pip";
 import { useEffect, useState } from "react";
 import type { Accent, Prefs, Size, TextSize, Theme } from "../domain";
 import { repo } from "../useNotes";
@@ -35,7 +36,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
   return (
     <div className="scrim" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }} onKeyDown={e => { if (e.key === "Escape") onClose(); }}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Settings" tabIndex={-1} ref={el => { if (el && !el.contains(document.activeElement)) el.focus({ preventScroll: true }); }}>
-        <header><h2>Settings</h2><button className="ghost" onClick={onClose}>Done</button></header>
+        <header><h2>Settings</h2><PipWord height={22} className="set-wm" /><button className="ghost" onClick={onClose}>Done</button></header>
         <AccountRow />
         <label className="row"><div><b>Shake to capture</b><p>Shake the mouse side to side to open capture. Ignored while a button is held.</p></div><input type="checkbox" className="switch" checked={prefs.shakeToCapture} onChange={e => void setPrefs({ ...prefs, shakeToCapture: e.target.checked })} /></label>
         {prefs.shakeToCapture && <div className="row col"><div><b>Shake sensitivity</b><p role="status" aria-live="polite">{(() => { const v = prefs.shakeSens ?? 50; return v < 25 ? "Needs a firm, deliberate shake." : v < 45 ? "A little firmer than usual." : v <= 55 ? "A quick back and forth." : v <= 75 ? "Picks up smaller shakes." : "Fires on a small wiggle. May trigger by accident."; })()}</p></div>

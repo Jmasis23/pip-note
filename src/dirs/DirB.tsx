@@ -1,7 +1,7 @@
 import { Clipboard } from "../components/Clipboard";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
-import { Pip } from "../components/Pip";
+import { Pip, PipWord } from "../components/Pip";
 import { Capture } from "../components/Capture";
 import { Editor } from "../components/Editor";
 import { Settings } from "../components/Settings";
@@ -105,9 +105,8 @@ export default function DirB() {
     <div className={isNative() ? "db db-native" : "db"}>
       {isNative() && <Titlebar />}
       <header className="db-hero">
-        <div className="db-mascot"><Pip size={96} look /></div>
-        <div>
-          <div className="db-wm"><h1 aria-label="Pip">Pip<svg className="db-wm-spark" width="34" height="34" viewBox="0 0 34 34" aria-hidden><path d="M22 14l5-6M27 22l7-1M17 6l1-6" stroke="#FFC78B" strokeWidth="4" strokeLinecap="round" fill="none"/></svg></h1>
+                <div>
+          <div className="db-wm"><h1 aria-label="Pip"><PipWord height={38} /></h1>
           <p className="db-sub">Quick notes, right where you are.</p></div>
           <p>Shake the mouse, or press <kbd>{prefs.shortcut.replace(/\+/g, " + ")}</kbd></p>
         </div>
@@ -144,7 +143,7 @@ export default function DirB() {
                   <button className="db-draft-del" aria-label="Delete draft" onClick={async () => { await repo.deleteDraft(d.id); await refresh(); }}>Delete</button>
                 </motion.div>))}
             </AnimatePresence>
-            {drafts.length === 0 && <div className="db-empty"><Pip size={72} look /><p>No drafts. Press Esc in a capture to keep one here.</p></div>}
+            {drafts.length === 0 && <div className="db-empty"><Pip size={72} attn={7000} /><p>No drafts. Press Esc in a capture to keep one here.</p></div>}
           </section>
         ) : (
         <section ref={boardRef} className="db-board" aria-label="Notes">
@@ -154,7 +153,7 @@ export default function DirB() {
                 position={prefs.cardPositions?.[n.id]} boardRef={boardRef} onOpen={() => setSelId(n.id)}
                 onPlace={position => placeCard(n.id, position)} />))}
           </AnimatePresence>
-          {notes.length === 0 && <div className="db-empty"><Pip size={72} look /><p>{query ? `No results for "${query}"` : view === "trash" ? "Trash is empty" : folder ? `No notes in ${folder}` : view === "pinned" ? "No pinned notes" : view === "today" ? "No notes today" : "Capture your first thought"}</p>{query ? <button className="primary" onClick={() => setQuery("")}>Clear search</button> : view !== "trash" ? <button className="primary" onClick={() => openCapture()}>{folder ? "Capture here" : "New capture"}</button> : <button className="ghost field" onClick={clearFilters}>Show all notes</button>}</div>}
+          {notes.length === 0 && <div className="db-empty"><Pip size={72} attn={7000} /><p>{query ? `No results for "${query}"` : view === "trash" ? "Trash is empty" : folder ? `No notes in ${folder}` : view === "pinned" ? "No pinned notes" : view === "today" ? "No notes today" : "Capture your first thought"}</p>{query ? <button className="primary" onClick={() => setQuery("")}>Clear search</button> : view !== "trash" ? <button className="primary" onClick={() => openCapture()}>{folder ? "Capture here" : "New capture"}</button> : <button className="ghost field" onClick={clearFilters}>Show all notes</button>}</div>}
         </section>)}
 
         <AnimatePresence>

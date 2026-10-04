@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { call } from "../native";
-import { Pip } from "./Pip";
+import { PipWord } from "./Pip";
 
 const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.2, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 
@@ -14,7 +14,7 @@ export function Titlebar() {
   const toggle = () => { void call<boolean>("win_toggle_max").then(setMax).catch(() => {}); };
   return (
     <div className="tb" data-tauri-drag-region>
-      <div className="tb-id" data-tauri-drag-region><Pip size={16} /><span data-tauri-drag-region>Pip</span></div>
+      <div className="tb-id" data-tauri-drag-region><PipWord height={15} /></div>
       <div className="tb-ctl">
         <button aria-label="Minimize" onClick={() => void call("win_minimize")}>
           <svg width="10" height="10" viewBox="0 0 10 10" {...stroke}><path d="M1 5.5h8" /></svg>

@@ -28,3 +28,6 @@
 .gt-keys{display:grid;grid-template-columns:auto 1fr;gap:16px 22px;align-items:center;margin-top:28px;padding:20px 24px;border-radius:22px;background:rgba(127,127,150,.09);text-align:left;width:min(420px,100%)}
 .gt-keys div{display:contents}.gt-keys .kk{display:flex;gap:5px;font-style:normal}.gt-keys span{margin-left:0;font-size:14.5px;line-height:1.3}
 @media (prefers-color-scheme:dark){.gt-keys span{color:#B4B6C6}.gt-keys{background:rgba(255,255,255,.06)}.gt-keys kbd{background:rgba(255,255,255,.12);color:#F2F2F8;box-shadow:none}}
+
+.gt-mascot:has(.pipw){width:auto;height:auto;background:none;border-radius:0}
+@media (prefers-color-scheme:dark){.gt .pipw .ink{fill:#F6F1EB}}
