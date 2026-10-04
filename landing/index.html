@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pip: quick notes, right where you are</title>
+<meta name="description" content="Pip is a small notes app for Windows. Shake your mouse or press Ctrl+Shift+Space, write it down, get back to what you were doing.">
+<link rel="canonical" href="https://pip-note.pages.dev/">
+<meta name="robots" content="index,follow">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pip-note.pages.dev/">
+<meta property="og:site_name" content="Pip">
+<meta property="og:title" content="Pip: quick notes, right where you are">
+<meta property="og:description" content="Shake your mouse, write it down, get back to work. A calm notes app for Windows, free while in early access.">
+<meta property="og:image" content="https://pip-note.pages.dev/img/og-pip.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Pip Windows quick-capture notes app: catch the thought before it gets away.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pip: quick notes, right where you are">
+<meta name="twitter:description" content="Shake your mouse, write it down, get back to work. A calm notes app for Windows, free while in early access.">
+<meta name="twitter:image" content="https://pip-note.pages.dev/img/og-pip.png">
+<link rel="icon" href="img/pip-icon-only.svg">
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+<!-- Site verification placeholders are inactive until real account values are supplied.
+<meta name="google-site-verification" content="REPLACE_WITH_GOOGLE_VERIFICATION_TOKEN">
+<meta name="msvalidate.01" content="REPLACE_WITH_BING_VERIFICATION_TOKEN">
+-->
+<!-- Google Analytics is intentionally inactive. See INTEGRATIONS.md before activation.
+<script async src="https://www.googletagmanager.com/gtag/js?id=REPLACE_WITH_GA4_MEASUREMENT_ID"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'REPLACE_WITH_GA4_MEASUREMENT_ID');
+</script>
+-->
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="#top"><img src="img/pip-icon-only.svg" alt="" width="30" height="30"><span>Pip</span></a>
+  <nav><a href="#how">How it works</a><a href="#capture-suggestions">Capture suggestions</a><a href="#privacy">Privacy</a><a href="#know">Good to know</a></nav>
+  <a class="btn btn-sm" href="https://github.com/Jmasis23/pip-note/releases/download/v0.2.21/Pip_0.2.21_x64-setup.exe">Download</a>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="hero-copy">
+    <h1>Catch the thought before it gets away.</h1>
+    <p class="lede">Shake your mouse. Type. Go back to what you were doing. Pip is a calm little notes app for Windows. It stays out of the way until you need it.</p>
+    <div class="cta">
+      <a class="btn btn-lg" href="https://github.com/Jmasis23/pip-note/releases/download/v0.2.21/Pip_0.2.21_x64-setup.exe">Download for Windows</a>
+      <a class="link" href="#know">Before you install</a>
+    </div>
+    <p class="fine">Free while Pip is in early access. Windows 11, 64-bit. Version 0.2.21.</p>
+    <p class="byo">New in 0.2.21: move cards freely and tidy them with Auto arrange. Plus a resizable capture box for long pastes.</p>
+  </div>
+  <div class="hero-stage" aria-hidden="false">
+    <div class="win win-hero">
+      <div class="win-bar"><i></i><i></i><i></i></div>
+      <img src="img/app-home.webp" srcset="img/app-home-small.webp 680w, img/app-home.webp 1325w" sizes="(max-width: 860px) 90vw, 50vw" alt="Pip's note board: colored note cards for ideas, groceries, a trip and a call, with a Capture button at the bottom." width="1325" height="867" fetchpriority="high">
+    </div>
+    <img class="pip-hero" src="img/pip-idle-animated.svg" alt="Pip, a cream sticky note with a pin on top, winking" width="210" height="197">
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="how-head">
+    <h2>Shake. Write. Back to work.</h2>
+    <p>You're in the middle of something. Shake your mouse, or press Ctrl+Shift+Space, and a small capture box appears right where you are. Write it down, hit Ctrl+Enter, and it's saved. Then you're back, exactly where you left off. Press Esc and your half-written thought is kept for next time.</p>
+    <p>Drag the capture box's edges or corners to resize it. It stays on screen, and long pasted text scrolls inside so the Keep button stays visible.</p>
+  </div>
+  <figure class="demo-video" id="demo">
+    <video muted loop playsinline preload="none" poster="img/pip-demo-poster.webp" aria-label="Screen recording: searching Google, highlighting a passage, shaking the mouse, Pip's capture box opens, the text is pasted and saved, and the search carries on.">
+      <source src="img/pip-demo.mp4" type="video/mp4">
+    </video>
+    <figcaption>Researching on Google: highlight, shake, paste, saved. Back to the search.</figcaption>
+  </figure>
+</section>
+
+<section class="ask" id="capture-suggestions">
+  <div class="ask-head">
+    <p class="gpt gpt-lg">Powered by Jev</p>
+    <h2>A title and a place for the thought.</h2>
+    <p>Powered by Jev, Pip suggests a title from your own words and a folder you already have as you type in capture. Pick a different folder whenever you want. Your choice wins.</p>
+  </div>
+  <div class="ask-grid">
+    <div class="panel panel-blue signin">
+      <img class="sheet" src="img/capture.webp" alt="Pip's capture box with a folder dropdown, captured text and a Keep it button." width="601" height="362" loading="lazy">
+    </div>
+    <div class="ask-copy">
+      <h3>Suggestions happen during capture.</h3>
+      <p>While you're signed in, capture text and folder names are sent to Pip's own service for title and folder suggestions powered by Jev. This happens as you type, before you save.</p>
+      <h3>Your folder choice comes first.</h3>
+      <p>Choose a folder in the capture dropdown to override the suggestion. You can edit the saved note's title too.</p>
+      <h3>Saving doesn't wait.</h3>
+      <p>If a suggestion is unavailable or uncertain, Pip uses a first-line title on your PC and keeps the current folder.</p>
+      <p class="small"><a class="link" href="#privacy">Read what is sent and what stays on your PC</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="board">
+  <div class="board-copy">
+    <h2>A board you can read at a glance.</h2>
+    <p>Move your note cards freely around the board, or use Auto arrange to tidy them. Pin the ones you need, tick off checklists, search by title or body, and sort things into folders. Pick card colors and turn the text size up or down with the - and + buttons.</p>
+  </div>
+  <div class="panel panel-blue">
+    <img class="sheet" src="img/sheet-editor.webp" alt="A note open in Pip: title, formatting bar, a short line and a checklist, with formatting tools, a folder dropdown and a checklist." width="721" height="505" loading="lazy">
+  </div>
+</section>
+
+
+<section class="more">
+  <h2>The rest of the desk.</h2>
+  <dl>
+    <div><dt>Floating notes</dt><dd>Keep a note on screen while you work in something else.</dd></div>
+    <div><dt>Checklists</dt><dd>Plain checklists inside any note.</dd></div>
+    <div><dt>Light and dark</dt><dd>Follows Windows, or pick one.</dd></div>
+    <div><dt>Plain text</dt><dd>Export any note as Markdown, or all active notes as a JSON file from Settings.</dd></div>
+    <div><dt>Notes with your account</dt><dd>Sign in with Google or ChatGPT. Your notes sync through your own Pip account.</dd></div>
+    <div><dt>Clipboard history</dt><dd>Paused by default. Enable it in Clipboard to keep copied text and images on this PC. Pause it before copying secrets.</dd></div>
+    <div><dt>Calm motion</dt><dd>Turn animation off in settings, or let Windows do it for you.</dd></div>
+  </dl>
+</section>
+
+<section class="privacy" id="privacy">
+  <h2>What stays. What is sent.</h2>
+  <dl>
+    <div><dt>Notes and your account</dt><dd>A copy of your notes lives on this PC. Pip requires sign-in, and notes sync through your own Pip account. They are not stored only on your PC.</dd></div>
+    <div><dt>Capture-time suggestions</dt><dd>While you're signed in, Pip sends the text you're capturing and your folder names to Pip's own service for title and folder suggestions powered by Jev. It does not send your other notes or clipboard history for these suggestions.</dd></div>
+    <div><dt>A local fallback</dt><dd>If suggestions fail or aren't confident enough, Pip uses the first line as the title on this PC and keeps the current folder. Saving doesn't wait for Jev.</dd></div>
+    <div><dt>Clipboard history stays here</dt><dd>History is paused by default, saved unencrypted on this PC, and never syncs. Enable or pause it in Clipboard. If you choose "Keep as note", that item becomes a note and syncs with your account.</dd></div>
+    <div><dt>Capture settings in 0.2.21</dt><dd>Title and folder suggestions, powered by Jev, run automatically while you type in capture. Settings explains the feature. Version 0.2.21 has no switch to turn it off.</dd></div>
+    <div><dt>Your way out</dt><dd>Export any note as Markdown from its editor, or all active notes as a JSON file from Settings.</dd></div>
+  </dl>
+</section>
+
+<section class="know" id="know">
+  <div>
+    <h2>Good to know before you install.</h2>
+    <ul>
+      <li><b>Account required.</b> Sign in with Google or ChatGPT to use Pip. General Ask and bring-your-own-key AI are not in version 0.2.21.</li>
+      <li><b>Windows only for now.</b> There's no Mac, Linux or phone version yet.</li>
+      <li><b>Windows may warn you.</b> The installer isn't code-signed yet, so SmartScreen may say "Windows protected your PC". Choose "More info", then "Run anyway".</li>
+    </ul>
+  </div>
+</section>
+
+<section class="final">
+  <img src="img/pip-saved-animated.svg" alt="Pip nodding, with a small check mark" width="180" height="170" loading="lazy">
+  <h2>Need it later? Pip it.</h2>
+  <p class="made-big">Made by a note power user. - Joe</p>
+  <a class="btn btn-lg" href="https://github.com/Jmasis23/pip-note/releases/download/v0.2.21/Pip_0.2.21_x64-setup.exe">Download for Windows</a>
+  <p class="fine">Free while Pip is in early access. Windows 11, 64-bit. Version 0.2.21.</p>
+</section>
+</main>
+
+<footer>
+  <span>Pip</span>
+  <span class="made">Made by a note power user. - Joe</span>
+  <a href="#privacy">Privacy</a>
+</footer>
+<script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pip-note.pages.dev/sitemap.xml
