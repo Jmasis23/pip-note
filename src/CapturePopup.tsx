@@ -6,10 +6,13 @@ import type { TextSize } from "./domain";
 import { repo } from "./useNotes";
 import "@fontsource-variable/inter";
 import "./dirs/b.css";
+import "@fontsource-variable/bricolage-grotesque";
+import "./capture-popup.css";
 
 /** The small always-on-top box the shake and the hotkey open. It writes straight to the notes store and tells the main window. */
 export default function CapturePopup() {
   const [round, setRound] = useState(0);
+  const [closed, setClosed] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [size, setSize] = useState<TextSize>("m");
   useEffect(() => {
@@ -26,7 +29,7 @@ export default function CapturePopup() {
   }, []);
   return (
     <MotionConfig reducedMotion={reducedMotion ? "always" : "user"}><div className="db db-pop">
-      <Capture key={round} textSize={size} onTextSize={v => { setSize(v); document.documentElement.dataset.text = v; void repo.getPrefs().then(p => repo.setPrefs({ ...p, textSize: v })).then(() => isNative() && call("prefs_changed")); }} open onClose={() => isNative() && void call("capture_hide")} onSaved={() => isNative() && void call("capture_saved")} />
+      {closed ? <div className="cap-closed"><button onClick={() => { setClosed(false); setRound(r => r + 1); }}>Reopen capture</button></div> : <Capture key={round} textSize={size} onTextSize={v => { setSize(v); document.documentElement.dataset.text = v; void repo.getPrefs().then(p => repo.setPrefs({ ...p, textSize: v })).then(() => isNative() && call("prefs_changed")); }} open onClose={() => { if (isNative()) void call("capture_hide"); else setClosed(true); }} onSaved={() => isNative() && void call("capture_saved")} />}
     </div></MotionConfig>
   );
 }

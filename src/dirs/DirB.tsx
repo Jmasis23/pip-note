@@ -17,7 +17,9 @@ import type { CardPosition, Note, View } from "../domain";
 import { imageFrom, imageNote, toDataUrl } from "../images";
 import { preview, useFull, useTriggers, when } from "./util";
 import "@fontsource-variable/inter";
+import "@fontsource-variable/bricolage-grotesque";
 import "./b.css";
+import "../redesign.css";
 
 const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id: "today", label: "Today" }, { id: "pinned", label: "Pinned" }, { id: "drafts", label: "Drafts" }, { id: "trash", label: "Trash" }];
 const tone = (n: Note, picked?: string) => picked ?? (n.pinned ? "lav" : n.checklist.length ? "mint" : Date.now() - n.updatedAt < 864e5 ? "peach" : "white");
@@ -111,11 +113,7 @@ export default function DirB() {
     <div className={isNative() ? "db db-native" : "db"}>
       {isNative() && <Titlebar />}
       <header className="db-hero">
-                <div>
-          <div className="db-wm"><h1 aria-label="Pip"><PipWord height={38} /></h1>
-          <p className="db-sub">Quick notes, right where you are.</p></div>
-          <p>Shake the mouse, or press <kbd>{prefs.shortcut.replace(/\+/g, " + ")}</kbd></p>
-        </div>
+                <div className="db-wm"><h1 aria-label="Pip"><PipWord height={34} /></h1></div>
         <div className="db-tools"><button className="ghost field" onClick={() => setClips(true)}>Clipboard</button><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button></div>
       </header>
 
