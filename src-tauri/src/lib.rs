@@ -1,4 +1,5 @@
 mod shake;
+mod capture_bounds;
 mod clipboard;
 
 use pip_core::chatgpt::{self, Cred};
@@ -15,11 +16,44 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 struct AppState { kv: FileKv, shake: Arc<AtomicBool>, level: Arc<std::sync::atomic::AtomicU8>, shortcut: Mutex<Option<Shortcut>> }
 
+/// Keep capture on the active monitor, above its taskbar and inside its work area.
+/// Tauri sizes here are physical pixels; UI limits are converted using that monitor's DPI.
+static CAPTURE_LIMITS: Mutex<Option<(u32, u32, u32, u32)>> = Mutex::new(None);
+
+fn fit_capture(w: &tauri::WebviewWindow, opening: bool) {
+    let monitor = if opening {
+        w.cursor_position().ok().and_then(|p| w.monitor_from_point(p.x, p.y).ok().flatten())
+    } else { w.current_monitor().ok().flatten() }
+        .or_else(|| w.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else { return; };
+    let area = monitor.work_area();
+    let scale = monitor.scale_factor();
+    let size = w.inner_size().unwrap_or(tauri::PhysicalSize::new((600.0 * scale) as u32, (330.0 * scale) as u32));
+    let pos = w.outer_position().unwrap_or(area.position);
+    let bounds = capture_bounds::fit((area.position.x, area.position.y), (area.size.width, area.size.height), scale, (size.width, size.height), (pos.x, pos.y), opening);
+    let (min_w, min_h) = bounds.min; let (max_w, max_h) = bounds.max;
+    let next = tauri::PhysicalSize::new(bounds.size.0, bounds.size.1);
+    // Only update constraints when the work area / DPI changes. Reapplying them on
+    // every Resized event can create a stream of redundant native resize events.
+    if let Ok(mut limits) = CAPTURE_LIMITS.lock() {
+        let next_limits = (min_w, min_h, max_w, max_h);
+        if *limits != Some(next_limits) {
+            let _ = w.set_min_size(None::<tauri::PhysicalSize<u32>>);
+            let _ = w.set_max_size(Some(tauri::PhysicalSize::new(max_w, max_h)));
+            let _ = w.set_min_size(Some(tauri::PhysicalSize::new(min_w, min_h)));
+            *limits = Some(next_limits);
+        }
+    }
+    if size != next { let _ = w.set_size(next); }
+    let next_pos = tauri::PhysicalPosition::new(bounds.position.0, bounds.position.1);
+    if pos != next_pos { let _ = w.set_position(next_pos); }
+}
+
 /// Bring the window forward and tell the web view to open Capture. Used by the shake, the hotkey and the tray.
 pub fn open_capture(app: &AppHandle) {
     // Only the small capture box comes up. The main window stays where it is (hidden in the tray or behind other apps).
     if let Some(w) = app.get_webview_window("capture") {
-        let _ = w.center(); let _ = w.show(); let _ = w.set_focus();
+        fit_capture(&w, true); let _ = w.show(); let _ = w.set_focus();
         let _ = app.emit_to("capture", "pip://capture-show", ());
     }
 }
@@ -194,7 +228,7 @@ pub fn run() {
 
             // The capture box: a small always-on-top window that stays hidden until the shake, hotkey or tray asks for it.
             tauri::WebviewWindowBuilder::new(app, "capture", tauri::WebviewUrl::App("index.html?capture=1".into()))
-                .title("Pip capture").inner_size(600.0, 330.0).decorations(false).resizable(false).always_on_top(true).skip_taskbar(true).visible(false).center().build()?;
+                .title("Pip capture").inner_size(600.0, 330.0).min_inner_size(360.0, 280.0).max_inner_size(1000.0, 800.0).decorations(false).resizable(true).always_on_top(true).skip_taskbar(true).visible(false).center().build()?;
 
             let open = MenuItem::with_id(app, "open", "Open Pip", true, None::<&str>)?;
             let cap = MenuItem::with_id(app, "capture", "Capture a thought", true, None::<&str>)?;
@@ -211,6 +245,9 @@ pub fn run() {
         // The main window's web view (the biggest memory cost) is released a few seconds later, after any pending note save has flushed,
         // and rebuilt on demand by show_main. The small capture box stays loaded so the shake still opens it instantly.
         .on_window_event(|w, ev| {
+            if w.label() == "capture" && matches!(ev, WindowEvent::Moved(_) | WindowEvent::Resized(_)) {
+                if let Some(capture) = w.app_handle().get_webview_window("capture") { fit_capture(&capture, false); }
+            }
             if let WindowEvent::CloseRequested { api, .. } = ev {
                 api.prevent_close();
                 let _ = w.hide();
