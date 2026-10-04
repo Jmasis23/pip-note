@@ -1,4 +1,5 @@
-import { motion } from "motion/react";
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import type { Draft, Note, View } from "../domain";
 import { Pip } from "./Pip";
 import { dashboardModel } from "./dashboardModel";
@@ -30,24 +31,65 @@ export function HomeA({ name, notes, drafts, loaded, shortcut, now, onCapture, o
   </motion.main>;
 }
 
-/** B: Widgets. A bento of iOS-style tiles, no hero. */
+/** B: Widgets. A customizable bento of iOS-style tiles, no hero. */
+type Size = "s" | "m" | "l";
+type Slot = { id: string; size: Size };
+const WIDGETS: Record<string, { label: string; sizes: Size[] }> = {
+  capture: { label: "Capture", sizes: ["m", "l"] },
+  pinned: { label: "Pinned note", sizes: ["l", "m"] },
+  latest: { label: "Latest note", sizes: ["m", "l"] },
+  todo: { label: "To do ring", sizes: ["s", "m"] },
+  kept: { label: "Kept this week", sizes: ["s", "m"] },
+  list: { label: "Checklist", sizes: ["l", "m"] },
+  recent: { label: "Recent", sizes: ["m", "l"] },
+  date: { label: "Today", sizes: ["s", "m"] },
+};
+const DEFAULT: Slot[] = [{ id: "capture", size: "m" }, { id: "pinned", size: "l" }, { id: "todo", size: "s" }, { id: "kept", size: "s" }, { id: "list", size: "l" }, { id: "recent", size: "m" }];
+const KEY = "pip.home.layout.v1";
+const loadLayout = (): Slot[] => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); if (Array.isArray(v)) return v.filter((x: Slot) => WIDGETS[x?.id] && WIDGETS[x.id].sizes.includes(x.size)); } catch { /* ignore */ } return DEFAULT; };
+
 export function HomeB({ name, notes, drafts, loaded, shortcut, now, onCapture, onOpen, onView }: HomeProps) {
-  const m = dashboardModel(notes, now); const empty = loaded && m.total === 0; const top = m.pinned[0] ?? m.recent[0]; const draft = drafts[0];
+  const m = dashboardModel(notes, now); const empty = loaded && m.total === 0; const draft = drafts[0];
+  const [layout, setLayout] = useState<Slot[]>(loadLayout); const [edit, setEdit] = useState(false); const [drag, setDrag] = useState<string | null>(null);
+  const save = (next: Slot[]) => { setLayout(next); try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* ignore */ } };
+  const move = (id: string, to: number) => { const i = layout.findIndex(x => x.id === id); if (i < 0 || to < 0 || to >= layout.length || i === to) return; const n = [...layout]; const [it] = n.splice(i, 1); n.splice(to, 0, it); save(n); };
   const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(now - (6 - i) * 864e5).toDateString(); return notes.filter(n => n.deletedAt === null && new Date(n.updatedAt).toDateString() === d).length; });
   const max = Math.max(1, ...week); const done = notes.reduce((s, n) => s + n.checklist.filter(c => c.done).length, 0); const all = done + m.openItems;
-  const tile = (i: number) => ({ initial: { opacity: 0, scale: .94, y: 12 }, animate: { opacity: 1, scale: 1, y: 0 }, transition: { ...spring, delay: .05 + i * .05 }, whileHover: { y: -3 } });
-  return <main className="hv hv-b" aria-label="Your dashboard" data-empty={empty || undefined}>
-    <header><h1>{first(name) ? `Hi, ${first(name)}` : "Hi there"}</h1><p>{new Date(now).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p></header>
+  const pin = m.pinned[0] ?? m.recent[0]; const latest = m.recent[0];
+  const noteTile = (n: typeof pin, label: string) => n ? <button className="w note" onClick={() => onOpen(n.id)} aria-label={`Open ${n.title}`}><small>{label}</small><h3>{n.title}</h3><p>{preview(n)}</p><time>{when(n.updatedAt)}</time></button> : <div className="w hint"><p>Nothing yet.</p></div>;
+  const body = (id: string, size: Size) => {
+    switch (id) {
+      case "capture": return <button className="w cap" onClick={() => onCapture()}><Pip size={64} /><strong>{empty ? "Keep your first thought" : "Capture"}</strong><Keys s={shortcut} /></button>;
+      case "pinned": return noteTile(m.pinned[0], "Pinned");
+      case "latest": return noteTile(latest, "Latest");
+      case "todo": return <button className="w ring" onClick={() => onView("today")}><svg viewBox="0 0 80 80" aria-hidden><circle cx="40" cy="40" r="32" /><circle cx="40" cy="40" r="32" className="v" pathLength="100" strokeDasharray={`${all ? Math.round(done / all * 100) : 0} 100`} /></svg><strong>{m.openItems}</strong><span>to do</span></button>;
+      case "kept": return <button className="w bars" onClick={() => onView("all")}><strong>{m.total}</strong><span>kept</span><div aria-hidden>{week.map((c, i) => <i key={i} style={{ height: `${14 + c / max * 70}%` }} className={i === 6 ? "t" : ""} />)}</div></button>;
+      case "list": return <section className="w list" id="home-unfinished" aria-label="Still on your list"><h2>Still on your list</h2>{m.unfinished.length ? m.unfinished.slice(0, size === "l" ? 5 : 2).map(n => <button key={n.id} onClick={() => onOpen(n.id)} aria-label={`Open checklist: ${n.title}`}><Box /><span><strong>{n.checklist.find(c => !c.done)!.text}</strong><small>{n.title}</small></span></button>) : <p>All clear.</p>}</section>;
+      case "recent": return <section className="w recent" aria-label="Recent"><h2>Recent</h2>{m.recent.slice(0, size === "l" ? 5 : 3).map(n => <button key={n.id} onClick={() => onOpen(n.id)} aria-label={`Open recent note: ${n.title}`}><strong>{n.title}</strong><time>{when(n.updatedAt)}</time></button>)}</section>;
+      default: { const d = new Date(now); return <div className="w date"><small>{d.toLocaleDateString([], { weekday: "long" })}</small><strong>{d.getDate()}</strong><span>{d.toLocaleDateString([], { month: "long" })}</span></div>; }
+    }
+  };
+  const hidden = Object.keys(WIDGETS).filter(id => !layout.some(x => x.id === id));
+  const rm = (id: string) => save(layout.filter(x => x.id !== id));
+  const resize = (id: string) => save(layout.map(x => { if (x.id !== id) return x; const z = WIDGETS[id].sizes; return { ...x, size: z[(z.indexOf(x.size) + 1) % z.length] }; }));
+  const slots = empty ? [layout.find(x => x.id === "capture") ?? DEFAULT[0]] : layout;
+  return <main className="hv hv-b" aria-label="Your dashboard" data-empty={empty || undefined} data-edit={edit || undefined}>
+    <header><h1>{first(name) ? `Hi, ${first(name)}` : "Hi there"}</h1><p>{new Date(now).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p>{!empty && <button className="hv-edit" onClick={() => setEdit(e => !e)} aria-pressed={edit}>{edit ? "Done" : "Customize"}</button>}</header>
     <div className="hv-bento">
-      <motion.button {...tile(0)} className="w cap" onClick={() => onCapture()}><Pip size={64} /><strong>{empty ? "Keep your first thought" : "Capture"}</strong><Keys s={shortcut} /></motion.button>
-      {empty ? <motion.div {...tile(1)} className="w hint"><p>Nothing here yet.</p><small>Notes, checklists and pins show up as tiles.</small></motion.div> : <>
-      {top && <motion.button {...tile(1)} className="w note" onClick={() => onOpen(top.id)} aria-label={`Open ${top.title}`}><small>{top.pinned ? "Pinned" : "Latest"}</small><h3>{top.title}</h3><p>{preview(top)}</p><time>{when(top.updatedAt)}</time></motion.button>}
-      <motion.button {...tile(2)} className="w ring" onClick={() => onView("today")}><svg viewBox="0 0 80 80" aria-hidden><circle cx="40" cy="40" r="32" /><circle cx="40" cy="40" r="32" className="v" pathLength="100" strokeDasharray={`${all ? Math.round(done / all * 100) : 0} 100`} /></svg><strong>{m.openItems}</strong><span>to do</span></motion.button>
-      <motion.button {...tile(3)} className="w bars" onClick={() => onView("all")}><strong>{m.total}</strong><span>kept</span><div aria-hidden>{week.map((c, i) => <i key={i} style={{ height: `${14 + c / max * 70}%` }} className={i === 6 ? "t" : ""} />)}</div></motion.button>
-      <motion.section {...tile(4)} className="w list" id="home-unfinished" aria-label="Still on your list"><h2>Still on your list</h2>{m.unfinished.length ? m.unfinished.map(n => <button key={n.id} onClick={() => onOpen(n.id)} aria-label={`Open checklist: ${n.title}`}><Box /><span><strong>{n.checklist.find(c => !c.done)!.text}</strong><small>{n.title}</small></span></button>) : <p>All clear.</p>}</motion.section>
-      <motion.section {...tile(5)} className="w recent" aria-label="Recent"><h2>Recent</h2>{m.recent.slice(0, 3).map(n => <button key={n.id} onClick={() => onOpen(n.id)} aria-label={`Open recent note: ${n.title}`}><strong>{n.title}</strong><time>{when(n.updatedAt)}</time></button>)}</motion.section>
-      {draft && <motion.button {...tile(6)} className="w draft" onClick={() => onCapture(draft.id)}><small>Unfinished</small><em>{draft.text.trim()}</em></motion.button>}</>}
+      {slots.map((sl, i) => <motion.div layout key={sl.id} transition={spring} className={`wrap s-${sl.size}`} initial={{ opacity: 0, scale: .94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} whileHover={edit ? undefined : { y: -3 }}
+        draggable={edit} onDragStart={() => setDrag(sl.id)} onDragEnd={() => setDrag(null)} onDragOver={e => { if (edit && drag && drag !== sl.id) { e.preventDefault(); move(drag, i); } }} data-drag={drag === sl.id || undefined}>
+        <div className="inner" {...(edit ? { inert: "" as unknown as boolean } : {})}>{body(sl.id, sl.size)}</div>
+        {edit && <div className="ctl" role="group" aria-label={WIDGETS[sl.id].label}>
+          <button className="rm" onClick={() => rm(sl.id)} aria-label={`Remove ${WIDGETS[sl.id].label}`}>−</button>
+          <span><button onClick={() => move(sl.id, i - 1)} disabled={i === 0} aria-label="Move earlier">←</button><button onClick={() => move(sl.id, i + 1)} disabled={i === slots.length - 1} aria-label="Move later">→</button>{WIDGETS[sl.id].sizes.length > 1 && <button onClick={() => resize(sl.id)} aria-label="Change size">{sl.size.toUpperCase()}</button>}</span>
+        </div>}
+      </motion.div>)}
+      {empty && <motion.div className="wrap s-m" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}><div className="w hint"><p>Nothing here yet.</p><small>Notes, checklists and pins show up as tiles.</small></div></motion.div>}
+      {!empty && draft && !edit && <motion.button initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w draft" onClick={() => onCapture(draft.id)}><small>Unfinished</small><em>{draft.text.trim()}</em></motion.button>}
     </div>
+    <AnimatePresence>{edit && <motion.section className="hv-tray" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} aria-label="Add widgets"><h2>Add</h2>
+      {hidden.length ? <div>{hidden.map(id => <button key={id} onClick={() => save([...layout, { id, size: WIDGETS[id].sizes[0] }])}><b>+</b>{WIDGETS[id].label}</button>)}</div> : <p>Every widget is on.</p>}
+      <button className="hv-reset" onClick={() => save(DEFAULT)}>Reset layout</button></motion.section>}</AnimatePresence>
   </main>;
 }
 
