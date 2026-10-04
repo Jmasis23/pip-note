@@ -8,8 +8,9 @@
 .db-hero p{margin:12px 0 0;color:var(--muted);font-size:calc(15px*var(--ts,1))}
 .db-hero kbd{background:#fff;border:1px solid var(--line);margin:0 2px;padding:3px 7px}
 .db-gear{position:absolute;right:0;top:34px;color:var(--muted);font-weight:600;padding:8px 14px;border-radius:999px}.db-gear:hover{background:#fff}
-.db-board{max-width:1180px;margin:0 auto;columns:auto var(--cw,280px);column-gap:16px}
-.db-card{break-inside:avoid;display:block;width:100%;text-align:left;margin:0 0 16px;padding:20px 20px 16px;border-radius:28px;position:relative;box-shadow:0 1px 2px rgba(45,45,49,.05),0 14px 30px -18px rgba(45,45,49,.28);cursor:pointer}
+.db-board{max-width:1180px;min-height:max(65vh,520px);margin:0 auto;columns:auto var(--cw,280px);column-gap:16px;position:relative}
+.db-card{break-inside:avoid;display:block;width:100%;text-align:left;margin:0 0 16px;padding:20px 20px 16px;border-radius:28px;position:relative;box-shadow:0 1px 2px rgba(45,45,49,.05),0 14px 30px -18px rgba(45,45,49,.28);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.db-card:active{cursor:grabbing}.db-card.is-dragging{z-index:2147483647!important;cursor:grabbing}
 .db-card.white{background:#fff}.db-card.lav{background:#E1E4FF}.db-card.mint{background:#D5F2E5}.db-card.peach{background:#FFE3D3}
 .db-card b{display:block;font-size:calc(22px*var(--ts,1));font-weight:750;letter-spacing:-.03em;line-height:1.15}
 .db-pre{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;margin-top:8px;font-size:calc(15px*var(--ts,1));line-height:1.45;color:rgba(45,45,49,.72)}

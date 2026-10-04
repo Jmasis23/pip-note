@@ -6,12 +6,13 @@ import { Capture } from "../components/Capture";
 import { Editor } from "../components/Editor";
 import { Settings } from "../components/Settings";
 import { Titlebar } from "../components/Titlebar";
+import { DraggableCard } from "./DraggableCard";
 import { cleanFolder } from "../repo/repo";
 import { TextStepper } from "../components/TextStepper";
 import { initStorage, isNative, onNativeEvent, syncDesktopPrefs } from "../native";
 import { repo, useNotes } from "../useNotes";
-import type { Note, View } from "../domain";
-import { firstImage, imageFrom, imageNote, toDataUrl } from "../images";
+import type { CardPosition, Note, View } from "../domain";
+import { imageFrom, imageNote, toDataUrl } from "../images";
 import { preview, useFull, useTriggers, when } from "./util";
 import "@fontsource-variable/inter";
 import "./b.css";
@@ -22,6 +23,8 @@ const tone = (n: Note, picked?: string) => picked ?? (n.pinned ? "lav" : n.check
 export default function DirB() {
   const { folder, setFolder, folders, view, setView, query, setQuery, notes, drafts, counts, prefs, setPrefs, refresh } = useNotes();
   const [selId, setSelId] = useState<string | null>(null);
+  const boardRef = useRef<HTMLElement>(null);
+  const placementQueue = useRef<Promise<void>>(Promise.resolve());
   const [capture, setCapture] = useState(false);
   const [draftId, setDraftId] = useState<string | undefined>(undefined);
   const openCapture = (id?: string) => { setDraftId(id); setCapture(true); };
@@ -40,6 +43,21 @@ export default function DirB() {
     apply(); mq.addEventListener("change", apply); return () => mq.removeEventListener("change", apply);
   }, [prefs.theme, prefs.reducedMotion, prefs.accent, prefs.cardSize, prefs.textSize, prefs.tint]);
   const [toast, setToast] = useState("");
+  const placeCard = (id: string, position: CardPosition): Promise<boolean> => {
+    const pending = placementQueue.current.then(async () => {
+      try {
+        const current = await repo.getPrefs();
+        await setPrefs({ ...current, cardPositions: { ...current.cardPositions, [id]: position } });
+        return true;
+      } catch {
+        setToast("Couldn't save card position");
+        window.setTimeout(() => setToast(""), 2200);
+        return false;
+      }
+    });
+    placementQueue.current = pending.then(() => undefined);
+    return pending;
+  };
   const [newFolder, setNewFolder] = useState<string | null>(null);
   const addFolder = async () => { const f = cleanFolder(newFolder ?? ""); setNewFolder(null); if (!f) return; if (!folders.includes(f)) await setPrefs({ ...prefs, extraFolders: [...new Set([...(prefs.extraFolders ?? []), f])] }); setView("all"); setFolder(f); await refresh(); };
   // Desktop: the capture box is its own small window. When it saves, reload the store and redraw the board.
@@ -108,18 +126,12 @@ export default function DirB() {
             {drafts.length === 0 && <div className="db-empty"><Pip size={72} look /><p>No drafts. Press Esc in a capture to keep one here.</p></div>}
           </section>
         ) : (
-        <section className="db-board" aria-label="Notes">
+        <section ref={boardRef} className="db-board" aria-label="Notes">
           <AnimatePresence initial={false}>
             {notes.map((n, i) => (
-              <motion.button key={n.id} className={`db-card ${tone(n, prefs.noteColors?.[n.id])}`} onClick={() => setSelId(n.id)}
-                initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
-                whileHover={{ y: -4, rotate: i % 2 ? 0.5 : -0.5 }} transition={{ type: "spring", stiffness: 380, damping: 30 }}>
-                <b>{n.title}</b>
-                {firstImage(n.rich) && <img className="db-thumb" src={firstImage(n.rich)} alt="" />}
-                {(preview(n) || (!n.body.trim() && !n.checklist.length && !firstImage(n.rich))) && <span className="db-pre">{preview(n) || "Empty note"}</span>}
-                {n.checklist.length > 0 && <span className="db-prog" aria-label={`${n.checklist.filter(c => c.done).length} of ${n.checklist.length} done`}>{n.checklist.map(c => <i key={c.id} className={c.done ? "d" : ""} />)}</span>}
-                <time>{n.folder && <em className="db-fold">{n.folder.replace(/\//g, " / ")}</em>}{when(n.updatedAt)}</time>
-              </motion.button>))}
+              <DraggableCard key={n.id} note={n} index={i} color={tone(n, prefs.noteColors?.[n.id])}
+                position={prefs.cardPositions?.[n.id]} boardRef={boardRef} onOpen={() => setSelId(n.id)}
+                onPlace={position => placeCard(n.id, position)} />))}
           </AnimatePresence>
           {notes.length === 0 && <div className="db-empty"><Pip size={72} look /><p>{query ? `No results for "${query}"` : view === "trash" ? "Trash is empty" : folder ? `No notes in ${folder}` : view === "pinned" ? "No pinned notes" : view === "today" ? "No notes today" : "Capture your first thought"}</p>{query ? <button className="primary" onClick={() => setQuery("")}>Clear search</button> : view !== "trash" ? <button className="primary" onClick={() => openCapture()}>{folder ? "Capture here" : "New capture"}</button> : <button className="ghost field" onClick={clearFilters}>Show all notes</button>}</div>}
         </section>)}
