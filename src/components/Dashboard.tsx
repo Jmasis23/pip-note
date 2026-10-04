@@ -4,6 +4,7 @@ import type { Draft, Note, View } from "../domain";
 import { Pip } from "./Pip";
 import { dashboardModel, greeting } from "./dashboardModel";
 import { preview, when } from "../dirs/util";
+import { HomeA, HomeB, HomeC } from "./HomeVariants";
 import "./dashboard.css";
 
 type Props = {
@@ -37,6 +38,8 @@ export function Dashboard({ name, notes, drafts, loaded, shortcut, onCapture, on
     return () => { window.clearInterval(timer); window.removeEventListener("focus", update); };
   }, []);
   const model = dashboardModel(notes, now);
+  const variant = new URLSearchParams(location.search).get("home");
+  if (variant === "a" || variant === "b" || variant === "c") { const V = { a: HomeA, b: HomeB, c: HomeC }[variant]; return <V name={name} notes={notes} drafts={drafts} loaded={loaded} shortcut={shortcut} now={now} onCapture={onCapture} onOpen={onOpen} onView={onView} />; }
   const draft = [...drafts].sort((a, b) => b.updatedAt - a.updatedAt)[0];
   const date = new Date(now).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
   const empty = loaded && model.total === 0;
