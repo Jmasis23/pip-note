@@ -38,17 +38,23 @@ export function DraggableCard({ note, index, color, position, boardRef, onOpen, 
     y.set(clampOffset(saved ? saved.y - originY : 0, originY, card.offsetHeight, board.clientHeight));
   };
   useLayoutEffect(() => {
-    const board = boardRef.current;
-    const card = cardRef.current;
-    if (!board || !card) return;
-    const keepVisible = () => {
-      alignTo(position);
+    let observer: ResizeObserver | undefined;
+    let cancelled = false;
+    const attach = () => {
+      if (cancelled) return;
+      const board = boardRef.current;
+      const card = cardRef.current;
+      if (!board || !card) return;
+      const keepVisible = () => alignTo(position);
+      observer = new ResizeObserver(keepVisible);
+      observer.observe(board);
+      observer.observe(card);
+      keepVisible();
     };
-    const observer = new ResizeObserver(keepVisible);
-    observer.observe(board);
-    observer.observe(card);
-    keepVisible();
-    return () => observer.disconnect();
+    attach();
+    // On Home → board, child layout effects can run before the new board's ref is attached.
+    if (!observer) queueMicrotask(attach);
+    return () => { cancelled = true; observer?.disconnect(); };
   });
 
   const place = async () => {

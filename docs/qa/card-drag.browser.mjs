@@ -23,6 +23,7 @@ try {
       document.body.replaceChildren(root);
       (ReactDOM.createRoot ?? ReactDOM.default.createRoot)(root).render((React.createElement ?? React.default.createElement)(Desk));
     });
+    await page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name: /^All(?:\s|$)/ }).click();
     await page.locator('.db-card').first().waitFor();
     await page.waitForTimeout(350);
   };

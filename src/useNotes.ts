@@ -13,6 +13,8 @@ export function useNotes() {
   const [folder, setFolder] = useState("");
   const [folders, setFolders] = useState<string[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [counts, setCounts] = useState<Record<View, number>>({ all: 0, today: 0, pinned: 0, drafts: 0, trash: 0 });
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [prefs, setPrefsState] = useState<Prefs>(DEFAULT_PREFS);
@@ -25,7 +27,7 @@ export function useNotes() {
       repo.list({ view: "pinned", query: "" }), repo.list({ view: "trash", query: "" }), repo.getPrefs(), repo.listDrafts(),
     ]);
     if (my !== seq.current) return;
-    setNotes(list); setFolders([...new Set([...a.map(n => n.folder).filter((f): f is string => !!f), ...(pr.extraFolders ?? [])])].sort()); setCounts({ all: a.length, today: t.length, pinned: p.length, drafts: dr.length, trash: tr.length }); setPrefsState(pr); setDrafts(dr);
+    setNotes(list); setAllNotes(a); setLoaded(true); setFolders([...new Set([...a.map(n => n.folder).filter((f): f is string => !!f), ...(pr.extraFolders ?? [])])].sort()); setCounts({ all: a.length, today: t.length, pinned: p.length, drafts: dr.length, trash: tr.length }); setPrefsState(pr); setDrafts(dr);
   }, [view, query, folder]);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -38,5 +40,5 @@ export function useNotes() {
   }, [refresh]);
 
   const setPrefs = async (p: Prefs) => { setPrefsState(await repo.setPrefs(p)); };
-  return { folder, setFolder, folders, view, setView, query, setQuery, notes, drafts, counts, prefs, setPrefs, refresh };
+  return { folder, setFolder, folders, view, setView, query, setQuery, notes, allNotes, loaded, drafts, counts, prefs, setPrefs, refresh };
 }

@@ -6,6 +6,8 @@ import { Capture } from "../components/Capture";
 import { Editor } from "../components/Editor";
 import { Settings } from "../components/Settings";
 import { Titlebar } from "../components/Titlebar";
+import { Dashboard } from "../components/Dashboard";
+import { loadSession } from "../cloud/auth";
 import { DraggableCard } from "./DraggableCard";
 import { cleanFolder } from "../repo/repo";
 import { TextStepper } from "../components/TextStepper";
@@ -21,7 +23,11 @@ const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id:
 const tone = (n: Note, picked?: string) => picked ?? (n.pinned ? "lav" : n.checklist.length ? "mint" : Date.now() - n.updatedAt < 864e5 ? "peach" : "white");
 
 export default function DirB() {
-  const { folder, setFolder, folders, view, setView, query, setQuery, notes, drafts, counts, prefs, setPrefs, refresh } = useNotes();
+  const { folder, setFolder, folders, view, setView: setNotesView, query, setQuery, notes, allNotes, loaded, drafts, counts, prefs, setPrefs, refresh } = useNotes();
+  const [home, setHome] = useState(true);
+  const setView = (next: View) => { setHome(false); setNotesView(next); };
+  const browse = (next: View) => { setFolder(""); setQuery(""); setView(next); };
+  const openHome = () => { setFolder(""); setQuery(""); setHome(true); };
   const [selId, setSelId] = useState<string | null>(null);
   const boardRef = useRef<HTMLElement>(null);
   const placementQueue = useRef<Promise<void>>(Promise.resolve());
@@ -89,15 +95,15 @@ export default function DirB() {
       if (selId || capture || settings || clips || t?.closest("input, textarea, [contenteditable=true]")) return;
       const text = e.clipboardData?.getData("text/plain").trim(); const img = imageFrom(e.clipboardData ?? null); if (!text && !img) return;
       e.preventDefault();
-      try { await repo.create(text ? { body: text.slice(0, 20000), folder: view === "all" ? folder : "" } : { ...imageNote(await toDataUrl(img!)), folder: view === "all" ? folder : "" }); await refresh(); setToast("Kept from clipboard"); window.setTimeout(() => setToast(""), 2200); } catch { setToast("Couldn't keep that"); window.setTimeout(() => setToast(""), 2200); }
+      try { await repo.create(text ? { body: text.slice(0, 20000), folder: !home && view === "all" ? folder : "" } : { ...imageNote(await toDataUrl(img!)), folder: !home && view === "all" ? folder : "" }); await refresh(); setToast("Kept from clipboard"); window.setTimeout(() => setToast(""), 2200); } catch { setToast("Couldn't keep that"); window.setTimeout(() => setToast(""), 2200); }
     };
     window.addEventListener("paste", on); return () => window.removeEventListener("paste", on);
-  }, [selId, capture, settings, clips, folder, view, refresh]);
+  }, [selId, capture, settings, clips, folder, view, home, refresh]);
   useTriggers(prefs, () => openCapture(), capture || settings || clips);
   const clearFilters = () => { setFolder(""); setQuery(""); setView("all"); };
   const viewName = VIEWS.find(v => v.id === view)?.label ?? "All";
   const context = `${folder ? folder + " / " : ""}${view === "all" ? "All notes" : viewName}`;
-  const full = useFull(selId, notes);
+  const full = useFull(selId, allNotes);
   useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
 
   return (
@@ -113,7 +119,8 @@ export default function DirB() {
         <div className="db-tools"><button className="ghost field" onClick={() => setClips(true)}>Clipboard</button><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button></div>
       </header>
 
-      {view !== "trash" && view !== "drafts" && (() => {
+      {home && <Dashboard name={loadSession()?.user.name} notes={allNotes} drafts={drafts} loaded={loaded} shortcut={prefs.shortcut} onCapture={openCapture} onOpen={setSelId} onView={browse} />}
+      {!home && view !== "trash" && view !== "drafts" && (() => {
         const top = [...new Set(folders.map(f => f.split("/")[0]))];
         const root = folder.split("/")[0];
         const kids = [...new Set(folders.filter(f => root && f.startsWith(root + "/")).map(f => f.split("/").slice(0, 2).join("/")))];
@@ -125,12 +132,12 @@ export default function DirB() {
             : <input className="db-chip-in" autoFocus value={newFolder} maxLength={60} placeholder="Folder name" aria-label="New folder name" onChange={e => setNewFolder(e.target.value)} onBlur={() => void addFolder()} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setNewFolder(null); }} />}
         </div>);
       })()}
-      <div className="db-context"><div><h2>{context}</h2><p>{view === "drafts" ? drafts.length : notes.length} {view === "drafts" ? "drafts" : "notes"} shown{query ? ` matching "${query}"` : ""}. Navigation counts include all folders.</p></div><div className="db-context-actions">
+      {!home && <div className="db-context"><div><h2>{context}</h2><p>{view === "drafts" ? drafts.length : notes.length} {view === "drafts" ? "drafts" : "notes"} shown{query ? ` matching "${query}"` : ""}. Navigation counts include all folders.</p></div><div className="db-context-actions">
         {view !== "drafts" && <button className="ghost field" disabled={arranging} title="Arrange all note cards into columns" onClick={() => void autoArrange()}>{arranging ? "Arranging…" : "Auto arrange"}</button>}
         {(folder || query || view !== "all") && <button className="ghost field" onClick={clearFilters}>Show all notes</button>}
-      </div></div>
+      </div></div>}
       <LayoutGroup>
-        {view === "drafts" ? (
+        {home ? null : view === "drafts" ? (
           <section className="db-drafts" aria-label="Drafts">
             <p className="db-drafts-hint">Unfinished captures. Nothing here is lost until you delete it.</p>
             <AnimatePresence initial={false}>
@@ -168,13 +175,17 @@ export default function DirB() {
 
       <nav className="db-dock" aria-label="Views">
         <LayoutGroup id="dock">
+          <button aria-current={home ? "page" : undefined} onClick={openHome}>
+            {home && <motion.i layoutId="dock-on" className="db-dock-on" transition={{ type: "spring", stiffness: 520, damping: 38 }} />}
+            <span>Home</span>
+          </button>
           {VIEWS.map(v => (
-            <button key={v.id} aria-current={view === v.id ? "page" : undefined} onClick={() => setView(v.id)}>
-              {view === v.id && <motion.i layoutId="dock-on" className="db-dock-on" transition={{ type: "spring", stiffness: 520, damping: 38 }} />}
+            <button key={v.id} aria-current={!home && view === v.id ? "page" : undefined} onClick={() => setView(v.id)}>
+              {!home && view === v.id && <motion.i layoutId="dock-on" className="db-dock-on" transition={{ type: "spring", stiffness: 520, damping: 38 }} />}
               <span>{v.label}</span><em>{counts[v.id]}</em>
             </button>))}
         </LayoutGroup>
-        <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" aria-label="Search notes" />
+        <input type="search" value={query} onChange={e => { if (home) { setHome(false); setNotesView("all"); setFolder(""); } setQuery(e.target.value); }} placeholder="Search" aria-label="Search notes" />
         <button className="db-add" onClick={() => openCapture()} aria-label="New capture">Capture</button>
       </nav>
 
