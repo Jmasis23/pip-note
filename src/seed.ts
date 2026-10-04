@@ -1,7 +1,7 @@
 import { DEFAULT_PREFS } from "./domain";
 export function seedIfAsked(preview = false) {
   const q = new URLSearchParams(location.search);
-  if (preview && q.has("empty")) { localStorage.removeItem("pip.store.v1"); return; }
+  if (preview && q.has("empty") && !("__TAURI_INTERNALS__" in window)) { localStorage.removeItem("pip.store.v1"); return; }
   if (!(q.has("seed") || preview) || "__TAURI_INTERNALS__" in window) return;
   if (localStorage.getItem("pip.store.v1") && !new URLSearchParams(location.search).has("reseed")) return;
   const t = Date.now(), h = 3600e3;

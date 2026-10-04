@@ -14,7 +14,7 @@ const keyName = (e: KeyboardEvent) => {
 
 const TEXT_OPTS: [TextSize, string][] = [["xs", "Tiny"], ["s", "Small"], ["m", "Medium"], ["l", "Large"]];
 const SIZES: [Size, string][] = [["s", "Small"], ["m", "Medium"], ["l", "Large"]];
-const ACCENTS: [Accent, string, string][] = [["lavender", "#8A90FF", "Lavender"], ["sky", "#4FA8F5", "Sky"], ["mint", "#3DBE8C", "Mint"], ["peach", "#F59A6B", "Peach"], ["rose", "#EE6F96", "Rose"], ["graphite", "#6B6F82", "Graphite"]];
+const ACCENTS: [Accent, string, string][] = [["lavender", "#FF8A3A", "Orange"], ["peach", "#F2B590", "Apricot"], ["graphite", "#6B6458", "Graphite"]];
 function Seg<T extends string>({ label, value, opts, onChange }: { label: string; value: T; opts: [T, string][]; onChange: (v: T) => void }) {
   return <div className="seg" role="radiogroup" aria-label={label}>{opts.map(([id, t]) => <button key={id} role="radio" aria-checked={value === id} className={value === id ? "on" : ""} onClick={() => onChange(id)}>{t}</button>)}</div>;
 }

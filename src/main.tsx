@@ -13,7 +13,7 @@ async function boot() {
   const { default: Desk } = await import("./dirs/DirB");
   const q = new URLSearchParams(location.search);
   // Design preview only (VITE_PREVIEW at build time): no account, local sample notes. ?gate shows the sign-in screens, ?empty the first-run state.
-  if (import.meta.env.VITE_PREVIEW === "true" && !q.has("gate")) {
+  if (import.meta.env.VITE_PREVIEW === "true" && !("__TAURI_INTERNALS__" in window) && !q.has("gate")) {
     if (!localStorage.getItem("pip.session.v1")) localStorage.setItem("pip.session.v1", JSON.stringify({ access_token: "preview", refresh_token: "preview", expires_at: 4102444800, user: { id: "preview", email: "preview@pip.invalid", name: "Joe" } }));
     createRoot(document.getElementById("root")!).render(<Desk />); return;
   }
