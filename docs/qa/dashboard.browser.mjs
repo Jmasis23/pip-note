@@ -38,6 +38,17 @@ try {
   await page.locator('.home-stats strong').first().waitFor();
   assert.equal(await page.locator('.home-stats strong').first().textContent(), '7');
   assert.equal(await page.locator('.home-note').count(), 2);
+  await page.setViewportSize({ width: 1180, height: 780 });
+  await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => {
+    const dock = document.querySelector('.db-dock').getBoundingClientRect();
+    return document.querySelector('.home-welcome').getBoundingClientRect().height < 150
+      && [...document.querySelectorAll('.home-lower>section')].every(section => section.getBoundingClientRect().bottom < dock.top);
+  }), true, 'compact greeting leaves recent notes and checklist details visible above the dock');
+  await page.locator('.home-signoff').scrollIntoViewIfNeeded();
+  assert.ok(await page.evaluate(() => window.scrollY > 0), 'remaining content uses the document scroll');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.setViewportSize({ width: 1280, height: 1000 });
   await page.screenshot({ path: `${artifacts}/desktop.png`, fullPage: true });
 
   // Open a pinned note, update its pin, and verify Home reflects the edit.

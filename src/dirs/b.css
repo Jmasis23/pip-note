@@ -352,3 +352,23 @@
 .set-wm{margin-left:auto;margin-right:12px;opacity:.9}
 .db-wm{align-items:center;gap:18px}.db-hero h1 .pipw{height:calc(46px*var(--ts,1));width:auto}
 @media (max-width:760px){.db-hero h1 .pipw{height:calc(34px*var(--ts,1))}}
+
+/* Capture: explicit dismissal, a clear destination, and a footer that stays in reach. */
+.db .capture-close{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:50%;color:var(--muted);margin-left:auto}
+.db .capture-close:hover{background:var(--lav-soft);color:var(--ink)}
+.db .capture-close:disabled{opacity:.4}
+.db .capture header .ts-step{margin-left:auto}
+.db .capture header .ts-step+.capture-close{margin-left:0}
+.capture-destination{display:flex;align-items:center;gap:8px}
+.capture-destination>span{flex:none;font-size:11px;color:var(--muted)}
+.db-pop .capture{background:var(--surface);border:1px solid var(--line)}
+.db-pop .capture header{padding:10px 16px 8px;border-bottom:1px solid var(--line);font-size:13px}
+.db-pop .capture header>.pipm{flex:none;width:28px;height:28px}
+.db-pop .capture-destination{padding:8px 16px 0}
+.db-pop .capture-destination select{flex:1;min-width:0;max-width:none;border-radius:999px;background:var(--bg);font-size:12px;padding:5px 10px}
+.db-pop .capture-arrangement{padding:6px 16px 0}
+.db-pop .capture textarea{padding:12px 16px;font-size:calc(18px*var(--ts,1));line-height:1.55}
+.db-pop .capture footer{padding:10px 16px 12px;border-top:1px solid var(--line);background:var(--bg)}
+.db-pop .capture footer .status{flex:1;font-size:11px;line-height:1.4}
+.db-pop .capture footer .primary{padding:8px 14px;border-radius:999px;font-size:13px}
+.db-pop .capture footer kbd{font-size:10px;margin-left:8px}

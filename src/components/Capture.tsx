@@ -91,12 +91,12 @@ export function Capture({ open, onClose, onSaved, variant = "modal", draftId, te
             exit={variant === "island" ? { width: 252, height: 44, borderRadius: 22, opacity: 0 } : { y: 10, scale: 0.98, opacity: 0 }}
             transition={{ type: "spring", stiffness: variant === "island" ? 300 : 420, damping: variant === "island" ? 26 : 32 }}
             onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); void dismiss(); } if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void keep(); } }}>
-            <header data-tauri-drag-region><Pip state={state} size={40} pulse={Math.floor(text.length / 6)} /><span data-tauri-drag-region>Something on your mind?</span>{textSize && onTextSize && <TextStepper value={textSize} onChange={onTextSize} />}</header>
-            <label className="capture-destination"><select aria-label="Capture folder" value={destination} disabled={state === "saving" || state === "saved"} onChange={e => { folderOverride.current = true; setDestination(e.target.value); }}><option value="">Inbox (unfiled)</option>{[...new Set([...destinations, destination])].filter(Boolean).map(f=><option key={f} value={f}>{f}</option>)}</select></label>
+            <header data-tauri-drag-region><Pip state={state} size={40} pulse={Math.floor(text.length / 6)} /><span data-tauri-drag-region>Something on your mind?</span>{textSize && onTextSize && <TextStepper value={textSize} onChange={onTextSize} />}<button type="button" className="capture-close" aria-label="Keep draft and close" title="Keep draft and close (Esc)" disabled={state === "saving" || state === "saved"} onClick={() => void dismiss()}><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden><path d="m3 3 8 8M11 3l-8 8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg></button></header>
+            <label className="capture-destination"><span>Keep in</span><select aria-label="Capture folder" value={destination} disabled={state === "saving" || state === "saved"} onChange={e => { folderOverride.current = true; setDestination(e.target.value); }}><option value="">Inbox (unfiled)</option>{[...new Set([...destinations, destination])].filter(Boolean).map(f=><option key={f} value={f}>{f}</option>)}</select></label>
             {captureModelEnabled && <div className="capture-arrangement"><p title={suggestedTitle || capturedNote(text).title || "First line of your note"}><b>{suggestedTitle || capturedNote(text).title || "First line of your note"}</b></p></div>}
             <textarea ref={ref} onPaste={e => void pasteImage(e)} value={text} disabled={state === "saving" || state === "saved"} onChange={e => { setText(e.target.value); if (state !== "capturing") setState("capturing"); setStatus(""); }} placeholder="Type it before it slips away" aria-label="Note text" />
             <footer>
-              <span className={`status ${state === "error" ? "bad" : ""}`} role="status" aria-live="polite">{state === "error" ? status : ""}</span>
+              <span className={`status ${state === "error" ? "bad" : ""}`} role="status" aria-live="polite">{status || "Esc keeps a draft"}</span>
               <button className="primary" onClick={() => void keep()} disabled={state === "saving" || state === "saved"}>Keep it <kbd>Ctrl Enter</kbd></button>
             </footer>
             {isNative() && document.documentElement.classList.contains("cap-win") && ([
@@ -105,7 +105,7 @@ export function Capture({ open, onClose, onSaved, variant = "modal", draftId, te
             ] as const).map(([edge, direction]) => <div key={edge} className={`capture-edge ${edge}`} aria-hidden="true" onMouseDown={e => {
               if (e.button !== 0) return;
               e.preventDefault(); e.stopPropagation();
-              void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow().startResizeDragging(direction)).catch(console.error);
+              void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow().startResizeDragging(direction)).catch(() => setStatus("Couldn't resize. Try another edge."));
             }} />)}
           </motion.div>
         </motion.div>
