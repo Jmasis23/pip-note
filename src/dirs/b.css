@@ -8,7 +8,8 @@
 .db-hero p{margin:12px 0 0;color:var(--muted);font-size:calc(15px*var(--ts,1))}
 .db-hero kbd{background:#fff;border:1px solid var(--line);margin:0 2px;padding:3px 7px}
 .db-gear{position:absolute;right:0;top:34px;color:var(--muted);font-weight:600;padding:8px 14px;border-radius:999px}.db-gear:hover{background:#fff}
-.db-board{max-width:1180px;min-height:max(65vh,520px);margin:0 auto;columns:auto var(--cw,280px);column-gap:16px;position:relative}
+.db-board{max-width:1180px;min-height:max(65vh,520px);margin:0 auto;columns:auto var(--cw,280px);column-gap:16px;position:relative;isolation:isolate;z-index:0}
+.db-context-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .db-card{break-inside:avoid;display:block;width:100%;text-align:left;margin:0 0 16px;padding:20px 20px 16px;border-radius:28px;position:relative;box-shadow:0 1px 2px rgba(45,45,49,.05),0 14px 30px -18px rgba(45,45,49,.28);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .db-card:active{cursor:grabbing}.db-card.is-dragging{z-index:2147483647!important;cursor:grabbing}
 .db-card.white{background:#fff}.db-card.lav{background:#E1E4FF}.db-card.mint{background:#D5F2E5}.db-card.peach{background:#FFE3D3}
@@ -30,7 +31,7 @@
 .db-dock input{width:128px;border:0;background:rgba(45,45,49,.06);border-radius:999px;padding:9px 14px;font-size:calc(14px*var(--ts,1));margin:0 6px}
 .db-dock input:focus-visible{outline:2px solid var(--focus)}
 .db-add{background:var(--ink);color:#fff;border-radius:999px;padding:10px 18px;font-weight:650;font-size:calc(14.5px*var(--ts,1));transition:transform .12s}.db-add:active{transform:scale(.95)}
-.db .scrim{background:rgba(255,248,238,.55);backdrop-filter:blur(14px);padding:max(28px,5vh) 16px 112px;place-items:start center}
+.db .scrim{background:rgba(255,248,238,.55);backdrop-filter:blur(14px);padding:max(28px,5vh) 16px 112px;place-items:start center;z-index:50}
 .db .capture{border-radius:34px;width:min(600px,100%)}
 .db .capture header{border:0;padding:16px 22px 0;font-size:calc(15px*var(--ts,1))}.db .capture textarea{font-size:calc(22px*var(--ts,1));min-height:170px;padding:12px 22px;letter-spacing:-.02em}
 .db .primary{background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px}.db .primary kbd{background:rgba(255,255,255,.18);color:#fff}

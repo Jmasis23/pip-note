@@ -43,6 +43,24 @@ export default function DirB() {
     apply(); mq.addEventListener("change", apply); return () => mq.removeEventListener("change", apply);
   }, [prefs.theme, prefs.reducedMotion, prefs.accent, prefs.cardSize, prefs.textSize, prefs.tint]);
   const [toast, setToast] = useState("");
+  const [arranging, setArranging] = useState(false);
+  const autoArrange = async () => {
+    setArranging(true);
+    const pending = placementQueue.current.then(async () => {
+      try {
+        const current = await repo.getPrefs();
+        await setPrefs({ ...current, cardPositions: {} });
+        setToast("Cards arranged");
+      } catch {
+        setToast("Couldn't arrange cards. Try again.");
+      } finally {
+        setArranging(false);
+        window.setTimeout(() => setToast(""), 2200);
+      }
+    });
+    placementQueue.current = pending;
+    await pending;
+  };
   const placeCard = (id: string, position: CardPosition): Promise<boolean> => {
     const pending = placementQueue.current.then(async () => {
       try {
@@ -108,7 +126,10 @@ export default function DirB() {
             : <input className="db-chip-in" autoFocus value={newFolder} maxLength={60} placeholder="Folder name" aria-label="New folder name" onChange={e => setNewFolder(e.target.value)} onBlur={() => void addFolder()} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setNewFolder(null); }} />}
         </div>);
       })()}
-      <div className="db-context"><div><h2>{context}</h2><p>{view === "drafts" ? drafts.length : notes.length} {view === "drafts" ? "drafts" : "notes"} shown{query ? ` matching "${query}"` : ""}. Navigation counts include all folders.</p></div>{(folder || query || view !== "all") && <button className="ghost field" onClick={clearFilters}>Show all notes</button>}</div>
+      <div className="db-context"><div><h2>{context}</h2><p>{view === "drafts" ? drafts.length : notes.length} {view === "drafts" ? "drafts" : "notes"} shown{query ? ` matching "${query}"` : ""}. Navigation counts include all folders.</p></div><div className="db-context-actions">
+        {view !== "drafts" && <button className="ghost field" disabled={arranging} title="Arrange all note cards into columns" onClick={() => void autoArrange()}>{arranging ? "Arranging…" : "Auto arrange"}</button>}
+        {(folder || query || view !== "all") && <button className="ghost field" onClick={clearFilters}>Show all notes</button>}
+      </div></div>
       <LayoutGroup>
         {view === "drafts" ? (
           <section className="db-drafts" aria-label="Drafts">

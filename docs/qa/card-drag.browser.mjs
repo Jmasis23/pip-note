@@ -68,8 +68,42 @@ try {
   assert.ok(narrowCard.x >= board.x - 2 && narrowCard.x + narrowCard.width <= board.x + board.width + 2, 'card should stay visible on a narrow board');
   await placedCard.click();
   assert.equal(await page.locator('.db-sheet').count(), 1, 'normal click should open the note');
+  const assertOverlayCoversCards = async (selector) => {
+    assert.equal(await page.evaluate(selector => [...document.querySelectorAll('.db-card')].every(card => {
+      const rect = card.getBoundingClientRect();
+      const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+      return y < 0 || y >= innerHeight || !!document.elementFromPoint(x, y)?.closest(selector);
+    }), selector), true, 'dialogs must cover even cards with saved high stacking orders');
+  };
+  await assertOverlayCoversCards('.db-veil');
+  await page.getByRole('button', { name: 'Back to notes', exact: true }).click();
+  await page.locator('.db-veil').waitFor({ state: 'detached' });
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
+  await assertOverlayCoversCards('.scrim');
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.setViewportSize({ width: 1200, height: 850 });
+  const notesBeforeArrange = await page.evaluate(async () => (await (await import('/src/useNotes.ts')).repo.syncState()).notes);
+  await page.getByRole('button', { name: 'Auto arrange', exact: true }).click();
+  await page.mouse.move(10, 10);
+  await page.waitForTimeout(350);
+  const assertArranged = async () => {
+    const state = await page.evaluate(async () => (await import('/src/useNotes.ts')).repo.syncState());
+    assert.deepEqual(state.prefs.cardPositions, {}, 'arrangement reset should persist');
+    assert.deepEqual(state.notes, notesBeforeArrange, 'arranging must preserve note content and revisions');
+    assert.equal(await page.evaluate(() => {
+      const board = document.querySelector('.db-board').getBoundingClientRect();
+      return [...document.querySelectorAll('.db-card')].every(card => {
+        const rect = card.getBoundingClientRect();
+        return Math.abs(rect.left - board.left - card.offsetLeft) < 2 && Math.abs(rect.top - board.top - card.offsetTop) < 2;
+      });
+    }), true, 'all cards should return to their natural column positions');
+  };
+  await assertArranged();
+  await mountBoard();
+  await assertArranged();
   assert.deepEqual(errors, []);
-  console.log('Card drag, persistence, keyboard movement, resize, and click: PASS');
+  console.log('Card drag, persistence, keyboard, resize, dialog layering, auto arrange, and reload: PASS');
 } finally {
   await browser?.close();
   server.kill('SIGTERM');

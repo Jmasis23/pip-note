@@ -34,8 +34,8 @@ export function DraggableCard({ note, index, color, position, boardRef, onOpen, 
     if (!board || !card) return;
     const originX = card.offsetLeft;
     const originY = card.offsetTop;
-    x.set(clampOffset(saved ? saved.x - originX : x.get(), originX, card.offsetWidth, board.clientWidth));
-    y.set(clampOffset(saved ? saved.y - originY : y.get(), originY, card.offsetHeight, board.clientHeight));
+    x.set(clampOffset(saved ? saved.x - originX : 0, originX, card.offsetWidth, board.clientWidth));
+    y.set(clampOffset(saved ? saved.y - originY : 0, originY, card.offsetHeight, board.clientHeight));
   };
   useLayoutEffect(() => {
     const board = boardRef.current;
