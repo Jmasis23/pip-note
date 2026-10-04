@@ -26,3 +26,18 @@
 .db.db-pop .capture footer .primary kbd{margin:0;background:rgba(32,30,34,.13);color:#201E22;border:0;font-size:10.5px;padding:3px 7px;border-radius:999px}
 @media(max-height:300px){.db.db-pop .capture textarea{font-size:calc(19px*var(--ts,1))}.db.db-pop .capture header{padding-top:12px}}
 @media(prefers-reduced-motion:reduce){.db.db-pop .capture footer .primary{transition:none}}
+/* Soft edges: the window is a floating rounded card (needs a transparent native window to show outside the card). */
+html.cap-win,.cap-win body,.cap-win #root{background:transparent!important}
+.db.db-pop{padding:10px;background:transparent}
+.db.db-pop .scrim{border-radius:32px}
+.db.db-pop .capture{border-radius:32px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 18px 38px -14px rgba(32,30,34,.38),0 3px 10px -3px rgba(32,30,34,.16)}
+.db.db-pop .capture textarea{border-radius:20px;outline:0}
+.db.db-pop .capture footer{padding:6px 16px 16px 24px}
+.db.db-pop .capture header{padding:18px 20px 0 24px}
+.db.db-pop .capture-destination{padding:10px 24px 0}
+.db.db-pop .capture-arrangement{padding:8px 24px 0}
+.db.db-pop .capture textarea{padding:14px 24px 8px}
+.db.db-pop .capture-close,.db.db-pop .capture header .ts-step,.db.db-pop .capture header .ts-step button{border-radius:999px}
+.db.db-pop .capture footer .primary kbd{border-radius:999px}
+.db.db-pop .capture-edge.se::after{right:12px;bottom:12px;border-bottom-right-radius:4px}
+:root[data-theme=dark] .db.db-pop .capture{box-shadow:0 0 0 1px var(--line),0 18px 38px -14px rgba(0,0,0,.7)}
