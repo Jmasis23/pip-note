@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Capture } from "./components/Capture";
-import { initStorage, call, onNativeEvent } from "./native";
+import { initStorage, call, onNativeEvent, isNative } from "./native";
 import type { TextSize } from "./domain";
 import { repo } from "./useNotes";
 import "@fontsource-variable/inter";
@@ -19,14 +19,14 @@ export default function CapturePopup() {
     };
     void theme();
     let off = () => {}; let dead = false;
-    void onNativeEvent("pip://capture-show", () => { void (async () => { await initStorage(); await theme(); setRound(r => r + 1); setLive(true); })(); }).then(f => { if (dead) f(); else off = f; });
+    if (isNative()) void onNativeEvent("pip://capture-show", () => { void (async () => { await initStorage(); await theme(); setRound(r => r + 1); setLive(true); })(); }).then(f => { if (dead) f(); else off = f; });
     const blur = () => { if (live) window.dispatchEvent(new Event("pip-dismiss")); };
     window.addEventListener("blur", blur);
     return () => { dead = true; off(); window.removeEventListener("blur", blur); };
   }, [live]);
   return (
     <div className="db db-pop">
-      <Capture key={round} textSize={size} onTextSize={v => { setSize(v); document.documentElement.dataset.text = v; void repo.getPrefs().then(p => repo.setPrefs({ ...p, textSize: v })).then(() => call("prefs_changed")); }} open onClose={() => void call("capture_hide")} onSaved={() => void call("capture_saved")} />
+      <Capture key={round} textSize={size} onTextSize={v => { setSize(v); document.documentElement.dataset.text = v; void repo.getPrefs().then(p => repo.setPrefs({ ...p, textSize: v })).then(() => isNative() && call("prefs_changed")); }} open onClose={() => isNative() && void call("capture_hide")} onSaved={() => isNative() && void call("capture_saved")} />
     </div>
   );
 }
