@@ -3,9 +3,21 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: .15 });
 document.querySelectorAll(".panel,.demo,.more dl,.know>div").forEach(el => { el.classList.add("rv"); io.observe(el); });
 
-// demo video: play only while on screen, never show controls
+// demo video: autoplay while on screen with no controls; if autoplay is unavailable
+// (reduced motion, Low Power Mode, play() rejected or stalled) show native controls so it can always be started by hand.
 const dv = document.querySelector(".demo-video video");
-if (dv) { if (reduce) { dv.removeAttribute("autoplay"); dv.pause(); } else new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? dv.play().catch(() => {}) : dv.pause()), { threshold: .25 }).observe(dv); }
+if (dv) {
+  let manual = false;
+  const manualMode = () => { if (manual) return; manual = true; dv.pause(); dv.controls = true; dv.preload = "metadata"; };
+  if (reduce) manualMode();
+  else new IntersectionObserver(es => es.forEach(e => {
+    if (manual) return;
+    if (!e.isIntersecting) { dv.pause(); return; }
+    const p = dv.play();
+    if (p && p.catch) p.catch(manualMode);
+    setTimeout(() => { if (!manual && dv.paused) manualMode(); }, 2500);
+  }), { threshold: .25 }).observe(dv);
+}
 
 // Pip spark cues: one playful hop on the hero tile, and a saved burst when the closing CTA scrolls in.
 const hs = document.querySelector(".pip-hero .pipm");
