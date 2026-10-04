@@ -1,6 +1,8 @@
 import { DEFAULT_PREFS } from "./domain";
-export function seedIfAsked() {
-  if (!new URLSearchParams(location.search).has("seed") || "__TAURI_INTERNALS__" in window) return;
+export function seedIfAsked(preview = false) {
+  const q = new URLSearchParams(location.search);
+  if (preview && q.has("empty")) { localStorage.removeItem("pip.store.v1"); return; }
+  if (!(q.has("seed") || preview) || "__TAURI_INTERNALS__" in window) return;
   if (localStorage.getItem("pip.store.v1") && !new URLSearchParams(location.search).has("reseed")) return;
   const t = Date.now(), h = 3600e3;
   const n = (i: number, title: string, body: string, ago: number, pinned = false, cl: [string, boolean][] = []) => ({ id: "n" + i, title, body, checklist: cl.map(([text, done], k) => ({ id: `c${i}${k}`, text, done })), createdAt: t - ago * h, updatedAt: t - ago * h, pinned, deletedAt: null, revision: 1 });

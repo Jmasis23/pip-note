@@ -1,0 +1,82 @@
+/* Pip redesign: paper, ink, one spark. Loaded after the Desk styles so it wins on purpose. */
+.db{--display:"Bricolage Grotesque Variable","Inter Variable",system-ui,sans-serif;
+  --bg:#FBF6EE;--surface:#FFFDF9;--ink:#201E22;--ink-fixed:#201E22;--muted:#7D7469;--line:rgba(32,30,34,.1);
+  --spark:#FF8A3A;--sand:#F3EADB;--apricot:#FFE6D1;--panel:#201E22;--panel-ink:#F8F2E9;--panel-mute:rgba(248,242,233,.62);
+  --lav:#FF8A3A;--lav-soft:#FFE6D1;--focus:#D9631A;letter-spacing:-.011em;
+  background:radial-gradient(1200px 520px at 80% -10%,rgba(255,138,58,.09),transparent 60%),var(--bg)}
+:root[data-theme=dark] .db{--bg:#151215;--surface:#1F1B20;--ink:#F6F0E8;--muted:#A3998E;--line:rgba(246,240,232,.1);--sand:#2A242A;--apricot:#3B271A;--panel:#F6F0E8;--panel-ink:#201E22;--panel-mute:rgba(32,30,34,.62);--lav-soft:#3B271A;--focus:#FFB070;
+  background:radial-gradient(1200px 520px at 80% -10%,rgba(255,138,58,.12),transparent 60%),var(--bg)}
+:root[data-theme=dark] body{background:#151215}
+body{background:#FBF6EE}
+.db :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* header */
+.db-hero{max-width:1120px;padding:20px 0 16px}
+.db-sub{font-size:calc(13px*var(--ts,1))!important;color:var(--muted)}
+.db-hero kbd,.db kbd{background:var(--surface);border:1px solid var(--line);border-bottom-width:2px;color:var(--ink)}
+.db-hero .pipw .ink{fill:var(--ink)}
+.db-tools .ghost.field{background:transparent;box-shadow:none;border-radius:999px;color:var(--muted);font-weight:600}
+.db-tools .ghost.field:hover,.db-gear:hover{background:var(--sand);color:var(--ink)}
+.db-gear{color:var(--muted)}
+:root[data-theme=dark] .db-gear:hover{background:var(--sand)}
+
+/* dock */
+.db-dock{background:color-mix(in srgb,var(--surface) 72%,transparent);backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-shadow:0 0 0 1px var(--line),0 1px 0 rgba(255,255,255,.6) inset,0 28px 56px -22px rgba(32,30,34,.5);padding:6px}
+:root[data-theme=dark] .db-dock{background:color-mix(in srgb,#2A242A 78%,transparent);box-shadow:0 0 0 1px rgba(246,240,232,.1),0 28px 56px -22px #000}
+.db-dock>button:not(.db-add){color:var(--muted);font-weight:600}
+.db-dock button[aria-current=page]{color:#F8F2E9}
+.db-dock-on{background:var(--ink)!important;box-shadow:0 8px 18px -8px rgba(32,30,34,.6)}
+:root[data-theme=dark] .db-dock button[aria-current=page]{color:#201E22}
+:root[data-theme=dark] .db-dock-on{background:var(--panel)!important}
+.db-dock em{opacity:.6}
+.db-dock input{background:rgba(32,30,34,.06)}
+:root[data-theme=dark] .db-dock input{background:rgba(246,240,232,.08)}
+.db-add,.db .primary{background:var(--spark)!important;color:#201E22!important;box-shadow:0 8px 18px -8px rgba(255,138,58,.8),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .2s cubic-bezier(.3,1.4,.5,1)}
+.db .primary kbd{background:rgba(32,30,34,.14);color:#201E22;border:0}
+:root[data-theme=dark] .db-add,:root[data-theme=dark] .db .primary{background:var(--spark)!important;color:#201E22!important}
+
+/* board + cards: one family, warm */
+.db-context h2{font:600 calc(30px*var(--ts,1))/1.1 var(--display);letter-spacing:-.035em}
+.db-chip{background:var(--surface);color:var(--muted)}
+.db-chip[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.db-card{border-radius:30px;box-shadow:0 0 0 1px var(--line),0 22px 34px -26px rgba(32,30,34,.45)}
+.db-card.white{background:var(--surface)}
+.db-card.lav{background:var(--panel);--cardink:var(--panel-ink)}
+.db-card.mint{background:var(--sand)}
+.db-card.peach{background:var(--apricot)}
+.db-card.lav,.db-card.lav b,.db-card.lav .db-pre,.db-card.lav time{color:var(--panel-ink)}
+.db-card.lav .db-pre,.db-card.lav time{opacity:.66}
+.db-card.lav .db-prog i{background:rgba(248,242,233,.25)}.db-card.lav .db-prog i.d{background:var(--spark)}
+:root[data-theme=dark] .db-card.lav .db-prog i{background:rgba(32,30,34,.2)}
+.db-card b{font:600 calc(22px*var(--ts,1))/1.15 var(--display);letter-spacing:-.03em}
+.db-card .db-pre{color:color-mix(in srgb,var(--ink) 70%,transparent)}
+.db-card.lav .db-pre{color:var(--panel-ink)}
+.db-prog i.d{background:var(--spark)}
+:root[data-theme=dark] .db-card.white{background:var(--surface)}
+:root[data-theme=dark] .db-card.mint{background:var(--sand)}
+:root[data-theme=dark] .db-card.peach{background:var(--apricot)}
+:root[data-theme=dark] .db-card.lav{background:var(--panel)}
+:root[data-theme=dark] .db-card time{color:rgba(246,240,232,.5)}
+:root[data-theme=dark] .db-card.lav time{color:var(--panel-ink)}
+/* picked colors: warm-shifted Sticky palette */
+.db-card.yellow{background:#FFEFB8}.db-card.green{background:#DCEBCB}.db-card.pink{background:#FFD9D2}.db-card.purple{background:#E8DCEC}.db-card.blue{background:#D8E6EA}.db-card.gray{background:#E9E4DC}
+.cp-btn.yellow,.cp-sw.yellow{background:#FFEFB8}.cp-btn.green,.cp-sw.green{background:#DCEBCB}.cp-btn.pink,.cp-sw.pink{background:#FFD9D2}.cp-btn.purple,.cp-sw.purple{background:#E8DCEC}.cp-btn.blue,.cp-sw.blue{background:#D8E6EA}.cp-btn.gray,.cp-sw.gray{background:#E9E4DC}
+.db-card.charcoal{background:#201E22}
+.db-empty{color:var(--muted)}
+
+/* sheets and overlays */
+.db-veil,.db .scrim{background:rgba(251,246,238,.6);backdrop-filter:blur(18px) saturate(1.2)}
+:root[data-theme=dark] .db-veil,:root[data-theme=dark] .db .scrim{background:rgba(14,12,14,.66)}
+.db-sheet,.db .capture,.db .sheet{background:var(--surface);border-radius:36px;box-shadow:0 0 0 1px var(--line),0 50px 90px -34px rgba(32,30,34,.55)}
+:root[data-theme=dark] .db-sheet,:root[data-theme=dark] .db .capture,:root[data-theme=dark] .db .sheet{background:var(--surface)}
+.db-sheet .ed-title,.db .sheet h2{font-family:var(--display);font-weight:600;letter-spacing:-.04em}
+.db .capture textarea{font-family:var(--display);font-weight:500}
+.db .sheet .row:hover{background:var(--sand)}
+.db .sheet .ghost:hover{background:var(--sand)}
+:root[data-theme=dark] .db .rt-bar button.on{color:#201E22}
+.db-toast{background:var(--ink);color:var(--surface)}
+:root[data-accent] .db-card.lav,:root[data-tint=quiet] .db-card.lav{background:var(--panel)}
+:root[data-accent] .db-card.mint,:root[data-tint=quiet] .db-card.mint{background:var(--sand)}
+:root[data-accent] .db-card.peach,:root[data-tint=quiet] .db-card.peach{background:var(--apricot)}
+.db-board,.db-folders,.db-context{max-width:1120px}
+.home[data-empty] .home-welcome-actions{position:static}
