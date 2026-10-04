@@ -228,7 +228,7 @@ pub fn run() {
 
             // The capture box: a small always-on-top window that stays hidden until the shake, hotkey or tray asks for it.
             tauri::WebviewWindowBuilder::new(app, "capture", tauri::WebviewUrl::App("index.html?capture=1".into()))
-                .title("Pip capture").inner_size(600.0, 330.0).min_inner_size(360.0, 280.0).max_inner_size(1000.0, 800.0).decorations(false).resizable(true).always_on_top(true).skip_taskbar(true).visible(false).center().build()?;
+                .title("Pip capture").inner_size(600.0, 330.0).min_inner_size(360.0, 280.0).max_inner_size(1000.0, 800.0).decorations(false).transparent(true).resizable(true).always_on_top(true).skip_taskbar(true).visible(false).center().build()?;
 
             let open = MenuItem::with_id(app, "open", "Open Pip", true, None::<&str>)?;
             let cap = MenuItem::with_id(app, "capture", "Capture a thought", true, None::<&str>)?;
