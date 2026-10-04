@@ -6,6 +6,8 @@ import type { TextSize } from "./domain";
 import { repo } from "./useNotes";
 import "@fontsource-variable/inter";
 import "./dirs/b.css";
+import "@fontsource-variable/bricolage-grotesque";
+import "./capture-popup.css";
 
 /** The small always-on-top box the shake and the hotkey open. It writes straight to the notes store and tells the main window. */
 export default function CapturePopup() {
