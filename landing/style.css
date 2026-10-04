@@ -169,3 +169,5 @@ section[id]{scroll-margin-top:84px}
 .pipm[data-state=saved] .glow{animation:pip-glow .36s ease-out both}
 .not-found .nf-wm{width:auto}
 @media (prefers-reduced-motion:reduce){.pipw *,.pipm *,.pipm,.pipw{animation:none!important;transition:none!important}}
+
+.demo-video video::-webkit-media-controls,.demo-video video::-webkit-media-controls-panel,.demo-video video::-webkit-media-controls-start-playback-button,.demo-video video::-webkit-media-controls-overlay-play-button{display:none!important;-webkit-appearance:none}
