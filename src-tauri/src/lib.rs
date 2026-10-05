@@ -78,7 +78,7 @@ pub fn open_tool(app: &AppHandle, tool: Tool, _x: f64, _y: f64) {
     }
 }
 /// Compact tools that have a UI. Others do nothing yet (no placeholder windows).
-fn tool_key(t: Tool) -> Option<&'static str> { match t { Tool::QuickRecall => Some("recall"), _ => None } }
+fn tool_key(t: Tool) -> Option<&'static str> { match t { Tool::QuickRecall => Some("recall"), Tool::ClipboardShelf => Some("clipboard"), Tool::ProjectShelf => Some("project"), _ => None } }
 
 static TOOL_NAME: Mutex<String> = Mutex::new(String::new());
 static TOOL_SHOWN_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);

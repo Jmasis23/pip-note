@@ -19,4 +19,10 @@ await page.keyboard.press('Enter'); await page.getByText('Copied.').waitFor();
 assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'Best, Alex', 'Enter copies the snippet text');
 await page.getByLabel('Search what you kept').fill('zzzzqq'); await page.getByText('Nothing matches.').waitFor();
 await page.screenshot({ path: out + '/2-empty.png' });
+// Project Shelf and Clipboard Shelf (preview): shelves from folders, clipboard history unavailable outside the Windows app
+await page.evaluate(() => { const v = JSON.parse(localStorage.getItem('pip.store.v1')); v.notes.slice(0, 3).forEach((n, i) => { n.folder = i ? 'Home' : 'Work'; }); localStorage.setItem('pip.store.v1', JSON.stringify(v)); });
+await page.goto(origin + '/?tool=project&seed=1'); const ps = page.getByRole('dialog', { name: 'Project Shelf' }); await ps.waitFor();
+await ps.getByRole('group', { name: 'Projects' }).getByRole('button').first().waitFor(); await page.screenshot({ path: out + '/3-project-shelf.png' });
+await ps.getByRole('option').first().click(); await page.getByText('Copied.').waitFor();
+await page.goto(origin + '/?tool=clipboard&seed=1'); await page.getByRole('dialog', { name: 'Clipboard Shelf' }).getByText('only runs in the Windows app').waitFor();
 assert.deepEqual(errors, []); await browser.close(); console.log('recall browser QA passed', out);

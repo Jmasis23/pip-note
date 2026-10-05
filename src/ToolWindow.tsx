@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { call, initStorage, isNative, onNativeEvent } from "./native";
 import { repo } from "./useNotes";
 import { readList, SNIPPETS_KEY, type Snippet } from "./panels/store";
-import { recallResults, type RecallItem } from "./panels/recall";
+import { recallResults, projectShelves, type RecallItem, type Shelf } from "./panels/recall";
+import { clipboard, type ClipItem } from "./clipboard";
 import "@fontsource-variable/inter";
 import "./dirs/b.css";
 import "./panels/panels.css";
@@ -10,7 +11,7 @@ import "./panels/panels.css";
 /** The one compact window every non-capture tool shows in. The native side says which tool through tool_current. */
 export default function ToolWindow() {
   const [tool, setTool] = useState("");
-  const refresh = useCallback(async () => { try { await initStorage(); } catch { /* keep the old view */ } setTool(isNative() ? await call<string>("tool_current") : "recall"); }, []);
+  const refresh = useCallback(async () => { try { await initStorage(); } catch { /* keep the old view */ } setTool(isNative() ? await call<string>("tool_current") : (new URLSearchParams(location.search).get("tool") || "recall").replace(/^1$/, "recall")); }, []);
   useEffect(() => {
     document.documentElement.classList.add("cap-win");
     void refresh(); let off = () => {}; let dead = false;
@@ -19,8 +20,8 @@ export default function ToolWindow() {
   }, [refresh]);
   const close = () => { if (isNative()) void call("tool_hide"); };
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") close(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, []);
-  return <div className="db db-pop"><div className="db-sheet panel tool-win" role="dialog" aria-label={tool === "recall" ? "Quick Recall" : "Pip tool"}>
-    {tool === "recall" ? <Recall onDone={close} /> : <p className="pn-empty">This tool is not ready yet.</p>}
+  return <div className="db db-pop"><div className="db-sheet panel tool-win" role="dialog" aria-label={tool === "recall" ? "Quick Recall" : tool === "clipboard" ? "Clipboard Shelf" : tool === "project" ? "Project Shelf" : "Pip tool"}>
+    {tool === "recall" ? <Recall onDone={close} /> : tool === "clipboard" ? <ClipShelf onDone={close} /> : tool === "project" ? <ProjectShelf onDone={close} /> : <p className="pn-empty">This tool is not ready yet.</p>}
   </div></div>;
 }
 
@@ -43,5 +44,37 @@ function Recall({ onDone }: { onDone: () => void }) {
     <ul className="pn-list" role="listbox" aria-label="Results">{items.map((it, i) => <li key={it.kind + it.id} role="option" aria-selected={i === at} className={i === at ? "sel" : ""} onClick={() => void pick(it)}><div><b>{it.title}</b><p>{it.kind === "snippet" ? "Snippet" : "Note"} · {it.text.replace(/\s+/g, " ").slice(0, 70)}</p></div></li>)}</ul>
     {items.length === 0 && <p className="pn-empty">{q ? "Nothing matches." : "Nothing kept yet."}</p>}
     <p className="pn-msg" role="status">{msg || "Arrow keys to move, Enter to copy, Esc to close."}</p>
+  </>;
+}
+
+/** Clipboard Shelf: recent copies from the existing clipboard history. Click puts one back on the clipboard; Keep it saves one as a note. */
+function ClipShelf({ onDone }: { onDone: () => void }) {
+  const [items, setItems] = useState<ClipItem[]>([]); const [on, setOn] = useState(false); const [supported, setSupported] = useState(true); const [msg, setMsg] = useState("");
+  const load = useCallback(async () => { try { const st = await clipboard.status(); setItems(st.items.slice(0, 8)); setOn(st.enabled); setSupported(st.supported); } catch { setMsg("Couldn't read clipboard history."); } }, []);
+  useEffect(() => { void load(); let off = () => {}; let dead = false; if (isNative()) void clipboard.watch(() => void load()).then(f => { if (dead) f(); else off = f; }); return () => { dead = true; off(); }; }, [load]);
+  const use = async (it: ClipItem) => { try { await clipboard.copy(it.id); setMsg("Back on your clipboard."); window.setTimeout(onDone, 350); } catch { setMsg("Couldn't copy that one."); } };
+  const keep = async (it: ClipItem) => { try { await repo.create({ body: (it.text || "").slice(0, 20000) }); if (isNative()) await call("capture_saved"); setMsg("Kept."); } catch { setMsg("Couldn't keep that."); } };
+  return <>
+    <header className="panel-head"><div><h2>Clipboard Shelf</h2></div><button className="ghost" onClick={onDone}>Done</button></header>
+    {!supported && <p className="pn-empty">Clipboard history only runs in the Windows app.</p>}
+    {supported && !on && <p className="pn-empty">Clipboard history is paused. Turn it on from Clipboard in the main app.</p>}
+    <ul className="pn-list">{items.filter(i => !i.image).map(it => <li key={it.id}><div><b>{it.text.replace(/\s+/g, " ").slice(0, 60)}</b></div><div className="pn-act"><button className="ghost field" onClick={() => void use(it)}>Use</button><button className="ghost field" onClick={() => void keep(it)}>Keep it</button></div></li>)}</ul>
+    {supported && on && items.length === 0 && <p className="pn-empty">Nothing copied yet.</p>}
+    <p className="pn-msg" role="status">{msg || "Saved unencrypted on this PC. Pause it for secrets."}</p>
+  </>;
+}
+
+/** Project Shelf: your projects (top-level folders) and their newest notes. Click a note to copy its text. */
+function ProjectShelf({ onDone }: { onDone: () => void }) {
+  const [shelves, setShelves] = useState<Shelf[]>([]); const [open, setOpen] = useState(""); const [msg, setMsg] = useState("");
+  useEffect(() => { void (async () => { try { await initStorage(); } catch { /* use what is loaded */ } const s = projectShelves(await repo.list({ view: "all", query: "" })); setShelves(s); setOpen(s[0]?.folder ?? ""); })(); }, []);
+  const cur = shelves.find(s => s.folder === open);
+  const copy = async (text: string) => { try { await navigator.clipboard.writeText(text); setMsg("Copied."); window.setTimeout(onDone, 350); } catch { setMsg("Couldn't copy."); } };
+  return <>
+    <header className="panel-head"><div><h2>Project Shelf</h2></div><button className="ghost" onClick={onDone}>Done</button></header>
+    <div className="pn-row" role="group" aria-label="Projects" style={{ flexWrap: "wrap" }}>{shelves.map(s => <button key={s.folder} className="db-chip" aria-pressed={open === s.folder} onClick={() => setOpen(s.folder)}>{s.folder} {s.notes.length}</button>)}</div>
+    <ul className="pn-list">{(cur?.notes ?? []).slice(0, 8).map(n => <li key={n.id} role="option" aria-selected={false} style={{ cursor: "pointer" }} onClick={() => void copy(n.body)}><div><b>{n.title || n.body.split("\n")[0].slice(0, 60) || "Untitled"}</b><p>{n.body.replace(/\s+/g, " ").slice(0, 70)}</p></div></li>)}</ul>
+    {shelves.length === 0 && <p className="pn-empty">No projects yet. Put a note in a folder to start one.</p>}
+    <p className="pn-msg" role="status">{msg || "Click a note to copy it."}</p>
   </>;
 }

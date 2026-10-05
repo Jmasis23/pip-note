@@ -16,3 +16,10 @@ describe("recallResults", () => {
   });
   it("untitled notes get a title from the first line", () => { expect(recallResults([note({ body: "first line\nsecond" })], [], "")[0].title).toBe("first line"); });
 });
+import { projectShelves } from "./recall";
+describe("projectShelves", () => {
+  it("groups by top-level folder, skips unfiled and trashed, most recent project first", () => {
+    const s = projectShelves([note({ id: "a", folder: "Work/Clients", updatedAt: 5 }), note({ id: "b", folder: "Work", updatedAt: 9 }), note({ id: "c", folder: "Home", updatedAt: 20 }), note({ id: "d", updatedAt: 99 }), note({ id: "e", folder: "Home", updatedAt: 99, deletedAt: 1 })]);
+    expect(s.map(x => x.folder)).toEqual(["Home", "Work"]); expect(s[1].notes.map(n => n.id)).toEqual(["b", "a"]);
+  });
+});

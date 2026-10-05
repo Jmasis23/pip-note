@@ -11,3 +11,10 @@ export function recallResults(notes: Note[], snippets: Snippet[], query: string)
   const named = s.filter(x => q && x.title.toLowerCase().includes(q)); const rest = s.filter(x => !named.includes(x));
   return [...named, ...n, ...rest].slice(0, MAX);
 }
+export type Shelf = { folder: string; notes: Note[] };
+/** Project Shelf: live notes grouped by top-level folder, newest project activity first. Notes with no folder are left out. */
+export function projectShelves(notes: Note[]): Shelf[] {
+  const by = new Map<string, Note[]>();
+  for (const n of notes) { if (n.deletedAt !== null || !n.folder) continue; const k = n.folder.split("/")[0]; by.set(k, [...(by.get(k) ?? []), n]); }
+  return [...by].map(([folder, ns]) => ({ folder, notes: ns.sort((a, b) => b.updatedAt - a.updatedAt) })).sort((a, b) => b.notes[0].updatedAt - a.notes[0].updatedAt);
+}
