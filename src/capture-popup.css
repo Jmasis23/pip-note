@@ -28,9 +28,9 @@
 @media(prefers-reduced-motion:reduce){.db.db-pop .capture footer .primary{transition:none}}
 /* Soft edges: the window is a floating rounded card (needs a transparent native window to show outside the card). */
 html.cap-win,.cap-win body,.cap-win #root{background:transparent!important}
-.db.db-pop{padding:10px;background:transparent}
-.db.db-pop .scrim{border-radius:32px}
-.db.db-pop .capture{border-radius:32px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 18px 38px -14px rgba(32,30,34,.38),0 3px 10px -3px rgba(32,30,34,.16)}
+.db.db-pop{padding:0;background:transparent}
+.db.db-pop .scrim{border-radius:26px}
+.db.db-pop .capture{border-radius:26px;overflow:hidden;box-shadow:0 0 0 1px var(--line)}
 .db.db-pop .capture textarea{border-radius:20px;outline:0}
 .db.db-pop .capture footer{padding:6px 16px 16px 24px}
 .db.db-pop .capture header{padding:18px 20px 0 24px}

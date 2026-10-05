@@ -87,3 +87,9 @@ body{background:#FBF6EE}
 .db-tools .ts-step button{width:32px;height:32px}
 .db-dock{font-size:13.5px}.db-dock>button:not(.db-add){font-size:13.5px}.db-dock em{font-size:12px}
 @media(max-width:700px){.db-tools .ghost.field,.db-tools .ts-step{display:none}.db-dock>button:not(.db-add) em{display:none}.db-dock>button:not(.db-add){padding-inline:10px}.db-dock input{width:84px}}
+/* Narrow windows: the dock is one scrolling row, not a squeezed pill. */
+@media(max-width:700px){
+  .db-dock{left:12px;right:12px;bottom:14px;transform:none;max-width:none;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;justify-content:flex-start;flex-wrap:nowrap;width:auto}
+  .db-dock::-webkit-scrollbar{display:none}
+  .db-dock>*{flex:none}.db-dock>.db-add{margin-left:auto;position:sticky;right:0}
+}
