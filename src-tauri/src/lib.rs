@@ -87,7 +87,7 @@ const HOST_KEY: &str = "chatgpt-host";
 fn cred(st: &AppState) -> Option<Cred> { st.kv.get(CRED_KEY).ok().flatten().and_then(|s| serde_json::from_str(&s).ok()).filter(|c: &Cred| c.has_plan()) }
 fn save_cred(st: &AppState, c: &Cred) -> Result<(), String> { st.kv.set(CRED_KEY, &serde_json::to_string(c).map_err(|e| e.to_string())?).map_err(|e| e.to_string()) }
 fn open_url(url: &str) -> Result<(), String> {
-    #[cfg(windows)] let r = std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", url]).spawn();
+    #[cfg(windows)] let r = { use std::os::windows::process::CommandExt; std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", url]).creation_flags(0x0800_0000).spawn() }; // CREATE_NO_WINDOW
     #[cfg(not(windows))] let r = std::process::Command::new("xdg-open").arg(url).spawn();
     r.map(|_| ()).map_err(|_| "Couldn't open your browser.".to_string())
 }
@@ -213,6 +213,8 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        // Pip lives in the tray: it starts with Windows, quietly, so the shake and hotkey always work.
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--background"])))
         .manage(Pending(Mutex::new(None)))
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
@@ -223,6 +225,17 @@ pub fn run() {
             let handle = app.handle().clone();
             let _ = register_shortcut(&handle, &st, parse_shortcut("Ctrl+Shift+Space")?); // default until the web view says otherwise
             app.manage(st);
+            // First run turns on start-with-Windows once. Later launches leave the choice alone.
+            {
+                use tauri_plugin_autostart::ManagerExt;
+                let st = app.state::<AppState>();
+                if st.kv.get("autostart-init").ok().flatten().is_none() {
+                    let _ = app.autolaunch().enable();
+                    let _ = st.kv.set("autostart-init", "1");
+                }
+            }
+            // Started by Windows (--background): stay in the tray. Opened by hand: show the window.
+            if !std::env::args().any(|a| a == "--background") { show_main(&handle); }
             clipboard::start(handle.clone())?;
             shake::start(handle.clone(), shake, level);
 

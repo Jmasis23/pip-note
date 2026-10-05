@@ -94,7 +94,7 @@ button:hover>.hv-box{border-color:var(--spark);box-shadow:inset 0 0 0 4px var(--
 @keyframes hv-sk{to{background-position:-200% 0}}
 .hv-b .wrap{display:block}.hv-b .wrap .mo{height:100%;position:relative}
 .hv-b .ctl button{background:var(--ink);color:var(--bg);min-width:36px;height:36px}
-.hv-b .ctl button[aria-disabled=true]{opacity:.3}.hv-b .ctl .rm{background:var(--spark);color:#201E22;width:36px}
+.hv-b .ctl button[aria-disabled=true]{opacity:.3}
 @media(pointer:coarse){.hv-b .ctl button{min-width:44px;height:44px}}
 .hv-b[data-edit] .hv-edit,.hv-b[data-edit] .hv-edit:hover{background:var(--ink);color:var(--bg)}
 .hv-b .cap kbd,.hv-b .cap .hv-keys kbd{background:rgba(32,30,34,.18);color:#201E22}
@@ -111,3 +111,15 @@ button:hover>.hv-box{border-color:var(--spark)}
 @media(prefers-reduced-motion:reduce){.hv-b .skel{animation:none}}
 .wrap.s-l .note p{font-size:calc(19px*var(--ts,1));line-height:1.5;-webkit-line-clamp:7;line-clamp:7}.wrap.s-l .note h3{font-size:calc(38px*var(--ts,1))}
 @media(max-width:700px){.hv-b .wrap.s-m .date strong{font-size:calc(44px*var(--ts,1))}.hv-b .wrap.s-m .date{padding:16px}}
+/* Customize: drag a tile to move it, pull the corner to resize it. */
+.hv-b[data-edit] .wrap{touch-action:none;cursor:grab;outline:0;user-select:none;-webkit-user-select:none}
+.hv-b[data-edit] .wrap:focus-visible .ctl{box-shadow:0 0 0 3px var(--ink)}
+.hv-b .wrap[data-drag]{opacity:1;z-index:5;cursor:grabbing}
+.hv-b .wrap[data-drag] .mo{filter:drop-shadow(0 22px 26px rgba(32,30,34,.28))}
+.hv-b .wrap[data-drag] .inner{animation:none}
+.hv-b .ctl{padding:0;display:block;cursor:inherit}
+.hv-b .ctl .rm{position:absolute;top:-9px;left:-9px;pointer-events:auto;width:32px;min-width:32px;height:32px;padding:0;border-radius:50%;background:var(--spark);color:#201E22;font-size:20px;line-height:1;box-shadow:0 6px 14px -6px rgba(32,30,34,.6)}
+.hv-b .ctl .rz{position:absolute;right:-8px;bottom:-8px;width:36px;height:36px;border-radius:50%;background:var(--surface);box-shadow:0 0 0 2px var(--spark),0 8px 16px -8px rgba(32,30,34,.5);cursor:nwse-resize;pointer-events:auto;touch-action:none}
+.hv-b .ctl .rz::before{content:"";position:absolute;right:9px;bottom:9px;width:12px;height:12px;border-right:3px solid var(--spark);border-bottom:3px solid var(--spark);border-bottom-right-radius:6px}
+.hv-b .ctl .rz:hover{transform:scale(1.08)}
+@media(pointer:coarse){.hv-b .ctl .rz{width:44px;height:44px;right:-10px;bottom:-10px}.hv-b .ctl .rz::before{right:13px;bottom:13px}.hv-b .ctl .rm{width:40px;height:40px}}
