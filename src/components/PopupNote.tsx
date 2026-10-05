@@ -5,6 +5,7 @@ import { CloseButton } from "@/components/base/buttons/close-button";
 import { Editor } from "./Editor";
 import type { Note, Prefs } from "../domain";
 import { repo } from "../useNotes";
+import { isNative } from "../native";
 import "./rail.css";
 
 const blank = (n: Note) => !n.body.trim() && !n.checklist.length && /^(untitled)?$/i.test(n.title.trim());
@@ -71,6 +72,14 @@ export function PopupNote({ onClose }: { onClose: (kept: boolean) => void }) {
           onColor={c => { if (!prefs) return; const m = { ...(prefs.noteColors ?? {}) }; if (c) m[note.id] = c; else delete m[note.id]; void repo.setPrefs({ ...prefs, noteColors: m }).then(refresh); }}
           onChanged={() => void refresh()} onBack={() => void close()} />}
       </div>
+      {isNative() && document.documentElement.classList.contains("cap-win") && ([
+        ["n", "North"], ["ne", "NorthEast"], ["e", "East"], ["se", "SouthEast"],
+        ["s", "South"], ["sw", "SouthWest"], ["w", "West"], ["nw", "NorthWest"],
+      ] as const).map(([edge, direction]) => <div key={edge} className={`capture-edge ${edge}`} aria-hidden="true" onMouseDown={e => {
+        if (e.button !== 0) return;
+        e.preventDefault(); e.stopPropagation();
+        void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow().startResizeDragging(direction)).catch(() => {});
+      }} />)}
     </section>
   );
 }
