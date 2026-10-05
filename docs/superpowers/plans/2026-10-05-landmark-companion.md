@@ -46,4 +46,4 @@
 
 ## Execution outcome
 
-The four implementation slices and a read-only branch review are complete. See `docs/VERIFICATION.md` for final evidence. Windows runtime acceptance, rendered visual inspection and installer delivery remain blocked by this environment; the checked workflow provides a separate Windows build path, not proof of a passed run. Source is preserved on `feat/landmark-companion`, with no merge or release publication.
+The four implementation slices and a read-only branch review are complete. See `docs/VERIFICATION.md` for final evidence. Windows runtime acceptance and rendered visual inspection remain blocked by this environment. The local installer build failed, but a Windows GitHub Actions run successfully produced the delivered installer; archive integrity and PE headers were checked. Source is preserved on `feat/landmark-companion`, with no merge or release publication.

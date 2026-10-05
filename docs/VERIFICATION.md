@@ -1,6 +1,6 @@
 # Verification — October 5, 2026
 
-This is a source implementation with portable and Windows-target compiler checks. It is **not yet a Windows runtime-validated release**. No installer was produced in this environment.
+This implementation has passing portable checks, Windows-target checks and an actual Windows CI installer build. It is **not yet a Windows runtime-validated release**. The local Linux installer build failed; GitHub’s Windows runner produced the downloadable installer.
 
 ## Completed checks
 
@@ -16,6 +16,8 @@ This is a source implementation with portable and Windows-target compiler checks
 | Windows GNU-target `cargo check` | Passed |
 | Windows GNU-target `cargo clippy --no-deps -- -D warnings` | Passed |
 | `git diff --check` | Passed |
+| GitHub Windows MSVC `cargo check --locked` | Passed in companion workflow |
+| GitHub Windows NSIS installer build | Passed in existing Windows workflow |
 
 The checks used Node 24.19, Rust 1.99, the repository lockfiles, and a locally extracted MinGW toolchain for the Windows target. The Windows compilation commands were:
 
@@ -34,7 +36,7 @@ A read-only code review identified nine material issues. The fixes add per-windo
 
 ## Environment blockers
 
-- Two `npx tauri build --target x86_64-pc-windows-gnu --bundles nsis` release attempts failed while Rust created dependency archives: `failed to map object file: memory map must have a non-zero length`. The second attempt disabled LTO and increased codegen units; it failed on a different dependency with the same archive error. There is no Windows installer artifact to hand off.
+- Two `npx tauri build --target x86_64-pc-windows-gnu --bundles nsis` release attempts failed while Rust created dependency archives: `failed to map object file: memory map must have a non-zero length`. The second attempt disabled LTO and increased codegen units; it failed on a different dependency with the same archive error. This prevented local installer delivery; the separate Windows CI build subsequently succeeded.
 - The browser verification daemon failed to start. A fallback Playwright Chromium download returned corrupt/truncated archives. No browser screenshot or rendered visual acceptance was completed. DOM tests are not a substitute for rendering, native input, tray or focus verification.
 - This host is Linux. It cannot establish that the low-level mouse hook, monitor overlays, clipboard listener, foreground restoration, notifications or tray work correctly on Windows.
 
@@ -42,4 +44,8 @@ A read-only code review identified nine material issues. The fixes add per-windo
 
 Run the [Windows checklist](WINDOWS.md) on Windows 11 with other applications focused, two monitors including negative coordinates and mixed scaling, display hotplug, clipboard exclusions, tray close/reopen, restart persistence, popup placement, keyboard dismissal and reminder behavior. Tune the default physical-pixel gesture thresholds from those results. Also inspect visual contrast, small tray readability, keyboard focus and reduced motion in the rendered desktop application.
 
-The feature-branch CI workflow performs portable checks and a Windows MSVC installer build, then uploads an unsigned artifact. A workflow definition is not evidence that its run has passed. Signing, publishing, updates and the deferred OCR/voice/cloud/AI extensions are outside this source delivery. Further data and runtime limitations are listed in [COMPANION.md](COMPANION.md).
+The companion workflow’s portable job and Windows MSVC check passed in [run 37292452629](https://github.com/Jmasis23/pip-note/actions/runs/37292452629); its independent bundle job was still running when the first installer became available. The existing [Windows workflow run 37292452529](https://github.com/Jmasis23/pip-note/actions/runs/37292452529) successfully built and uploaded `Pip_0.2.44_x64-setup.exe`. That workflow stamps the build number into the version. Both runs use source commit `0c510c62f3277357ff1d2c79764d8c35f4670d47`, whose tree matches the verified local implementation. Later documentation-only commits do not alter that installer’s code.
+
+The delivered archive is `Pip-Windows-installer.zip` (2,592,154 bytes). Its SHA-256 matches GitHub’s artifact digest: `33150633f49285f6ded4fce4a74af036e7f886c168f4dafc0a484c3f95b51050`. ZIP CRC validation passed and its executable has a valid Windows PE signature. The installer was not executed here and is unsigned. No release was published.
+
+Signing, publishing, updates and the deferred OCR/voice/cloud/AI extensions remain outside this delivery. Further data and runtime limitations are listed in [COMPANION.md](COMPANION.md).
