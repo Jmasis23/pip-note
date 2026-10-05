@@ -94,7 +94,8 @@ fn tick(app: &AppHandle) {
     let mut fired: Vec<String> = st.kv.get(FIRED_KEY).ok().flatten().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as f64).unwrap_or(0.0);
     let before = fired.len();
-    for r in list.iter().filter(|r| r.at <= now && !fired.contains(&r.id)) {
+    let due: Vec<&Due> = list.iter().filter(|r| r.at <= now && !fired.contains(&r.id)).collect();
+    for r in due {
         let body: String = r.text.chars().take(160).collect();
         let _ = app.notification().builder().title("Pip").body(if body.is_empty() { "Reminder".to_string() } else { body }).show();
         let _ = app.emit("reminder-fired", r.id.clone());
