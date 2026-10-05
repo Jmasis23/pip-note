@@ -4,6 +4,10 @@ import type { Draft, Note, View } from "../domain";
 import { Pip } from "./Pip";
 import { dashboardModel } from "./dashboardModel";
 import { preview, when } from "../dirs/util";
+import { AskPip } from "./AskPip";
+import { Suggestions } from "./Suggestions";
+import { loadReminders, onRemindersChanged, previewRing, removeReminder, split, type Reminder } from "../ai/reminders";
+import { when as whenAt } from "../ai/plan";
 import "./home.css";
 
 export type HomeProps = { name?: string; notes: Note[]; drafts: Draft[]; loaded: boolean; shortcut: string; now: number; onCapture: (draftId?: string) => void; onOpen: (id: string) => void; onView: (view: View) => void };
@@ -25,8 +29,9 @@ const WIDGETS: Record<string, { label: string; min: [number, number] }> = {
   list: { label: "Checklist", min: [2, 1] },
   recent: { label: "Recent", min: [2, 1] },
   date: { label: "Today", min: [1, 1] },
+  reminders: { label: "Reminders", min: [2, 1] },
 };
-const DEFAULT: Slot[] = [{ id: "pinned", w: 2, h: 2 }, { id: "todo", w: 1, h: 1 }, { id: "kept", w: 1, h: 1 }, { id: "date", w: 2, h: 1 }, { id: "list", w: 2, h: 2 }, { id: "recent", w: 2, h: 2 }];
+const DEFAULT: Slot[] = [{ id: "pinned", w: 2, h: 2 }, { id: "todo", w: 1, h: 1 }, { id: "kept", w: 1, h: 1 }, { id: "date", w: 2, h: 1 }, { id: "reminders", w: 2, h: 1 }, { id: "list", w: 2, h: 2 }, { id: "recent", w: 2, h: 2 }];
 const KEY = "pip.home.layout.v4";
 const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 const sizeOf = (w: number, h: number): Size => w * h >= 4 ? "l" : w * h >= 2 ? "m" : "s";
@@ -95,6 +100,7 @@ export function Home({ name, notes, drafts, loaded, shortcut, now, onCapture, on
   const noteTile = (n: typeof pin, label: string, size: Size) => n ? <button className="w note" onClick={() => onOpen(n.id)} aria-label={`Open ${n.title}`}><Head label={label} /><h3>{n.title}</h3><p>{n.body.trim()}</p>{size === "l" && n.checklist.filter(c => !c.done).slice(0, 3).map(c => <span key={c.id} className="nl"><Box />{c.text}</span>)}<time>{when(n.updatedAt)}</time></button> : <div className="w hint"><p>Nothing yet.</p></div>;
   const body = (id: string, size: Size) => {
     switch (id) {
+      case "reminders": return <RemindersTile now={now} size={size} />;
       case "capture": return <button className="w cap" onClick={() => onCapture()}><Pip size={64} /><strong>{empty ? "Keep your first thought" : "Capture"}</strong><Keys s={shortcut} /></button>;
       case "pinned": return noteTile(pin, "Pinned", size);
       case "latest": return noteTile(latest, "Latest", size);
@@ -110,6 +116,8 @@ export function Home({ name, notes, drafts, loaded, shortcut, now, onCapture, on
   const slots: Slot[] = empty ? [{ id: "capture", w: 2, h: 1 }] : layout;
   return <MotionConfig reducedMotion="user"><main className="hv hv-b" aria-label="Your dashboard" data-empty={empty || undefined} data-edit={edit || undefined}>
     <header><h1>{first(name) ? `Hi, ${first(name)}` : "Hi there"}</h1><p>{new Date(now).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p>{!empty && <button className="hv-edit" onClick={() => setEdit(e => !e)} aria-pressed={edit}>{edit ? "Done" : "Customize"}</button>}</header>
+    {!empty && !edit && <AskPip notes={notes} now={now} />}
+    {!empty && !edit && loaded && <Suggestions notes={notes} folders={[...new Set(notes.map(n => n.folder).filter((f): f is string => !!f))]} now={now} />}
     <div className="hv-bento" ref={grid}>
       {!loaded && [0, 1, 2, 3].map(i => <div key={i} className={`wrap s-${i === 0 ? "l" : "s"}`}><div className="w skel" aria-hidden /></div>)}
       {loaded && slots.map((sl, i) => { const w = Math.min(sl.w, cols); const z = sizeOf(w, sl.h); return <div key={sl.id} data-id={sl.id} className={`wrap s-${z}`} style={{ gridColumn: `span ${w}`, gridRow: `span ${sl.h}` }}
@@ -133,3 +141,13 @@ export function Home({ name, notes, drafts, loaded, shortcut, now, onCapture, on
   </main></MotionConfig>;
 }
 
+
+function RemindersTile({ now, size }: { now: number; size: Size }) {
+  const [list, setList] = useState<Reminder[]>(() => loadReminders());
+  useEffect(() => { const f = () => setList(loadReminders()); const off = onRemindersChanged(f); const ring = previewRing(f); return () => { off(); ring(); }; }, []);
+  const { up, due } = split(list, now);
+  const rows = [...due, ...up].slice(0, size === "l" ? 5 : 2);
+  return <section className="w rem" aria-label="Reminders"><Head label="Reminders" />
+    {rows.length ? <ul>{rows.map(r => <li key={r.id} data-due={r.at <= now || undefined}><div><strong>{r.text}</strong><small>{r.at <= now ? "Now" : whenAt(r.at, now)}</small></div><button onClick={() => removeReminder(r.id)} aria-label={`Done: ${r.text}`}>&#10003;</button></li>)}</ul> : <p className="none">Nothing coming up. Ask Pip to remind you.</p>}
+  </section>;
+}

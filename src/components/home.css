@@ -9,7 +9,7 @@ button:hover>.hv-box{border-color:var(--spark);box-shadow:inset 0 0 0 4px var(--
 /* A: Paper */
 
 /* B: Widgets */
-.hv-b{max-width:1000px;display:flex;flex-direction:column;gap:18px;padding-top:10px}
+.hv-b{max-width:1000px;display:flex;flex-direction:column;gap:18px;padding-top:10px;padding-bottom:120px}
 .hv-b header{display:flex;align-items:baseline;gap:14px;padding:0 6px}.hv-b h1{font-size:calc(34px*var(--ts,1));font-weight:650;letter-spacing:-.04em}.hv-b header p{margin:0;font-size:calc(14px*var(--ts,1));color:var(--muted)}
 .hv-bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:176px;gap:16px}
 .hv-b .w{position:relative;border-radius:34px;padding:20px;background:var(--surface);box-shadow:0 0 0 1px var(--line),0 26px 36px -28px rgba(32,30,34,.5);text-align:left;color:var(--ink);overflow:hidden;display:flex;flex-direction:column;min-width:0}

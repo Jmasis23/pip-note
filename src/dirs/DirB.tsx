@@ -130,7 +130,7 @@ export default function DirB() {
             : <input className="db-chip-in" autoFocus value={newFolder} maxLength={60} placeholder="Folder name" aria-label="New folder name" onChange={e => setNewFolder(e.target.value)} onBlur={() => void addFolder()} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setNewFolder(null); }} />}
         </div>);
       })()}
-      {!home && <div className="db-context"><div><h2>{context}</h2><p>{view === "drafts" ? drafts.length : notes.length} {view === "drafts" ? "drafts" : "notes"} shown{query ? ` matching "${query}"` : ""}. Navigation counts include all folders.</p></div><div className="db-context-actions">
+      {!home && <div className="db-context"><div><h2>{context}</h2><p>{view === "drafts" ? drafts.length : notes.length} {view === "drafts" ? "drafts" : "notes"} shown{query ? ` matching "${query}"` : ""}.</p></div><div className="db-context-actions">
         {view !== "drafts" && <button className="ghost field" disabled={arranging} title="Arrange all note cards into columns" onClick={() => void autoArrange()}>{arranging ? "Arranging…" : "Auto arrange"}</button>}
         {(folder || query || view !== "all") && <button className="ghost field" onClick={clearFilters}>Show all notes</button>}
       </div></div>}
@@ -180,7 +180,7 @@ export default function DirB() {
           {VIEWS.map(v => (
             <button key={v.id} aria-current={!home && view === v.id ? "page" : undefined} onClick={() => setView(v.id)}>
               {!home && view === v.id && <motion.i layoutId="dock-on" className="db-dock-on" transition={{ type: "spring", stiffness: 520, damping: 38 }} />}
-              <span>{v.label}</span><em>{counts[v.id]}</em>
+              <span>{v.label}</span>{counts[v.id] > 0 && <em>{counts[v.id]}</em>}
             </button>))}
         </LayoutGroup>
         <input type="search" value={query} onChange={e => { if (home) { setHome(false); setNotesView("all"); setFolder(""); } setQuery(e.target.value); }} placeholder="Search" aria-label="Search notes" />

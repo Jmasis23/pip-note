@@ -10,6 +10,9 @@ import { plainToRich, richToPlain, sanitizeRich } from "../rich";
 import { RichBody } from "./RichBody";
 import { Dropdown, NewFolder } from "./Dropdown";
 import type { RichHandle } from "./RichBody";
+import { aiAvailable, aiComplete } from "../ai/client";
+import { cleanRewrite, REWRITE_LABEL, rewriteMessages, type RewriteMode } from "../ai/plan";
+import "./ai.css";
 
 type Save = "idle" | "pending" | "saved" | "error";
 const uid = () => crypto.randomUUID();
@@ -34,6 +37,24 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
   const richRef = useRef<RichHandle>(null);
   const [folder, setFolder] = useState(note.folder ?? "");
   useEffect(() => setFolder(note.folder ?? ""), [note.id, note.folder]);
+  const [menu, setMenu] = useState(false);
+  const [rw, setRw] = useState<{ s: "busy" } | { s: "done"; prev: { body: string; rich: string; items: ChecklistItem[] } } | { s: "err"; msg: string } | null>(null);
+  useEffect(() => { setRw(null); setMenu(false); }, [note.id]);
+  const rewrite = async (mode: RewriteMode) => {
+    setMenu(false);
+    const src = latest.current.body.trim() || latest.current.items.map(i => i.text).join("\n");
+    if (!src) { setRw({ s: "err", msg: "Write something first." }); return; }
+    setRw({ s: "busy" });
+    try {
+      const out = cleanRewrite(await aiComplete(rewriteMessages(mode, src)));
+      if (!out) throw new Error("Empty reply.");
+      const prev = { body: latest.current.body, rich: latest.current.rich, items: latest.current.items };
+      if (mode === "checklist") { setItems([...prev.items, ...out.split("\n").map(t => t.replace(/^[-*\u2022\d.)\s]+/, "").trim()).filter(Boolean).slice(0, 30).map(text => ({ id: uid(), text, done: false }))]); }
+      else { const r = plainToRich(out); setBody(out); setRich(r); setSeed(x => x + 1); }
+      touch(); setRw({ s: "done", prev });
+    } catch (e) { setRw({ s: "err", msg: String((e as Error)?.message ?? e).slice(0, 140) }); }
+  };
+  const undoRw = () => { if (rw?.s !== "done") return; const { prev } = rw; setBody(prev.body); setRich(prev.rich); setItems(prev.items); setSeed(x => x + 1); touch(); setRw(null); };
   const moveTo = async (to?: string) => { const f = cleanFolder(to ?? folder); setFolder(f); if (f === (note.folder ?? "")) return; await flush(); try { const n = await repo.update(note.id, rev.current, { folder: f }); rev.current = n.revision; onChanged(); } catch { setErr("Couldn't move it."); setSave("error"); } };
 
   useEffect(() => { setTitle(note.title); setBody(note.body); setRich(note.rich ?? plainToRich(note.body)); setSeed(x => x + 1); setItems(note.checklist); rev.current = note.revision; setSave("idle"); setConflict(null); setErr(""); dirty.current = false; }, [note.id]);
@@ -76,6 +97,8 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
             <button className="ghost" onClick={async () => { await repo.restore(note.id); onChanged(); }}>Restore</button>
             <button className="ghost danger" onClick={async () => { if (confirm("Delete this note forever? This can't be undone.")) { await repo.deleteForever(note.id); onChanged(); } }}>Delete forever</button>
           </>) : (<>
+            {aiAvailable() && <div className="rw"><button className="ghost" aria-haspopup="menu" aria-expanded={menu} disabled={rw?.s === "busy"} onClick={() => setMenu(m => !m)} onKeyDown={e => { if (e.key === "Escape" && menu) { e.stopPropagation(); setMenu(false); } }}>{rw?.s === "busy" ? "Working..." : "Rewrite"}</button>
+              {menu && <div className="rw-menu" role="menu">{(Object.keys(REWRITE_LABEL) as RewriteMode[]).map(m => <button key={m} role="menuitem" onClick={() => void rewrite(m)}>{REWRITE_LABEL[m]}</button>)}</div>}</div>}
             {onColor && <ColorPick value={color} onChange={onColor} />}
             <button className="ghost" aria-pressed={note.pinned} onClick={async () => { await flush(); await repo.setPinned(note.id, !note.pinned); onChanged(); }}>{note.pinned ? "Unpin" : "Pin"}</button>
             <button className="ghost" onClick={async () => { const m = await repo.exportMarkdown(note.id); try { const where = await exportFile(m.filename, m.text, "text/markdown"); if (where) setInfo(`Saved to ${where}`); } catch { setInfo("Couldn't save the file."); } }}>Export .md</button>
@@ -91,6 +114,7 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
             footer={close => <NewFolder onAdd={f => { const c = cleanFolder(f); if (c) { setFolder(c); void moveTo(c); } close(); }} />} />
                     <LiveTextStepper className="ed-ts" />
         </div>)}
+      {rw && rw.s !== "busy" && <div className="rw-bar" role="status">{rw.s === "done" ? <><span>Rewritten.</span><button className="ok" onClick={() => setRw(null)}>Keep</button><button className="no" onClick={undoRw}>Undo</button></> : <><span>{rw.msg}</span><button className="no" onClick={() => setRw(null)}>Close</button></>}</div>}
       {conflict && (
         <div className="conflict" role="alert">
           <p>This note changed in another window. Your edits are still here.</p>
