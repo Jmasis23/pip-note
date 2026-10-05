@@ -72,8 +72,38 @@ pub fn open_capture_placed(app: &AppHandle, near_cursor: bool) {
 /// Dispatch stage: show the compact tool for an activated Landmark. Never opens the main window.
 /// Only tools that exist are dispatched; others do nothing yet (no placeholder windows).
 pub fn open_tool(app: &AppHandle, tool: Tool, _x: f64, _y: f64) {
-    match tool { Tool::QuickCapture => open_capture_placed(app, true), _ => {} }
+    match tool {
+        Tool::QuickCapture => open_capture_placed(app, true),
+        t => if let Some(key) = tool_key(t) { open_compact(app, key); },
+    }
 }
+/// Compact tools that have a UI. Others do nothing yet (no placeholder windows).
+fn tool_key(t: Tool) -> Option<&'static str> { match t { Tool::QuickRecall => Some("recall"), _ => None } }
+
+static TOOL_NAME: Mutex<String> = Mutex::new(String::new());
+static TOOL_SHOWN_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+fn now_ms() -> u64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0) }
+
+/// One reusable compact window hosts every non-capture tool. It opens beside the cursor and closes on Escape, Done or focus loss.
+fn open_compact(app: &AppHandle, key: &str) {
+    let Some(w) = app.get_webview_window("tool") else { return; };
+    if let Ok(mut n) = TOOL_NAME.lock() { *n = key.to_string(); }
+    if let Ok(c) = w.cursor_position() {
+        if let Ok(Some(mon)) = w.monitor_from_point(c.x, c.y) {
+            let area = mon.work_area(); let scale = mon.scale_factor();
+            let size = w.outer_size().unwrap_or(tauri::PhysicalSize::new((420.0 * scale) as u32, (480.0 * scale) as u32));
+            let pos = pip_core::placement::place_near((c.x as i32, c.y as i32), (size.width, size.height), ((area.position.x, area.position.y), (area.size.width, area.size.height)), (16.0 * scale).round() as i32);
+            let _ = w.set_position(tauri::PhysicalPosition::new(pos.0, pos.1));
+        }
+    }
+    TOOL_SHOWN_MS.store(now_ms(), Ordering::Relaxed);
+    let _ = w.show(); let _ = w.set_focus();
+    let _ = app.emit_to("tool", "pip://tool-show", ());
+}
+#[tauri::command]
+fn tool_current() -> String { TOOL_NAME.lock().map(|n| n.clone()).unwrap_or_default() }
+#[tauri::command]
+fn tool_hide(app: AppHandle) { if let Some(w) = app.get_webview_window("tool") { let _ = w.hide(); } }
 
 /// The wiggle meter: small transparent, click-through, never-focused window following the cursor while a wiggle is in progress.
 fn start_meter(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
@@ -353,6 +383,10 @@ pub fn run() {
             tauri::WebviewWindowBuilder::new(app, "capture", tauri::WebviewUrl::App("index.html?capture=1".into()))
                 .title("Pip capture").inner_size(600.0, 330.0).min_inner_size(360.0, 280.0).max_inner_size(1000.0, 800.0).decorations(false).transparent(true).resizable(true).always_on_top(true).skip_taskbar(true).visible(false).center().build()?;
 
+            // The compact tool window: hidden until a Landmark asks for a tool.
+            tauri::WebviewWindowBuilder::new(app, "tool", tauri::WebviewUrl::App("index.html?tool=1".into()))
+                .title("Pip tool").inner_size(420.0, 480.0).decorations(false).transparent(true).resizable(false).always_on_top(true).skip_taskbar(true).visible(false).build()?;
+
             let open = MenuItem::with_id(app, "open", "Open Pip", true, None::<&str>)?;
             let cap = MenuItem::with_id(app, "capture", "Capture a thought", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -373,6 +407,10 @@ pub fn run() {
             if w.label() == "capture" && matches!(ev, WindowEvent::Moved(_) | WindowEvent::Resized(_)) {
                 if let Some(capture) = w.app_handle().get_webview_window("capture") { fit_capture(&capture, false, false); }
             }
+            // A compact tool is a popup: losing focus dismisses it, after a short grace so showing it cannot close it.
+            if w.label() == "tool" {
+                if let WindowEvent::Focused(false) = ev { if now_ms().saturating_sub(TOOL_SHOWN_MS.load(Ordering::Relaxed)) > 500 { let _ = w.hide(); } }
+            }
             if let WindowEvent::CloseRequested { api, .. } = ev {
                 api.prevent_close();
                 let _ = w.hide();
@@ -385,7 +423,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, landmarks_get, landmarks_save, landmarks_reset, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .invoke_handler(tauri::generate_handler![tool_current, tool_hide, assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, landmarks_get, landmarks_save, landmarks_reset, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .build(tauri::generate_context!())
         .expect("error while building Pip")
         // Quitting releases the mouse hook before the process exits.

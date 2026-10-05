@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { chromium } from 'playwright';
+// Browser preview of the compact tool window (?tool=1) running Quick Recall. Proves the UI logic only, not native window behavior.
+const origin = process.env.QA_ORIGIN || 'http://localhost:5199', out = process.env.QA_ARTIFACTS || '/tmp/pip-recall-qa';
+await mkdir(out, { recursive: true });
+const browser = await chromium.launch({ args: ['--no-sandbox'] });
+const ctx = await browser.newContext({ viewport: { width: 420, height: 480 }, permissions: ['clipboard-read', 'clipboard-write'] });
+await ctx.addInitScript(() => localStorage.setItem('snippets', JSON.stringify([{ id: 's1', name: 'Email signature', text: 'Best, Alex', updatedAt: 1 }])));
+const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
+await page.goto(origin + '/?tool=1&seed=1');
+const dlg = page.getByRole('dialog', { name: 'Quick Recall' }); await dlg.waitFor();
+await page.getByLabel('Search what you kept').waitFor(); assert.ok(await page.getByRole('option').count() >= 2, 'recent items listed');
+assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Search what you kept', 'search is focused on open');
+await page.screenshot({ path: out + '/1-recall.png' });
+await page.getByLabel('Search what you kept').fill('signature'); await page.getByRole('option').first().waitFor();
+assert.match(await page.getByRole('option').first().innerText(), /Email signature/);
+await page.keyboard.press('Enter'); await page.getByText('Copied.').waitFor();
+assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'Best, Alex', 'Enter copies the snippet text');
+await page.getByLabel('Search what you kept').fill('zzzzqq'); await page.getByText('Nothing matches.').waitFor();
+await page.screenshot({ path: out + '/2-empty.png' });
+assert.deepEqual(errors, []); await browser.close(); console.log('recall browser QA passed', out);

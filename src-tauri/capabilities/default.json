@@ -5,7 +5,8 @@
   "windows": [
     "main",
     "capture",
-    "meter"
+    "meter",
+    "tool"
   ],
   "permissions": [
     "core:default",

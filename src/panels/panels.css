@@ -9,3 +9,6 @@
 .pn-act{display:flex;gap:6px;align-items:center;flex:none}.pn-empty{color:var(--muted);text-align:center;margin:10px 0}
 .db-wm-btn{all:unset;cursor:pointer;display:inline-flex;border-radius:10px}.db-wm-btn:focus-visible{outline:2px solid var(--focus);outline-offset:4px}
 .db-views{display:flex;gap:6px;flex-wrap:wrap;margin:0 auto 8px;max-width:1120px;padding:0 4px}
+.pn-list li[role=option]{cursor:pointer}.pn-list li.sel{background:#FFF1E4;border-color:#FF7828}
+:root[data-theme="dark"] .pn-list li.sel{background:#3A2E24}
+.tool-win{width:100%!important;max-height:100vh;height:100vh;border-radius:20px}
