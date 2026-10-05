@@ -12,7 +12,7 @@ The private GitHub repository exists. The user created it and supplied its URL. 
 
 ## Repository contents
 
-The design specification, project instructions, reproducible setup script, and optional devcontainer configuration are included. No product source code is included. `AGENTS.md` carries the agreed brand and project constraints into Codex.
+The repository now includes the Tauri/Rust desktop source, React/TypeScript interface, SQLite persistence, original branding, and build/verification documentation on `feat/landmark-companion`. Read README.md, docs/COMPANION.md and docs/VERIFICATION.md for the current state. The remaining environment and first-task notes below record the original handoff; they do not establish native runtime acceptance. `AGENTS.md` carries the product constraints into Codex.
 
 ## Codex configuration
 

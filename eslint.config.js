@@ -1,0 +1,2 @@
+import tseslint from 'typescript-eslint';
+export default tseslint.config({files:['src/companion/**/*.{ts,tsx}','src/landmarks/**/*.{ts,tsx}','src/main.tsx'],languageOptions:{parser:tseslint.parser,parserOptions:{ecmaVersion:'latest',sourceType:'module'}},plugins:{'@typescript-eslint':tseslint.plugin},rules:{'no-debugger':'error','no-unreachable':'error','no-constant-condition':['error',{checkLoops:false}],'@typescript-eslint/no-unused-vars':['error',{argsIgnorePattern:'^_',varsIgnorePattern:'^_'}]}});

@@ -1,0 +1,346 @@
+.sheet.lm-sheet {
+  width: min(760px, 100%);
+}
+.lm-sub {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.lm-pad {
+  padding: 0 18px;
+}
+.lm-body {
+  padding: 0 18px 6px;
+  display: grid;
+  gap: 12px;
+}
+.lm-status {
+  margin: 0;
+  font-size: 0.88em;
+  color: var(--muted);
+}
+.lm-status.bad,
+.lm-err {
+  color: var(--danger);
+}
+.lm-err {
+  margin: 0;
+  font-size: 0.9em;
+  padding: 0 18px;
+}
+.lm-body .lm-err {
+  padding: 0;
+}
+.lm-review {
+  background: #fff1e4;
+  border: 1px solid #f2b590;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.9em;
+  color: #20232b;
+}
+:root[data-theme="dark"] .lm-review {
+  background: #3a2e24;
+  color: var(--ink);
+}
+.lm-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.lm-tabs button {
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  display: grid;
+  text-align: left;
+  line-height: 1.2;
+}
+.lm-tabs button small {
+  color: var(--muted);
+  font-size: 0.78em;
+}
+.lm-tabs button.on {
+  background: var(--lav-soft);
+  border-color: #ff7828;
+}
+.lm-screen {
+  position: relative;
+  width: 100%;
+  max-height: 320px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #f4f1e8, #ece8db);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  touch-action: none;
+  cursor: crosshair;
+  outline-offset: 2px;
+}
+:root[data-theme="dark"] .lm-screen {
+  background: linear-gradient(180deg, #2a2f3d, #222735);
+}
+.lm-screen.testing {
+  cursor: default;
+  box-shadow: inset 0 0 0 2px #ff7828;
+}
+.lm-screen:focus-visible,
+.lm-r:focus-visible {
+  outline: 2px solid var(--focus);
+}
+.lm-r {
+  position: absolute;
+  background: rgba(255, 120, 40, 0.16);
+  border: 1.5px solid #e5651a;
+  border-radius: 6px;
+  cursor: move;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--ink);
+  transition: background 0.12s;
+}
+.lm-r.sel {
+  background: rgba(255, 120, 40, 0.3);
+  border-width: 2px;
+}
+.lm-r.off {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.lm-r.review {
+  border-color: #b3261e;
+  background: rgba(179, 38, 30, 0.14);
+}
+.lm-r.hit {
+  background: rgba(255, 120, 40, 0.55);
+}
+.lm-name,
+.lm-tool {
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 3px;
+}
+.lm-name {
+  font-weight: 600;
+}
+.lm-tool {
+  opacity: 0.75;
+}
+.lm-h {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 2px solid #e5651a;
+  border-radius: 3px;
+}
+.lm-h.nw {
+  left: -1px;
+  top: -1px;
+  cursor: nwse-resize;
+}
+.lm-h.ne {
+  right: -1px;
+  top: -1px;
+  cursor: nesw-resize;
+}
+.lm-h.sw {
+  left: -1px;
+  bottom: -1px;
+  cursor: nesw-resize;
+}
+.lm-h.se {
+  right: -1px;
+  bottom: -1px;
+  cursor: nwse-resize;
+}
+.lm-hint {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.9em;
+  text-align: center;
+  padding: 0 12%;
+  pointer-events: none;
+}
+.lm-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  background: #20232b;
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85em;
+  pointer-events: none;
+}
+.lm-cap {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.84em;
+}
+.lm-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.lm-row .on {
+  background: var(--lav-soft);
+}
+.lm-sens {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+}
+.lm-sens small {
+  color: var(--muted);
+  min-width: 44px;
+}
+.lm-presets summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.lm-presets div {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.lm-edit {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.lm-edit legend {
+  font-size: 0.8em;
+  color: var(--muted);
+  padding: 0 4px;
+}
+.lm-edit label {
+  display: grid;
+  gap: 3px;
+  font-size: 0.84em;
+  color: var(--muted);
+}
+.lm-edit input:not([type="checkbox"]),
+.lm-edit select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.lm-check {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  grid-auto-flow: column;
+}
+.lm-foot {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+.lm-note {
+  color: var(--muted);
+  font-size: 0.9em;
+  flex: 1;
+  text-align: right;
+}
+.ion {
+  flex: none;
+  vertical-align: -3px;
+  margin-right: 6px;
+}
+.lm-ico .ion,
+.lm-ico {
+  margin: 0;
+}
+.lm-ico {
+  padding: 6px;
+  line-height: 0;
+}
+.lm-row .ghost,
+.lm-edit .ghost {
+  display: inline-flex;
+  align-items: center;
+}
+.lm-ring {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(14px, 14px);
+  z-index: 3;
+}
+.wring {
+  display: block;
+  overflow: visible;
+}
+.wring-bg {
+  fill: rgba(255, 250, 243, 0.92);
+  stroke: rgba(32, 35, 43, 0.08);
+  stroke-width: 1;
+}
+.wring-track {
+  fill: none;
+  stroke: rgba(255, 120, 40, 0.2);
+  stroke-width: 5;
+}
+.wring-fill {
+  fill: none;
+  stroke: #ff7828;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.09s linear;
+}
+.wring.full .wring-fill {
+  stroke: #e5651a;
+}
+.wring.full {
+  animation: wring-pop 0.18s ease-out;
+}
+@keyframes wring-pop {
+  from {
+    transform: scale(0.92);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+:root[data-motion="reduced"] .wring-fill {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wring-fill {
+    transition: none;
+  }
+  .wring.full {
+    animation: none;
+  }
+}
+.wring-host {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+}

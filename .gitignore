@@ -21,3 +21,5 @@ target/
 test-results/
 
 qa-artifacts/
+
+src-tauri/gen/
