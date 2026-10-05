@@ -67,3 +67,9 @@ html.cap-win,.cap-win body,.cap-win #root{background:transparent!important}
 .db.db-pop .capture-arrangement{padding:8px 18px 0}
 .db.db-pop .capture footer{border-top:0;background:transparent;padding:10px 14px 14px 20px}
 .db.db-pop .capture footer .status{font-size:13px}
+
+/* round 4: the popup is the rail panel's note card, filling the window */
+.db.db-pop .fr-panel.pn{position:relative;right:auto!important;top:auto!important;bottom:auto!important;width:100%;height:100dvh;max-height:none;border-radius:30px;overflow:hidden;box-shadow:0 0 0 1px rgba(45,45,49,.07);transform:none}
+:root[data-theme=dark] .db.db-pop .fr-panel.pn{box-shadow:0 0 0 1px rgba(255,255,255,.09)}
+.db.db-pop .pn .fr-head{cursor:grab}
+.db.db-pop .pn .fr-edit{overflow-y:auto}

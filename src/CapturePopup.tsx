@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { MotionConfig } from "motion/react";
-import { Capture } from "./components/Capture";
+import { PopupNote } from "./components/PopupNote";
 import { initStorage, call, onNativeEvent, isNative } from "./native";
 import type { TextSize } from "./domain";
 import { repo } from "./useNotes";
 import "@fontsource-variable/inter";
 import "./dirs/b.css";
+import "./bui/pip.css";
 import "@fontsource-variable/bricolage-grotesque";
 import "./capture-popup.css";
 
@@ -29,7 +30,7 @@ export default function CapturePopup() {
   }, []);
   return (
     <MotionConfig reducedMotion={reducedMotion ? "always" : "user"}><div className="db db-pop">
-      {closed ? <div className="cap-closed"><button onClick={() => { setClosed(false); setRound(r => r + 1); }}>Reopen capture</button></div> : <Capture key={round} textSize={size} onTextSize={v => { setSize(v); document.documentElement.dataset.text = v; void repo.getPrefs().then(p => repo.setPrefs({ ...p, textSize: v })).then(() => isNative() && call("prefs_changed")); }} open onClose={() => { if (isNative()) void call("capture_hide"); else setClosed(true); }} onSaved={() => isNative() && void call("capture_saved")} />}
+      {closed ? <div className="cap-closed"><button onClick={() => { setClosed(false); setRound(r => r + 1); }}>Reopen capture</button></div> : <PopupNote key={round} onClose={kept => { if (isNative()) void call(kept ? "capture_saved" : "capture_hide"); else setClosed(true); }} />}
     </div></MotionConfig>
   );
 }
