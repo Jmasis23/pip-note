@@ -5,6 +5,7 @@ mod assist;
 
 use pip_core::chatgpt::{self, Cred};
 use pip_core::kv::FileKv;
+use pip_core::landmarks::{self, Engine, GestureOpts, Layout, Landmark, Tool};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -15,13 +16,15 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 
-struct AppState { kv: FileKv, shake: Arc<AtomicBool>, level: Arc<std::sync::atomic::AtomicU8>, shortcut: Mutex<Option<Shortcut>> }
+struct AppState { kv: FileKv, shake: Arc<AtomicBool>, level: Arc<std::sync::atomic::AtomicU8>, shortcut: Mutex<Option<Shortcut>>, engine: Arc<Mutex<Engine>>, gesture_status: shake::Status }
+
+const LAYOUT_KEY: &str = "landmarks"; // not a "pip." key: the web view only reaches it through the typed commands
 
 /// Keep capture on the active monitor, above its taskbar and inside its work area.
 /// Tauri sizes here are physical pixels; UI limits are converted using that monitor's DPI.
 static CAPTURE_LIMITS: Mutex<Option<(u32, u32, u32, u32)>> = Mutex::new(None);
 
-fn fit_capture(w: &tauri::WebviewWindow, opening: bool) {
+fn fit_capture(w: &tauri::WebviewWindow, opening: bool, near_cursor: bool) {
     let monitor = if opening {
         w.cursor_position().ok().and_then(|p| w.monitor_from_point(p.x, p.y).ok().flatten())
     } else { w.current_monitor().ok().flatten() }
@@ -32,6 +35,13 @@ fn fit_capture(w: &tauri::WebviewWindow, opening: bool) {
     let size = w.inner_size().unwrap_or(tauri::PhysicalSize::new((600.0 * scale) as u32, (330.0 * scale) as u32));
     let pos = w.outer_position().unwrap_or(area.position);
     let bounds = capture_bounds::fit((area.position.x, area.position.y), (area.size.width, area.size.height), scale, (size.width, size.height), (pos.x, pos.y), opening);
+    // A Landmark activation opens the tool beside the cursor; the hotkey and tray keep the centered placement.
+    let mut bounds = bounds;
+    if opening && near_cursor {
+        if let Ok(c) = w.cursor_position() {
+            bounds.position = pip_core::placement::place_near((c.x as i32, c.y as i32), bounds.size, ((area.position.x, area.position.y), (area.size.width, area.size.height)), (16.0 * scale).round() as i32);
+        }
+    }
     let (min_w, min_h) = bounds.min; let (max_w, max_h) = bounds.max;
     let next = tauri::PhysicalSize::new(bounds.size.0, bounds.size.1);
     // Only update constraints when the work area / DPI changes. Reapplying them on
@@ -51,13 +61,147 @@ fn fit_capture(w: &tauri::WebviewWindow, opening: bool) {
 }
 
 /// Bring the window forward and tell the web view to open Capture. Used by the shake, the hotkey and the tray.
-pub fn open_capture(app: &AppHandle) {
+pub fn open_capture(app: &AppHandle) { open_capture_placed(app, false); }
+pub fn open_capture_placed(app: &AppHandle, near_cursor: bool) {
     // Only the small capture box comes up. The main window stays where it is (hidden in the tray or behind other apps).
     if let Some(w) = app.get_webview_window("capture") {
-        fit_capture(&w, true); let _ = w.show(); let _ = w.set_focus();
+        fit_capture(&w, true, near_cursor); let _ = w.show(); let _ = w.set_focus();
         let _ = app.emit_to("capture", "pip://capture-show", ());
     }
 }
+/// Dispatch stage: show the compact tool for an activated Landmark. Never opens the main window.
+/// Only tools that exist are dispatched; others do nothing yet (no placeholder windows).
+pub fn open_tool(app: &AppHandle, tool: Tool, _x: f64, _y: f64) {
+    match tool {
+        Tool::QuickCapture => open_capture_placed(app, true),
+        t => if let Some(key) = tool_key(t) { open_compact(app, key); },
+    }
+}
+/// Compact tools that have a UI. Others do nothing yet (no placeholder windows).
+fn tool_key(t: Tool) -> Option<&'static str> { match t { Tool::QuickRecall => Some("recall"), Tool::ClipboardShelf => Some("clipboard"), Tool::ProjectShelf => Some("project"), Tool::Utilities => Some("utilities"), Tool::ResumeCards => Some("resume"), Tool::Snippets => Some("snippets"), Tool::FollowUps => Some("followups"), Tool::FloatingReference => Some("reference"), _ => None } }
+
+static TOOL_NAME: Mutex<String> = Mutex::new(String::new());
+static TOOL_SHOWN_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+fn now_ms() -> u64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0) }
+
+/// One reusable compact window hosts every non-capture tool. It opens beside the cursor and closes on Escape, Done or focus loss.
+fn open_compact(app: &AppHandle, key: &str) {
+    let Some(w) = app.get_webview_window("tool") else { return; };
+    if let Ok(mut n) = TOOL_NAME.lock() { *n = key.to_string(); }
+    if let Ok(c) = w.cursor_position() {
+        if let Ok(Some(mon)) = w.monitor_from_point(c.x, c.y) {
+            let area = mon.work_area(); let scale = mon.scale_factor();
+            let size = w.outer_size().unwrap_or(tauri::PhysicalSize::new((420.0 * scale) as u32, (480.0 * scale) as u32));
+            let pos = pip_core::placement::place_near((c.x as i32, c.y as i32), (size.width, size.height), ((area.position.x, area.position.y), (area.size.width, area.size.height)), (16.0 * scale).round() as i32);
+            let _ = w.set_position(tauri::PhysicalPosition::new(pos.0, pos.1));
+        }
+    }
+    TOOL_SHOWN_MS.store(now_ms(), Ordering::Relaxed);
+    let _ = w.show(); let _ = w.set_focus();
+    let _ = app.emit_to("tool", "pip://tool-show", ());
+}
+#[tauri::command]
+fn tool_current() -> String { TOOL_NAME.lock().map(|n| n.clone()).unwrap_or_default() }
+/// Pin a note as a small always-on-top reference window. The id must look like one of our own ids.
+#[tauri::command]
+fn reference_open(app: AppHandle, id: String) -> Result<(), String> {
+    if id.is_empty() || id.len() > 64 || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') { return Err("That note can't be pinned.".into()); }
+    let label = format!("ref-{id}");
+    if let Some(w) = app.get_webview_window(&label) { let _ = w.show(); let _ = w.set_focus(); return Ok(()); }
+    let n = app.webview_windows().keys().filter(|k| k.starts_with("ref-")).count() as f64;
+    tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App(format!("index.html?ref={id}").into()))
+        .title("Pip reference").inner_size(340.0, 260.0).min_inner_size(240.0, 160.0).decorations(false).transparent(true).resizable(true).always_on_top(true).skip_taskbar(true)
+        .position(80.0 + 28.0 * n, 80.0 + 28.0 * n).build().map_err(|e| e.to_string())?;
+    Ok(())
+}
+#[tauri::command]
+fn tool_hide(app: AppHandle) { if let Some(w) = app.get_webview_window("tool") { let _ = w.hide(); } }
+
+/// The wiggle meter: small transparent, click-through, never-focused window following the cursor while a wiggle is in progress.
+fn start_meter(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let w = tauri::WebviewWindowBuilder::new(app, "meter", tauri::WebviewUrl::App("index.html?meter=1".into()))
+        .title("Pip meter").inner_size(56.0, 56.0).decorations(false).transparent(true).resizable(false).always_on_top(true).skip_taskbar(true)
+        .shadow(false).focused(false).focusable(false).visible(false).build()?;
+    let _ = w.set_ignore_cursor_events(true);
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let (mut shown, mut last) = (false, -1.0f64);
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(16));
+            let m = shake::METER.lock().map(|g| *g).unwrap_or_default();
+            if m.frac > 0.0 {
+                let size = w.outer_size().map(|z| (z.width as i32, z.height as i32)).unwrap_or((56, 56));
+                let (mut px, mut py) = (m.x as i32 + 22, m.y as i32 + 22);
+                // Corner Landmarks sit at screen edges: flip to the other side of the cursor so the ring is never cut off.
+                if let Ok(Some(mon)) = w.monitor_from_point(m.x, m.y) {
+                    let (mp, ms) = (mon.position(), mon.size());
+                    if px + size.0 > mp.x + ms.width as i32 { px = m.x as i32 - 22 - size.0; }
+                    if py + size.1 > mp.y + ms.height as i32 { py = m.y as i32 - 22 - size.1; }
+                }
+                let _ = w.set_position(tauri::PhysicalPosition::new(px, py));
+                if !shown { let _ = w.show(); shown = true; }
+                if (m.frac - last).abs() > 1e-6 { let _ = app.emit_to("meter", "pip://meter", m.frac); last = m.frac; }
+            } else if shown {
+                let _ = w.hide(); shown = false; last = -1.0; let _ = app.emit_to("meter", "pip://meter", 0.0f64);
+            }
+        }
+    });
+    Ok(())
+}
+
+fn current_monitors(app: &AppHandle) -> Vec<landmarks::Monitor> {
+    app.available_monitors().unwrap_or_default().iter().map(|m| {
+        let (p, z) = (m.position(), m.size());
+        landmarks::Monitor { id: m.name().cloned().unwrap_or_else(|| format!("monitor-{}-{}", p.x, p.y)), x: p.x, y: p.y, w: z.width, h: z.height, scale: m.scale_factor() }
+    }).collect()
+}
+fn save_layout(kv: &FileKv, l: &Layout) -> Result<(), String> { kv.set(LAYOUT_KEY, &serde_json::to_string(l).map_err(|e| e.to_string())?).map_err(|e| e.to_string()) }
+
+/// Load the saved layout, or create editable presets on every monitor the first time. Flags Landmarks whose display changed while Pip was closed.
+fn load_layout(app: &AppHandle, kv: &FileKv) -> Layout {
+    let now = current_monitors(app);
+    let saved = kv.get(LAYOUT_KEY).ok().flatten();
+    let mut layout = saved.as_ref().and_then(|s| serde_json::from_str::<Layout>(s).ok()).unwrap_or_else(|| Layout { landmarks: now.iter().flat_map(|m| landmarks::default_presets(&m.id)).collect(), monitors: now.clone() });
+    if layout.reconcile(now).len() > 0 || saved.is_none() { let _ = save_layout(kv, &layout); }
+    layout
+}
+
+/// Watches for monitors added, removed or reshaped and flags affected Landmarks for review.
+fn watch_displays(app: AppHandle) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        let now = current_monitors(&app);
+        if now.is_empty() { continue; }
+        let st = app.state::<AppState>();
+        let changed = { let Ok(mut e) = st.engine.lock() else { continue };
+            if e.layout.monitors == now { None } else { e.reset(); let flagged = e.layout.reconcile(now); let _ = save_layout(&st.kv, &e.layout); Some(flagged) } };
+        if let Some(flagged) = changed { let _ = app.emit("pip://displays-changed", flagged); }
+    });
+}
+
+#[derive(serde::Serialize)]
+struct LandmarkState { layout: Layout, status: String, paused: bool }
+#[tauri::command]
+fn landmarks_get(st: State<AppState>) -> Result<LandmarkState, String> {
+    Ok(LandmarkState { layout: st.engine.lock().map_err(|e| e.to_string())?.layout.clone(), status: st.gesture_status.lock().map_err(|e| e.to_string())?.clone(), paused: !st.shake.load(Ordering::Relaxed) })
+}
+/// Replace the Landmarks. Validation is the core's; the error text is meant for the user. Persisted before going live.
+#[tauri::command]
+fn landmarks_save(st: State<AppState>, landmarks: Vec<Landmark>) -> Result<Layout, String> {
+    landmarks::validate(&landmarks).map_err(|e| e.to_string())?;
+    let mut e = st.engine.lock().map_err(|e| e.to_string())?;
+    let mut next = e.layout.clone(); next.landmarks = landmarks;
+    save_layout(&st.kv, &next)?; e.layout = next; e.reset();
+    Ok(e.layout.clone())
+}
+#[tauri::command]
+fn landmarks_reset(st: State<AppState>) -> Result<Layout, String> {
+    let mut e = st.engine.lock().map_err(|e| e.to_string())?;
+    let mut next = e.layout.clone(); next.landmarks = next.monitors.iter().flat_map(|m| landmarks::default_presets(&m.id)).collect();
+    save_layout(&st.kv, &next)?; e.layout = next; e.reset();
+    Ok(e.layout.clone())
+}
+
 fn show_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") { let _ = w.unminimize(); let _ = w.show(); let _ = w.set_focus(); return; }
     // The main window's web view is released while Pip sits in the tray (see the close handler). Build it again with the same settings.
@@ -176,6 +320,7 @@ fn update_install(app: AppHandle, pending: State<'_, Pending>) -> Result<(), Str
 #[tauri::command]
 fn set_shake_level(st: State<AppState>, level: u8) {
     st.level.store(level.min(100), Ordering::Relaxed);
+    if let Ok(mut e) = st.engine.lock() { e.opts = GestureOpts::from_sensitivity(level); }
 }
 #[tauri::command]
 fn set_shake_enabled(st: State<AppState>, enabled: bool) { st.shake.store(enabled, Ordering::Relaxed); }
@@ -223,8 +368,10 @@ pub fn run() {
             let kv = FileKv::open(dir.join("store")).map_err(|e| e.to_string())?;
             let shake = Arc::new(AtomicBool::new(true));
             let level = Arc::new(std::sync::atomic::AtomicU8::new(50));
-            let st = AppState { kv, shake: shake.clone(), level: level.clone(), shortcut: Mutex::new(None) };
             let handle = app.handle().clone();
+            let engine = Arc::new(Mutex::new(Engine::new(load_layout(&handle, &kv), GestureOpts::from_sensitivity(50))));
+            let gesture_status: shake::Status = Arc::new(Mutex::new("starting".into()));
+            let st = AppState { kv, shake: shake.clone(), level: level.clone(), shortcut: Mutex::new(None), engine: engine.clone(), gesture_status: gesture_status.clone() };
             let _ = register_shortcut(&handle, &st, parse_shortcut("Ctrl+Shift+Space")?); // default until the web view says otherwise
             app.manage(st);
             // First run turns on start-with-Windows once. Later launches leave the choice alone.
@@ -240,18 +387,33 @@ pub fn run() {
             if !std::env::args().any(|a| a == "--background") { show_main(&handle); }
             assist::start_clock(handle.clone());
             clipboard::start(handle.clone())?;
-            shake::start(handle.clone(), shake, level);
+            shake::start(handle.clone(), shake.clone(), level, engine, gesture_status);
+            watch_displays(handle.clone());
+            start_meter(&handle)?;
 
             // The capture box: a small always-on-top window that stays hidden until the shake, hotkey or tray asks for it.
             tauri::WebviewWindowBuilder::new(app, "capture", tauri::WebviewUrl::App("index.html?capture=1".into()))
                 .title("Pip capture").inner_size(600.0, 330.0).min_inner_size(360.0, 280.0).max_inner_size(1000.0, 800.0).decorations(false).transparent(true).resizable(true).always_on_top(true).skip_taskbar(true).visible(false).center().build()?;
 
+            // The compact tool window: hidden until a Landmark asks for a tool.
+            tauri::WebviewWindowBuilder::new(app, "tool", tauri::WebviewUrl::App("index.html?tool=1".into()))
+                .title("Pip tool").inner_size(420.0, 480.0).decorations(false).transparent(true).resizable(false).always_on_top(true).skip_taskbar(true).visible(false).build()?;
+
             let open = MenuItem::with_id(app, "open", "Open Pip", true, None::<&str>)?;
             let cap = MenuItem::with_id(app, "capture", "Capture a thought", true, None::<&str>)?;
+            let lm = MenuItem::with_id(app, "landmarks", "Landmarks...", true, None::<&str>)?;
+            let pause = tauri::menu::CheckMenuItem::with_id(app, "pause", "Pause wiggle gestures", true, false, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&open, &cap, &quit])?;
+            let menu = Menu::with_items(app, &[&open, &cap, &lm, &pause, &quit])?;
+            let pause_flag = shake.clone();
             let mut tray = TrayIconBuilder::new().tooltip("Pip").menu(&menu).show_menu_on_left_click(false)
-                .on_menu_event(|app, ev| match ev.id.as_ref() { "open" => show_main(app), "capture" => open_capture(app), "quit" => app.exit(0), _ => {} })
+                .on_menu_event(move |app, ev| match ev.id.as_ref() {
+                    "open" => show_main(app),
+                    "capture" => open_capture(app),
+                    // Session-only pause: the checkmark tracks the flag the Landmark engine already respects. A restart resumes gestures.
+                    "pause" => { let was_enabled = pause_flag.load(Ordering::Relaxed); pause_flag.store(!was_enabled, Ordering::Relaxed); let _ = pause.set_checked(was_enabled); }
+                    "landmarks" => { show_main(app); let app = app.clone(); tauri::async_runtime::spawn(async move { tokio_sleep(900).await; let _ = app.emit_to("main", "pip://open-landmarks", ()); }); }
+                    "quit" => app.exit(0), _ => {} })
                 .on_tray_icon_event(|tray, ev| { if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = ev { show_main(tray.app_handle()); } });
             // Tray: the bare orange spark (32x32 RGBA, no tile) so it reads on light and dark taskbars. Falls back to the app icon.
             let spark = tauri::image::Image::new(include_bytes!("../icons/tray32.rgba"), 32, 32);
@@ -264,9 +426,14 @@ pub fn run() {
         // and rebuilt on demand by show_main. The small capture box stays loaded so the shake still opens it instantly.
         .on_window_event(|w, ev| {
             if w.label() == "capture" && matches!(ev, WindowEvent::Moved(_) | WindowEvent::Resized(_)) {
-                if let Some(capture) = w.app_handle().get_webview_window("capture") { fit_capture(&capture, false); }
+                if let Some(capture) = w.app_handle().get_webview_window("capture") { fit_capture(&capture, false, false); }
             }
-            if let WindowEvent::CloseRequested { api, .. } = ev {
+            // A compact tool is a popup: losing focus dismisses it, after a short grace so showing it cannot close it.
+            if w.label() == "tool" {
+                if let WindowEvent::Focused(false) = ev { if now_ms().saturating_sub(TOOL_SHOWN_MS.load(Ordering::Relaxed)) > 500 { let _ = w.hide(); } }
+            }
+            // Floating references are real windows: closing one closes it. Every other window hides to the tray.
+            if let (WindowEvent::CloseRequested { api, .. }, false) = (ev, w.label().starts_with("ref-")) {
                 api.prevent_close();
                 let _ = w.hide();
                 if w.label() == "main" {
@@ -278,7 +445,9 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
-        .run(tauri::generate_context!())
-        .expect("error while running Pip");
+        .invoke_handler(tauri::generate_handler![tool_current, tool_hide, reference_open, assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, landmarks_get, landmarks_save, landmarks_reset, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .build(tauri::generate_context!())
+        .expect("error while building Pip")
+        // Quitting releases the mouse hook before the process exits.
+        .run(|_app, ev| { if let tauri::RunEvent::Exit = ev { shake::stop(); } });
 }

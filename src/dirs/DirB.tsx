@@ -1,4 +1,9 @@
 import { Clipboard } from "../components/Clipboard";
+import { LandmarksSheet } from "../landmarks/LandmarksSheet";
+import { Icon } from "../icons/Icon";
+import { Snippets } from "../panels/Snippets";
+import { Followups } from "../panels/Followups";
+import { Projects } from "../panels/Projects";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { Pip, PipWord } from "../components/Pip";
@@ -19,6 +24,7 @@ import { preview, useFull, useTriggers, when } from "./util";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/bricolage-grotesque";
 import "./b.css";
+import "../panels/panels.css";
 import "../redesign.css";
 
 const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id: "today", label: "Today" }, { id: "pinned", label: "Pinned" }, { id: "drafts", label: "Drafts" }, { id: "trash", label: "Trash" }];
@@ -39,6 +45,9 @@ export default function DirB() {
   const [settings, setSettings] = useState(false);
   useEffect(() => { const f = () => setSettings(true); window.addEventListener("pip:open-settings", f); return () => window.removeEventListener("pip:open-settings", f); }, []);
   const [clips, setClips] = useState(false);
+  const [landmarksOpen, setLandmarksOpen] = useState(false);
+  useEffect(() => { if (!isNative()) return; let off = () => {}; let dead = false; void onNativeEvent("pip://open-landmarks", () => setLandmarksOpen(true)).then(f => { if (dead) f(); else off = f; }); return () => { dead = true; off(); }; }, []);
+  const [panel, setPanel] = useState<"" | "projects" | "snippets" | "followups">("");
   useEffect(() => {
     const mq = matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
@@ -113,8 +122,8 @@ export default function DirB() {
     <div className={isNative() ? "db db-native" : "db"}>
       {isNative() && <Titlebar />}
       <header className="db-hero">
-                <div className="db-wm"><h1 aria-label="Pip"><PipWord height={34} /></h1></div>
-        <div className="db-tools"><button className="ghost field" onClick={() => setClips(true)}>Clipboard</button><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button></div>
+                <div className="db-wm"><h1 aria-label="Pip"><button className="db-wm-btn" onClick={openHome} aria-label="Pip home" title="Home"><PipWord height={34} /></button></h1></div>
+        <div className="db-tools"><button className="ghost field" onClick={() => setClips(true)}><Icon name="clipboard" size={16} />Clipboard</button><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /></div>
       </header>
 
       {home && <Dashboard name={loadSession()?.user.name} notes={allNotes} drafts={drafts} loaded={loaded} shortcut={prefs.shortcut} onCapture={openCapture} onOpen={setSelId} onView={browse} />}
@@ -130,6 +139,7 @@ export default function DirB() {
             : <input className="db-chip-in" autoFocus value={newFolder} maxLength={60} placeholder="Folder name" aria-label="New folder name" onChange={e => setNewFolder(e.target.value)} onBlur={() => void addFolder()} onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setNewFolder(null); }} />}
         </div>);
       })()}
+      {!home && <div className="db-views" role="group" aria-label="Library views">{VIEWS.map(v => <button key={v.id} className="db-chip" aria-pressed={view === v.id} onClick={() => setView(v.id)}>{v.label}{counts[v.id] > 0 && v.id !== "all" ? ` ${counts[v.id]}` : ""}</button>)}</div>}
       {!home && <div className="db-context"><div><h2>{context}</h2><p>{view === "drafts" ? drafts.length : notes.length} {view === "drafts" ? "drafts" : "notes"} shown{query ? ` matching "${query}"` : ""}.</p></div><div className="db-context-actions">
         {view !== "drafts" && <button className="ghost field" disabled={arranging} title="Arrange all note cards into columns" onClick={() => void autoArrange()}>{arranging ? "Arranging…" : "Auto arrange"}</button>}
         {(folder || query || view !== "all") && <button className="ghost field" onClick={clearFilters}>Show all notes</button>}
@@ -173,15 +183,15 @@ export default function DirB() {
 
       <nav className="db-dock" aria-label="Views">
         <LayoutGroup id="dock">
-          <button aria-current={home ? "page" : undefined} onClick={openHome}>
-            {home && <motion.i layoutId="dock-on" className="db-dock-on" transition={{ type: "spring", stiffness: 520, damping: 38 }} />}
-            <span>Home</span>
+          <button aria-current={!home && !panel && view === "all" ? "page" : undefined} onClick={() => { setPanel(""); setView("all"); }}>
+            {!home && view === "all" && <motion.i layoutId="dock-on" className="db-dock-on" transition={{ type: "spring", stiffness: 520, damping: 38 }} />}
+            <span>Library</span>{counts.all > 0 && <em>{counts.all}</em>}
           </button>
-          {VIEWS.map(v => (
-            <button key={v.id} aria-current={!home && view === v.id ? "page" : undefined} onClick={() => setView(v.id)}>
-              {!home && view === v.id && <motion.i layoutId="dock-on" className="db-dock-on" transition={{ type: "spring", stiffness: 520, damping: 38 }} />}
-              <span>{v.label}</span>{counts[v.id] > 0 && <em>{counts[v.id]}</em>}
-            </button>))}
+          <button onClick={() => setPanel("projects")}><Icon name="folder" size={15} /><span>Projects</span></button>
+          <button onClick={() => setPanel("snippets")}><Icon name="copy" size={15} /><span>Snippets</span></button>
+          <button onClick={() => setPanel("followups")}><Icon name="time" size={15} /><span>Follow-ups</span></button>
+          <button onClick={() => setLandmarksOpen(true)}><Icon name="map" size={15} /><span>Landmarks</span></button>
+          <button onClick={() => setSettings(true)}><Icon name="settings" size={15} /><span>Settings</span></button>
         </LayoutGroup>
         <input type="search" value={query} onChange={e => { if (home) { setHome(false); setNotesView("all"); setFolder(""); } setQuery(e.target.value); }} placeholder="Search" aria-label="Search notes" />
         <button className="db-add" onClick={() => openCapture()} aria-label="New capture">Capture</button>
@@ -189,6 +199,10 @@ export default function DirB() {
 
       <AnimatePresence>{toast && <motion.div className="db-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{toast}</motion.div>}</AnimatePresence>
       <Capture open={capture} draftId={draftId} folder={folder} textSize={prefs.textSize} onTextSize={v => void setPrefs({ ...prefs, textSize: v })} onClose={() => { setCapture(false); void refresh(); }} onSaved={() => void refresh()} />
+      {panel === "projects" && <Projects notes={allNotes} folders={folders} onClose={() => setPanel("")} onNew={() => { setPanel(""); setView("all"); setNewFolder(""); }} onOpen={f => { setPanel(""); setView("all"); setFolder(f); }} />}
+      {panel === "snippets" && <Snippets onClose={() => setPanel("")} />}
+      {panel === "followups" && <Followups onClose={() => setPanel("")} />}
+      {landmarksOpen && <LandmarksSheet prefs={prefs} setPrefs={setPrefs} onClose={() => setLandmarksOpen(false)} />}
       {clips && <Clipboard onClose={() => setClips(false)} onKept={() => void refresh()} />}
       {settings && <Settings prefs={prefs} setPrefs={setPrefs} onClose={() => setSettings(false)} onRestored={() => void refresh()} />}
     </div>

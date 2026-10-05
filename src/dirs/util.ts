@@ -25,7 +25,7 @@ export function useTriggers(prefs: Prefs, trigger: () => void, paused: boolean) 
   useEffect(() => {
     if (native || !prefs.shakeToCapture || paused) return;
     const det = createShakeDetector(trigger, shakeOpts(prefs.shakeSens ?? 50));
-    const on = (e: PointerEvent) => { if (e.pointerType === "mouse") det.move(e.clientX, e.clientY, e.timeStamp, e.buttons); };
+    const on = (e: PointerEvent) => { if (e.pointerType === "mouse" && !document.querySelector(".lm-sheet")) det.move(e.clientX, e.clientY, e.timeStamp, e.buttons); };
     window.addEventListener("pointermove", on, { passive: true }); return () => window.removeEventListener("pointermove", on);
   }, [prefs.shakeToCapture, prefs.shakeSens, paused]);
   useEffect(() => {
