@@ -50,3 +50,20 @@ html.cap-win,.cap-win body,.cap-win #root{background:transparent!important}
 :root[data-theme=dark] .db.db-pop .capture{box-shadow:0 0 0 1px var(--line),0 18px 38px -14px #000}
 .cap-closed{display:grid;place-items:center;height:100dvh}.cap-closed button{border-radius:999px;padding:10px 20px;background:var(--sand,#F3EADB);font-weight:600;color:var(--ink)}
 :root[data-theme=dark] .db.db-pop .capture{background:var(--paper)}
+
+/* round 3: same card language as the folder rail panel (white card, cream insets, orange spark) */
+.db.db-pop{--paper:#fff;--sand:#FFF1E2;--inset:#FFF8EE}
+:root[data-theme=dark] .db.db-pop{--paper:#13151D;--sand:#222536;--inset:#1B1D29}
+.db.db-pop .scrim,.db.db-pop .capture{border-radius:30px}
+.db.db-pop .capture{box-shadow:0 0 0 1px rgba(45,45,49,.07)}
+:root[data-theme=dark] .db.db-pop .capture{box-shadow:0 0 0 1px rgba(255,255,255,.09)}
+.db.db-pop .capture::before{display:none}
+.db.db-pop .capture header{padding:16px 16px 6px 18px;font-size:15.5px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.db.db-pop .capture header>.pipm{width:34px;height:34px;border-radius:12px;background:var(--sand);padding:4px;box-shadow:inset 0 0 0 1px rgba(45,45,49,.06)}
+.db.db-pop .capture-destination{padding:2px 18px 0}
+.db.db-pop .capture-destination select{background-color:var(--sand);color:var(--ink);font-weight:600}
+.db.db-pop .capture textarea{margin:10px 14px 0;width:calc(100% - 28px);box-sizing:border-box;padding:14px 16px;border-radius:22px;background:var(--inset);transition:box-shadow .18s}
+.db.db-pop .capture textarea:focus-visible{box-shadow:0 0 0 2px var(--spark)}
+.db.db-pop .capture-arrangement{padding:8px 18px 0}
+.db.db-pop .capture footer{border-top:0;background:transparent;padding:10px 14px 14px 20px}
+.db.db-pop .capture footer .status{font-size:13px}
