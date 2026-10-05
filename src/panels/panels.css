@@ -12,3 +12,4 @@
 .pn-list li[role=option]{cursor:pointer}.pn-list li.sel{background:#FFF1E4;border-color:#FF7828}
 :root[data-theme="dark"] .pn-list li.sel{background:#3A2E24}
 .tool-win{width:100%!important;max-height:100vh;height:100vh;border-radius:20px}
+.pn-ta{border:1px solid var(--line);border-radius:12px;padding:9px 12px;font:inherit;background:var(--surface);color:var(--ink);width:100%;resize:vertical}.pn-h{margin:6px 0 0;font-size:13px;color:var(--muted);font-weight:600}

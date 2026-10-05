@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { call, initStorage, isNative, onNativeEvent } from "./native";
+import { call, initStorage, isNative, kv, onNativeEvent } from "./native";
 import { repo } from "./useNotes";
 import { readList, SNIPPETS_KEY, type Snippet } from "./panels/store";
 import { recallResults, projectShelves, type RecallItem, type Shelf } from "./panels/recall";
 import { clipboard, type ClipItem } from "./clipboard";
+import { counts, UTILS } from "./panels/utilities";
+import { FOLLOWUPS_KEY, isOverdue, type Followup } from "./panels/store";
 import "@fontsource-variable/inter";
 import "./dirs/b.css";
 import "./panels/panels.css";
@@ -20,8 +22,8 @@ export default function ToolWindow() {
   }, [refresh]);
   const close = () => { if (isNative()) void call("tool_hide"); };
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") close(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, []);
-  return <div className="db db-pop"><div className="db-sheet panel tool-win" role="dialog" aria-label={tool === "recall" ? "Quick Recall" : tool === "clipboard" ? "Clipboard Shelf" : tool === "project" ? "Project Shelf" : "Pip tool"}>
-    {tool === "recall" ? <Recall onDone={close} /> : tool === "clipboard" ? <ClipShelf onDone={close} /> : tool === "project" ? <ProjectShelf onDone={close} /> : <p className="pn-empty">This tool is not ready yet.</p>}
+  return <div className="db db-pop"><div className="db-sheet panel tool-win" role="dialog" aria-label={tool === "recall" ? "Quick Recall" : tool === "clipboard" ? "Clipboard Shelf" : tool === "project" ? "Project Shelf" : tool === "utilities" ? "Quick Utilities" : tool === "resume" ? "Resume Cards" : tool === "snippets" ? "Snippets" : tool === "followups" ? "Follow-ups" : "Pip tool"}>
+    {tool === "recall" ? <Recall onDone={close} /> : tool === "clipboard" ? <ClipShelf onDone={close} /> : tool === "project" ? <ProjectShelf onDone={close} /> : tool === "utilities" ? <Utilities onDone={close} /> : tool === "resume" ? <Resume onDone={close} /> : tool === "snippets" ? <SnippetPick onDone={close} /> : tool === "followups" ? <FollowupGlance onDone={close} /> : <p className="pn-empty">This tool is not ready yet.</p>}
   </div></div>;
 }
 
@@ -76,5 +78,62 @@ function ProjectShelf({ onDone }: { onDone: () => void }) {
     <ul className="pn-list">{(cur?.notes ?? []).slice(0, 8).map(n => <li key={n.id} role="option" aria-selected={false} style={{ cursor: "pointer" }} onClick={() => void copy(n.body)}><div><b>{n.title || n.body.split("\n")[0].slice(0, 60) || "Untitled"}</b><p>{n.body.replace(/\s+/g, " ").slice(0, 70)}</p></div></li>)}</ul>
     {shelves.length === 0 && <p className="pn-empty">No projects yet. Put a note in a folder to start one.</p>}
     <p className="pn-msg" role="status">{msg || "Click a note to copy it."}</p>
+  </>;
+}
+
+/** Quick Utilities: transform the text on your clipboard, then it goes straight back to the clipboard. */
+function Utilities({ onDone }: { onDone: () => void }) {
+  const [text, setText] = useState(""); const [msg, setMsg] = useState("");
+  const paste = async () => { try { setText(await navigator.clipboard.readText()); setMsg(""); } catch { setMsg("Couldn't read the clipboard. Paste into the box instead."); } };
+  useEffect(() => { void paste(); }, []);
+  const apply = async (u: (typeof UTILS)[number]) => { const out = u.run(text); setText(out); try { await navigator.clipboard.writeText(out); setMsg(`${u.label}: copied.`); } catch { setMsg("Done, but couldn't copy. Select the text and copy it."); } };
+  const c = counts(text);
+  return <>
+    <header className="panel-head"><div><h2>Quick Utilities</h2></div><button className="ghost" onClick={onDone}>Done</button></header>
+    <textarea className="pn-ta" aria-label="Text" value={text} onChange={e => setText(e.target.value)} rows={5} placeholder="Copy some text, or type here" />
+    <p className="pn-msg">{c.words} words · {c.chars} characters · {c.lines} lines</p>
+    <div className="pn-row" style={{ flexWrap: "wrap" }}>{UTILS.map(u => <button key={u.id} className="ghost field" disabled={!text} onClick={() => void apply(u)}>{u.label}</button>)}</div>
+    <p className="pn-msg" role="status">{msg}</p>
+  </>;
+}
+
+/** Resume Cards: where you left off. Your newest notes and the follow-ups still open. */
+function Resume({ onDone }: { onDone: () => void }) {
+  const [notes, setNotes] = useState<{ id: string; title: string; when: string }[]>([]); const [fu, setFu] = useState<Followup[]>([]);
+  useEffect(() => { void (async () => { try { await initStorage(); } catch { /* use what is loaded */ } const all = await repo.list({ view: "all", query: "" }); setNotes(all.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3).map(n => ({ id: n.id, title: n.title || n.body.split("\n")[0].slice(0, 60) || "Untitled", when: new Date(n.updatedAt).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) }))); setFu(readList<Followup>(FOLLOWUPS_KEY).filter(f => !f.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999")).slice(0, 4)); })(); }, []);
+  return <>
+    <header className="panel-head"><div><h2>Where you left off</h2></div><button className="ghost" onClick={onDone}>Done</button></header>
+    <h3 className="pn-h">Last edited</h3><ul className="pn-list">{notes.map(n => <li key={n.id}><div><b>{n.title}</b><p>{n.when}</p></div></li>)}</ul>
+    {notes.length === 0 && <p className="pn-empty">Nothing kept yet.</p>}
+    <h3 className="pn-h">Still open</h3><ul className="pn-list">{fu.map(f => <li key={f.id} className={isOverdue(f) ? "late" : ""}><div><b>{f.text}</b>{f.due && <p>{isOverdue(f) ? "Overdue · " : ""}{f.due}</p>}</div></li>)}</ul>
+    {fu.length === 0 && <p className="pn-empty">No open follow-ups.</p>}
+  </>;
+}
+
+/** Snippets in the compact window: click one to copy it. Adding and editing happen in the main app. */
+function SnippetPick({ onDone }: { onDone: () => void }) {
+  const [items, setItems] = useState<Snippet[]>([]); const [q, setQ] = useState(""); const [msg, setMsg] = useState("");
+  useEffect(() => { void (async () => { try { await initStorage(); } catch { /* use what is loaded */ } setItems(readList<Snippet>(SNIPPETS_KEY).sort((a, b) => b.updatedAt - a.updatedAt)); })(); }, []);
+  const copy = async (s: Snippet) => { try { await navigator.clipboard.writeText(s.text); setMsg(`Copied "${s.name}".`); window.setTimeout(onDone, 350); } catch { setMsg("Couldn't copy."); } };
+  const shown = items.filter(s => (s.name + " " + s.text).toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+  return <>
+    <header className="panel-head"><div><h2>Snippets</h2></div><button className="ghost" onClick={onDone}>Done</button></header>
+    <input type="search" autoFocus aria-label="Search snippets" placeholder="Search snippets" value={q} onChange={e => setQ(e.target.value)} />
+    <ul className="pn-list">{shown.map(s => <li key={s.id} role="option" aria-selected={false} style={{ cursor: "pointer" }} onClick={() => void copy(s)}><div><b>{s.name}</b><p>{s.text.replace(/\s+/g, " ").slice(0, 70)}</p></div></li>)}</ul>
+    {items.length === 0 && <p className="pn-empty">No snippets yet. Add them from Snippets in the main app.</p>}
+    <p className="pn-msg" role="status">{msg || "Click a snippet to copy it."}</p>
+  </>;
+}
+
+/** Follow-ups at a glance: tick one off without opening the app. */
+function FollowupGlance({ onDone }: { onDone: () => void }) {
+  const [items, setItems] = useState<Followup[]>([]);
+  useEffect(() => { void (async () => { try { await initStorage(); } catch { /* use what is loaded */ } setItems(readList<Followup>(FOLLOWUPS_KEY)); })(); }, []);
+  const toggle = (id: string) => { const next = items.map(f => f.id === id ? { ...f, done: !f.done } : f); setItems(next); kv.setItem(FOLLOWUPS_KEY, JSON.stringify(next)); };
+  const open = items.filter(f => !f.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999")).slice(0, 8);
+  return <>
+    <header className="panel-head"><div><h2>Follow-ups</h2></div><button className="ghost" onClick={onDone}>Done</button></header>
+    <ul className="pn-list">{open.map(f => <li key={f.id} className={isOverdue(f) ? "late" : ""}><label><input type="checkbox" checked={false} onChange={() => toggle(f.id)} /><span>{f.text}</span></label>{f.due && <span className="pn-due">{isOverdue(f) ? "Overdue · " : ""}{f.due}</span>}</li>)}</ul>
+    {open.length === 0 && <p className="pn-empty">Nothing waiting.</p>}
   </>;
 }

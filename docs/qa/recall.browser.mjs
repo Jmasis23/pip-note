@@ -25,4 +25,14 @@ await page.goto(origin + '/?tool=project&seed=1'); const ps = page.getByRole('di
 await ps.getByRole('group', { name: 'Projects' }).getByRole('button').first().waitFor(); await page.screenshot({ path: out + '/3-project-shelf.png' });
 await ps.getByRole('option').first().click(); await page.getByText('Copied.').waitFor();
 await page.goto(origin + '/?tool=clipboard&seed=1'); await page.getByRole('dialog', { name: 'Clipboard Shelf' }).getByText('only runs in the Windows app').waitFor();
+// Utilities, Resume, Snippets, Follow-ups compact windows
+await page.goto(origin + '/?tool=utilities&seed=1'); const ut = page.getByRole('dialog', { name: 'Quick Utilities' }); await ut.waitFor();
+await ut.getByLabel('Text').fill('  hello   world  \n\nzeta\nalpha'); await ut.getByRole('button', { name: 'Remove blank lines' }).click(); await ut.getByText(/copied/).waitFor();
+assert.equal(await ut.getByLabel('Text').inputValue(), '  hello   world  \nzeta\nalpha'); await page.screenshot({ path: out + '/4-utilities.png' });
+await page.goto(origin + '/?tool=resume&seed=1'); await page.getByRole('dialog', { name: 'Resume Cards' }).getByText('Last edited').waitFor();
+await page.goto(origin + '/?tool=snippets&seed=1'); const sp = page.getByRole('dialog', { name: 'Snippets' }); await sp.getByRole('option', { name: /Email signature/ }).click(); await sp.getByText(/Copied "Email signature"/).waitFor();
+assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'Best, Alex');
+await page.goto(origin + '/?tool=followups&seed=1'); await page.evaluate(() => localStorage.setItem('followups', JSON.stringify([{ id: 'f1', text: 'Ask Mia', due: '2020-01-01', done: false, createdAt: 1 }])));
+await page.reload(); const fg = page.getByRole('dialog', { name: 'Follow-ups' }); await fg.getByText(/Overdue/).waitFor(); await fg.getByRole('checkbox').click(); await fg.getByText('Nothing waiting').waitFor();
+await page.reload(); await page.getByRole('dialog', { name: 'Follow-ups' }).getByText('Nothing waiting').waitFor();
 assert.deepEqual(errors, []); await browser.close(); console.log('recall browser QA passed', out);
