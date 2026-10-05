@@ -27,6 +27,7 @@ let host: HTMLDivElement;
 beforeEach(async () => {
   vi.clearAllMocks();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  (document as unknown as { queryCommandState: () => boolean }).queryCommandState = () => false;
   window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener() {}, removeEventListener() {} });
   host = document.createElement("div"); document.body.append(host);
   root = createRoot(host);
