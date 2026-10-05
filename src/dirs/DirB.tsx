@@ -1,4 +1,6 @@
 import { Clipboard } from "../components/Clipboard";
+import { LandmarksSheet } from "../landmarks/LandmarksSheet";
+import { Icon } from "../icons/Icon";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { Pip, PipWord } from "../components/Pip";
@@ -39,6 +41,7 @@ export default function DirB() {
   const [settings, setSettings] = useState(false);
   useEffect(() => { const f = () => setSettings(true); window.addEventListener("pip:open-settings", f); return () => window.removeEventListener("pip:open-settings", f); }, []);
   const [clips, setClips] = useState(false);
+  const [landmarksOpen, setLandmarksOpen] = useState(false);
   useEffect(() => {
     const mq = matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
@@ -114,7 +117,7 @@ export default function DirB() {
       {isNative() && <Titlebar />}
       <header className="db-hero">
                 <div className="db-wm"><h1 aria-label="Pip"><PipWord height={34} /></h1></div>
-        <div className="db-tools"><button className="ghost field" onClick={() => setClips(true)}>Clipboard</button><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings">Settings</button></div>
+        <div className="db-tools"><button className="ghost field" onClick={() => setClips(true)}><Icon name="clipboard" size={16} />Clipboard</button><button className="ghost field" onClick={() => setLandmarksOpen(true)}><Icon name="map" size={16} />Landmarks</button><TextStepper value={prefs.textSize} onChange={v => void setPrefs({ ...prefs, textSize: v })} /><button className="db-gear" onClick={() => setSettings(true)} aria-label="Settings"><Icon name="settings" size={16} />Settings</button></div>
       </header>
 
       {home && <Dashboard name={loadSession()?.user.name} notes={allNotes} drafts={drafts} loaded={loaded} shortcut={prefs.shortcut} onCapture={openCapture} onOpen={setSelId} onView={browse} />}
@@ -189,6 +192,7 @@ export default function DirB() {
 
       <AnimatePresence>{toast && <motion.div className="db-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{toast}</motion.div>}</AnimatePresence>
       <Capture open={capture} draftId={draftId} folder={folder} textSize={prefs.textSize} onTextSize={v => void setPrefs({ ...prefs, textSize: v })} onClose={() => { setCapture(false); void refresh(); }} onSaved={() => void refresh()} />
+      {landmarksOpen && <LandmarksSheet prefs={prefs} setPrefs={setPrefs} onClose={() => setLandmarksOpen(false)} />}
       {clips && <Clipboard onClose={() => setClips(false)} onKept={() => void refresh()} />}
       {settings && <Settings prefs={prefs} setPrefs={setPrefs} onClose={() => setSettings(false)} onRestored={() => void refresh()} />}
     </div>

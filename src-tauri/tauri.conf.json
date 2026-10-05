@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src ipc: http://ipc.localhost; script-src 'self'"
     }
   },
   "bundle": {
@@ -44,15 +44,5 @@
       }
     }
   },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY1Qzc4RTEwQjE1NzhBQkEKUldTNmlsZXhFSTdIOVpjTGppZEExTUdEbzcrMDVJRUZzMi9HeXEwMVZGWW52MFlDY3RtM1FuZUUK",
-      "endpoints": [
-        "https://github.com/Jmasis23/pip-note/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  }
+  "plugins": {}
 }

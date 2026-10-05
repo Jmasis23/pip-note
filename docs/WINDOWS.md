@@ -1,22 +1,26 @@
-# Pip for Windows
+# Windows acceptance checklist
 
-Tauri 2 shell around the React app. Everything the web view cannot or should not do lives in Rust.
+Run on Windows 11 x64 with C++ Build Tools, WebView2, Node 22+ and Rust stable. Use `npm ci`, `npm run tauri dev`, then `npm run tauri build`.
 
-## Layout
-- `src/` React app (Desk UI). Runs in a plain browser too (`npm run dev`).
-- `src/native.ts` the only place the web app talks to Rust. In a browser it falls back to localStorage and downloads.
-- `src-tauri/src/lib.rs` window, tray, single instance, global hotkey, storage/AI/export commands.
-- `src-tauri/src/shake.rs` system-wide shake: a low-level **mouse** hook (no keyboard hook) feeding `pip_core::gesture`.
-- `src-tauri/core/` logic with no Tauri dependency, unit tested on any OS: shake detector, atomic file store, OpenAI-compatible client, key storage.
+## Native proof
 
-## What lives where
-- Notes: files in `%APPDATA%\com.jmasis.pip\store\` (atomic temp+rename writes). The web view only holds them in memory.
-- AI key: Windows Credential Manager (service `com.jmasis.pip`). The endpoint is saved in Rust; the web view cannot read the key or redirect requests. Calls are made from Rust, so there is no CORS problem with Ollama.
-- Closing the window hides it to the tray so the shake and Ctrl+Shift+Space keep working. Quit from the tray menu.
+- Focus Notepad/browser/ordinary remote-work apps. Gesture in a Landmark opens only its assigned compact tool; main dashboard stays hidden.
+- Enter/hover/scroll/sweep/single reversal do nothing. Deliberate wiggle fires once. Continuous wiggling stays spent. Pause plus cooldown allows a new gesture.
+- Hold every mouse button while dragging; no activation. Check exclusions and full-screen suppression. Pause from main and tray; shortcuts remain alternatives.
+- Configure two monitors including a negative desktop origin and 100%/150%/200% scaling. Draw/move/resize/name/delete/enable regions and add edge presets. Overlaps explain the conflicting names.
+- Test unsaved regions in the full-monitor overlays. The actual Windows recognizer reports the tool without dispatch. Save, close overlays and confirm clicks pass through ordinary invisible regions.
+- Move/rescale/disconnect a monitor while setup is open. Affected regions require review; stale saves must be rejected. Reconnect and explicitly approve positions.
+- Activate each tool at each screen edge. Popup stays inside usable area and above taskbar. Escape saves draft then dismisses. Focus returns when Windows allows it. Passive references avoid unnecessary focus.
 
-## Build
-- CI: `.github/workflows/windows.yml` runs web tests, Rust core tests, then builds an unsigned NSIS installer on `windows-latest` and uploads it as the `Pip-windows-installer` artifact.
-- Locally on Windows: install Node 20 and Rust, then `npm ci && npx tauri build`.
+## Complete journeys
 
-## Not done
-Code signing (SmartScreen will warn on an unsigned installer), launch at login, auto-update, SQLite (storage is JSON files for now).
+- Capture note/checklist/link/pasted image plus a managed copy and original shortcut. Restart; retrieve via type/project/search. Move the shortcut original and verify the missing-file error.
+- Fill a snippet’s name/company/date fields, preview and copy. Project Shelf opens its assigned project. Edit/pin/unpin/close a floating reference; note stays saved.
+- Set task due and waiting status; notifications are opt in. Verify running, tray-closed, full-quit, overdue-restart and OS sleep behaviors. Save and retrieve a resume card.
+- Clipboard off by default; enable, copy text/image, pin, pause, change retention, exclude a process, clear history and restore a disabled-history backup.
+- Simultaneously edit from two windows; stale save retains text. Independent drafts survive dismissal/restart and cannot erase each other.
+- Export/import valid and damaged JSON; invalid import preserves current content. Back up/restore valid and malformed SQLite; corruption must be rejected before replacement.
+- Close to tray with preference on, quit with preference off, quit from tray, relaunch, exercise second-instance behavior. Check listener error recovery and keyboard alternatives.
+- Keyboard-only navigation, visible focus, dark/light contrast, reduced motion, resizing and high-DPI text. Confirm no remote runtime requests.
+
+These interactive steps were not executed in the Linux implementation environment. Do not treat portable tests or browser UI tests as native acceptance.
