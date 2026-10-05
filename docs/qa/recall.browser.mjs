@@ -35,4 +35,9 @@ assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'Best, A
 await page.goto(origin + '/?tool=followups&seed=1'); await page.evaluate(() => localStorage.setItem('followups', JSON.stringify([{ id: 'f1', text: 'Ask Mia', due: '2020-01-01', done: false, createdAt: 1 }])));
 await page.reload(); const fg = page.getByRole('dialog', { name: 'Follow-ups' }); await fg.getByText(/Overdue/).waitFor(); await fg.getByRole('checkbox').click(); await fg.getByText('Nothing waiting').waitFor();
 await page.reload(); await page.getByRole('dialog', { name: 'Follow-ups' }).getByText('Nothing waiting').waitFor();
+// Floating references: picker (preview cannot open native windows) and the reference window itself
+await page.goto(origin + '/?tool=reference&seed=1'); const rp = page.getByRole('dialog', { name: 'Floating References' }); await rp.getByRole('option').first().click(); await rp.getByText(/only run in the Windows app/).waitFor();
+await page.goto(origin + '/?ref=n1&seed=1'); const rw = page.getByRole('dialog', { name: 'Floating reference' }); await rw.getByText('Landing page idea').waitFor(); await rw.getByText(/Hero shows the cursor/).waitFor();
+await rw.getByRole('button', { name: 'Copy' }).click(); await rw.getByText('Copied.').waitFor(); await page.screenshot({ path: out + '/5-reference.png' });
+await page.goto(origin + '/?ref=missing&seed=1'); await page.getByRole('alert').getByText('no longer here').waitFor();
 assert.deepEqual(errors, []); await browser.close(); console.log('recall browser QA passed', out);

@@ -10,6 +10,10 @@ async function boot() {
     const { default: M } = await import("./landmarks/Meter");
     createRoot(document.getElementById("root")!).render(<M />); return;
   }
+  if (new URLSearchParams(location.search).has("ref")) {
+    const { default: R } = await import("./ReferenceWindow");
+    createRoot(document.getElementById("root")!).render(<R />); return;
+  }
   if (new URLSearchParams(location.search).has("tool")) {
     const { default: T } = await import("./ToolWindow");
     createRoot(document.getElementById("root")!).render(<T />); return;

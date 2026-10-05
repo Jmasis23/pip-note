@@ -22,8 +22,8 @@ export default function ToolWindow() {
   }, [refresh]);
   const close = () => { if (isNative()) void call("tool_hide"); };
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") close(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, []);
-  return <div className="db db-pop"><div className="db-sheet panel tool-win" role="dialog" aria-label={tool === "recall" ? "Quick Recall" : tool === "clipboard" ? "Clipboard Shelf" : tool === "project" ? "Project Shelf" : tool === "utilities" ? "Quick Utilities" : tool === "resume" ? "Resume Cards" : tool === "snippets" ? "Snippets" : tool === "followups" ? "Follow-ups" : "Pip tool"}>
-    {tool === "recall" ? <Recall onDone={close} /> : tool === "clipboard" ? <ClipShelf onDone={close} /> : tool === "project" ? <ProjectShelf onDone={close} /> : tool === "utilities" ? <Utilities onDone={close} /> : tool === "resume" ? <Resume onDone={close} /> : tool === "snippets" ? <SnippetPick onDone={close} /> : tool === "followups" ? <FollowupGlance onDone={close} /> : <p className="pn-empty">This tool is not ready yet.</p>}
+  return <div className="db db-pop"><div className="db-sheet panel tool-win" role="dialog" aria-label={tool === "recall" ? "Quick Recall" : tool === "clipboard" ? "Clipboard Shelf" : tool === "project" ? "Project Shelf" : tool === "utilities" ? "Quick Utilities" : tool === "resume" ? "Resume Cards" : tool === "snippets" ? "Snippets" : tool === "followups" ? "Follow-ups" : tool === "reference" ? "Floating References" : "Pip tool"}>
+    {tool === "recall" ? <Recall onDone={close} /> : tool === "clipboard" ? <ClipShelf onDone={close} /> : tool === "project" ? <ProjectShelf onDone={close} /> : tool === "utilities" ? <Utilities onDone={close} /> : tool === "resume" ? <Resume onDone={close} /> : tool === "snippets" ? <SnippetPick onDone={close} /> : tool === "followups" ? <FollowupGlance onDone={close} /> : tool === "reference" ? <RefPicker onDone={close} /> : <p className="pn-empty">This tool is not ready yet.</p>}
   </div></div>;
 }
 
@@ -135,5 +135,19 @@ function FollowupGlance({ onDone }: { onDone: () => void }) {
     <header className="panel-head"><div><h2>Follow-ups</h2></div><button className="ghost" onClick={onDone}>Done</button></header>
     <ul className="pn-list">{open.map(f => <li key={f.id} className={isOverdue(f) ? "late" : ""}><label><input type="checkbox" checked={false} onChange={() => toggle(f.id)} /><span>{f.text}</span></label>{f.due && <span className="pn-due">{isOverdue(f) ? "Overdue · " : ""}{f.due}</span>}</li>)}</ul>
     {open.length === 0 && <p className="pn-empty">Nothing waiting.</p>}
+  </>;
+}
+
+/** Floating References: pick a note to keep floating above your other windows while you work. */
+function RefPicker({ onDone }: { onDone: () => void }) {
+  const [q, setQ] = useState(""); const [items, setItems] = useState<RecallItem[]>([]); const [msg, setMsg] = useState("");
+  useEffect(() => { void (async () => { try { await initStorage(); } catch { /* use what is loaded */ } setItems(recallResults(await repo.list({ view: "all", query: "" }), [], q).filter(i => i.kind === "note")); })(); }, [q]);
+  const pin = async (it: RecallItem) => { try { if (isNative()) await call("reference_open", { id: it.id }); else setMsg("Floating windows only run in the Windows app."); if (isNative()) onDone(); } catch (e) { setMsg(String(e)); } };
+  return <>
+    <header className="panel-head"><div><h2>Floating References</h2></div><button className="ghost" onClick={onDone}>Done</button></header>
+    <input type="search" autoFocus aria-label="Search notes to pin" placeholder="Pick a note to float" value={q} onChange={e => setQ(e.target.value)} />
+    <ul className="pn-list">{items.map(it => <li key={it.id} role="option" aria-selected={false} style={{ cursor: "pointer" }} onClick={() => void pin(it)}><div><b>{it.title}</b><p>{it.text.replace(/\s+/g, " ").slice(0, 70)}</p></div></li>)}</ul>
+    {items.length === 0 && <p className="pn-empty">No notes match.</p>}
+    <p className="pn-msg" role="status">{msg || "It stays on top until you close it."}</p>
   </>;
 }

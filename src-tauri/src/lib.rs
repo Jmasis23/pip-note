@@ -78,7 +78,7 @@ pub fn open_tool(app: &AppHandle, tool: Tool, _x: f64, _y: f64) {
     }
 }
 /// Compact tools that have a UI. Others do nothing yet (no placeholder windows).
-fn tool_key(t: Tool) -> Option<&'static str> { match t { Tool::QuickRecall => Some("recall"), Tool::ClipboardShelf => Some("clipboard"), Tool::ProjectShelf => Some("project"), Tool::Utilities => Some("utilities"), Tool::ResumeCards => Some("resume"), Tool::Snippets => Some("snippets"), Tool::FollowUps => Some("followups"), _ => None } }
+fn tool_key(t: Tool) -> Option<&'static str> { match t { Tool::QuickRecall => Some("recall"), Tool::ClipboardShelf => Some("clipboard"), Tool::ProjectShelf => Some("project"), Tool::Utilities => Some("utilities"), Tool::ResumeCards => Some("resume"), Tool::Snippets => Some("snippets"), Tool::FollowUps => Some("followups"), Tool::FloatingReference => Some("reference"), _ => None } }
 
 static TOOL_NAME: Mutex<String> = Mutex::new(String::new());
 static TOOL_SHOWN_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -102,6 +102,18 @@ fn open_compact(app: &AppHandle, key: &str) {
 }
 #[tauri::command]
 fn tool_current() -> String { TOOL_NAME.lock().map(|n| n.clone()).unwrap_or_default() }
+/// Pin a note as a small always-on-top reference window. The id must look like one of our own ids.
+#[tauri::command]
+fn reference_open(app: AppHandle, id: String) -> Result<(), String> {
+    if id.is_empty() || id.len() > 64 || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') { return Err("That note can't be pinned.".into()); }
+    let label = format!("ref-{id}");
+    if let Some(w) = app.get_webview_window(&label) { let _ = w.show(); let _ = w.set_focus(); return Ok(()); }
+    let n = app.webview_windows().keys().filter(|k| k.starts_with("ref-")).count() as f64;
+    tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App(format!("index.html?ref={id}").into()))
+        .title("Pip reference").inner_size(340.0, 260.0).min_inner_size(240.0, 160.0).decorations(false).transparent(true).resizable(true).always_on_top(true).skip_taskbar(true)
+        .position(80.0 + 28.0 * n, 80.0 + 28.0 * n).build().map_err(|e| e.to_string())?;
+    Ok(())
+}
 #[tauri::command]
 fn tool_hide(app: AppHandle) { if let Some(w) = app.get_webview_window("tool") { let _ = w.hide(); } }
 
@@ -411,7 +423,8 @@ pub fn run() {
             if w.label() == "tool" {
                 if let WindowEvent::Focused(false) = ev { if now_ms().saturating_sub(TOOL_SHOWN_MS.load(Ordering::Relaxed)) > 500 { let _ = w.hide(); } }
             }
-            if let WindowEvent::CloseRequested { api, .. } = ev {
+            // Floating references are real windows: closing one closes it. Every other window hides to the tray.
+            if let (WindowEvent::CloseRequested { api, .. }, false) = (ev, w.label().starts_with("ref-")) {
                 api.prevent_close();
                 let _ = w.hide();
                 if w.label() == "main" {
@@ -423,7 +436,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![tool_current, tool_hide, assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, landmarks_get, landmarks_save, landmarks_reset, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .invoke_handler(tauri::generate_handler![tool_current, tool_hide, reference_open, assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, landmarks_get, landmarks_save, landmarks_reset, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .build(tauri::generate_context!())
         .expect("error while building Pip")
         // Quitting releases the mouse hook before the process exits.

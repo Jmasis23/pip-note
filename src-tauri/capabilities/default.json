@@ -6,7 +6,8 @@
     "main",
     "capture",
     "meter",
-    "tool"
+    "tool",
+    "ref-*"
   ],
   "permissions": [
     "core:default",
