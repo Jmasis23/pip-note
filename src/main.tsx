@@ -6,6 +6,10 @@ import "./styles.css";
 async function boot() {
   seedIfAsked(import.meta.env.VITE_PREVIEW === "true");
   try { await initStorage(); } catch (e) { console.error("native init failed", e); }
+  if (new URLSearchParams(location.search).has("meter")) {
+    const { default: M } = await import("./landmarks/Meter");
+    createRoot(document.getElementById("root")!).render(<M />); return;
+  }
   if (new URLSearchParams(location.search).has("capture")) {
     const { default: Pop } = await import("./CapturePopup");
     createRoot(document.getElementById("root")!).render(<Pop />); return;
