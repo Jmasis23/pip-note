@@ -24,7 +24,7 @@ const LAYOUT_KEY: &str = "landmarks"; // not a "pip." key: the web view only rea
 /// Tauri sizes here are physical pixels; UI limits are converted using that monitor's DPI.
 static CAPTURE_LIMITS: Mutex<Option<(u32, u32, u32, u32)>> = Mutex::new(None);
 
-fn fit_capture(w: &tauri::WebviewWindow, opening: bool) {
+fn fit_capture(w: &tauri::WebviewWindow, opening: bool, near_cursor: bool) {
     let monitor = if opening {
         w.cursor_position().ok().and_then(|p| w.monitor_from_point(p.x, p.y).ok().flatten())
     } else { w.current_monitor().ok().flatten() }
@@ -35,6 +35,13 @@ fn fit_capture(w: &tauri::WebviewWindow, opening: bool) {
     let size = w.inner_size().unwrap_or(tauri::PhysicalSize::new((600.0 * scale) as u32, (330.0 * scale) as u32));
     let pos = w.outer_position().unwrap_or(area.position);
     let bounds = capture_bounds::fit((area.position.x, area.position.y), (area.size.width, area.size.height), scale, (size.width, size.height), (pos.x, pos.y), opening);
+    // A Landmark activation opens the tool beside the cursor; the hotkey and tray keep the centered placement.
+    let mut bounds = bounds;
+    if opening && near_cursor {
+        if let Ok(c) = w.cursor_position() {
+            bounds.position = pip_core::placement::place_near((c.x as i32, c.y as i32), bounds.size, ((area.position.x, area.position.y), (area.size.width, area.size.height)), (16.0 * scale).round() as i32);
+        }
+    }
     let (min_w, min_h) = bounds.min; let (max_w, max_h) = bounds.max;
     let next = tauri::PhysicalSize::new(bounds.size.0, bounds.size.1);
     // Only update constraints when the work area / DPI changes. Reapplying them on
@@ -54,17 +61,18 @@ fn fit_capture(w: &tauri::WebviewWindow, opening: bool) {
 }
 
 /// Bring the window forward and tell the web view to open Capture. Used by the shake, the hotkey and the tray.
-pub fn open_capture(app: &AppHandle) {
+pub fn open_capture(app: &AppHandle) { open_capture_placed(app, false); }
+pub fn open_capture_placed(app: &AppHandle, near_cursor: bool) {
     // Only the small capture box comes up. The main window stays where it is (hidden in the tray or behind other apps).
     if let Some(w) = app.get_webview_window("capture") {
-        fit_capture(&w, true); let _ = w.show(); let _ = w.set_focus();
+        fit_capture(&w, true, near_cursor); let _ = w.show(); let _ = w.set_focus();
         let _ = app.emit_to("capture", "pip://capture-show", ());
     }
 }
 /// Dispatch stage: show the compact tool for an activated Landmark. Never opens the main window.
 /// Only tools that exist are dispatched; others do nothing yet (no placeholder windows).
 pub fn open_tool(app: &AppHandle, tool: Tool, _x: f64, _y: f64) {
-    match tool { Tool::QuickCapture => open_capture(app), _ => {} }
+    match tool { Tool::QuickCapture => open_capture_placed(app, true), _ => {} }
 }
 
 /// The wiggle meter: small transparent, click-through, never-focused window following the cursor while a wiggle is in progress.
@@ -363,7 +371,7 @@ pub fn run() {
         // and rebuilt on demand by show_main. The small capture box stays loaded so the shake still opens it instantly.
         .on_window_event(|w, ev| {
             if w.label() == "capture" && matches!(ev, WindowEvent::Moved(_) | WindowEvent::Resized(_)) {
-                if let Some(capture) = w.app_handle().get_webview_window("capture") { fit_capture(&capture, false); }
+                if let Some(capture) = w.app_handle().get_webview_window("capture") { fit_capture(&capture, false, false); }
             }
             if let WindowEvent::CloseRequested { api, .. } = ev {
                 api.prevent_close();
