@@ -7,6 +7,7 @@ import { Editor } from "../components/Editor";
 import { Settings } from "../components/Settings";
 import { Titlebar } from "../components/Titlebar";
 import { Dashboard } from "../components/Dashboard";
+import { FolderRail } from "../components/FolderRail";
 import { loadSession } from "../cloud/auth";
 import { DraggableCard } from "./DraggableCard";
 import { cleanFolder } from "../repo/repo";
@@ -18,6 +19,7 @@ import { imageFrom, imageNote, toDataUrl } from "../images";
 import { preview, useFull, useTriggers, when } from "./util";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/bricolage-grotesque";
+import "../bui/pip.css";
 import "./b.css";
 import "../redesign.css";
 
@@ -108,6 +110,11 @@ export default function DirB() {
   const full = useFull(selId, allNotes);
   useEffect(() => { if (!selId) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape" && !capture) setSelId(null); }; window.addEventListener("keydown", on); return () => window.removeEventListener("keydown", on); }, [selId, capture]);
 
+  const paneEditor = (id: string, back: () => void) => <PaneEditor key={id} id={id} notes={allNotes} folders={folders} color={prefs.noteColors?.[id] ?? null}
+    onColor={c => { const m = { ...(prefs.noteColors ?? {}) }; if (c) m[id] = c; else delete m[id]; void setPrefs({ ...prefs, noteColors: m }); }} onChanged={() => void refresh()} onBack={back} />;
+  const railAdd = async (name: string) => { const f = cleanFolder(name); if (!f) return null; if (!folders.includes(f)) await setPrefs({ ...prefs, extraFolders: [...new Set([...(prefs.extraFolders ?? []), f])] }); await refresh(); return f; };
+  const railPin = (f: string) => { const p = prefs.pinnedFolders ?? []; void setPrefs({ ...prefs, pinnedFolders: p.includes(f) ? p.filter(x => x !== f) : [...p, f] }); };
+
   return (
     <MotionConfig reducedMotion={prefs.reducedMotion ? "always" : "user"}>
     <div className={isNative() ? "db db-native" : "db"}>
@@ -171,6 +178,8 @@ export default function DirB() {
         </AnimatePresence>
       </LayoutGroup>
 
+      <FolderRail notes={allNotes} folders={folders} pinned={prefs.pinnedFolders ?? []} onTogglePin={railPin} onAddFolder={railAdd} renderEditor={paneEditor} />
+
       <nav className="db-dock" aria-label="Views">
         <LayoutGroup id="dock">
           <button aria-current={home ? "page" : undefined} onClick={openHome}>
@@ -196,3 +205,8 @@ export default function DirB() {
   );
 }
 void repo;
+
+function PaneEditor({ id, notes, folders, color, onColor, onChanged, onBack }: { id: string; notes: Note[]; folders: string[]; color: Parameters<typeof Editor>[0]["color"]; onColor: (c: Parameters<typeof Editor>[0]["color"]) => void; onChanged: () => void; onBack: () => void }) {
+  const full = useFull(id, notes);
+  return full ? <Editor key={full.id} note={full} folders={folders} color={color} onColor={onColor} onChanged={onChanged} onBack={onBack} /> : null;
+}

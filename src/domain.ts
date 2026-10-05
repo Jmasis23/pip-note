@@ -26,6 +26,7 @@ export type Prefs = {
   shortcut: string; theme: Theme; reducedMotion: boolean; launchAtLogin: boolean; shakeToCapture: boolean; /** 0 to 100, 50 is the default. */ shakeSens: number;
   cardSize: Size; textSize: TextSize; accent: Accent; /** "quiet" turns the tinted cards neutral. */ tint: "color" | "quiet";
   /** Folders created before any note is in them. */ extraFolders: string[];
+  /** Top-level folders pinned to the top of the folder rail. */ pinnedFolders?: string[];
   /** Card color picked per note. Kept on this device only. Missing means the automatic color. */ noteColors?: Record<string, "yellow" | "green" | "pink" | "purple" | "blue" | "gray" | "charcoal">;
   /** Board offsets are local to this device and do not change note revisions. */ cardPositions?: Record<string, CardPosition>;
 };
