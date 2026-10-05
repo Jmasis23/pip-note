@@ -1,6 +1,7 @@
 mod shake;
 mod capture_bounds;
 mod clipboard;
+mod assist;
 
 use pip_core::chatgpt::{self, Cred};
 use pip_core::kv::FileKv;
@@ -213,6 +214,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
         // Pip lives in the tray: it starts with Windows, quietly, so the shake and hotkey always work.
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--background"])))
         .manage(Pending(Mutex::new(None)))
@@ -236,6 +238,7 @@ pub fn run() {
             }
             // Started by Windows (--background): stay in the tray. Opened by hand: show the window.
             if !std::env::args().any(|a| a == "--background") { show_main(&handle); }
+            assist::start_clock(handle.clone());
             clipboard::start(handle.clone())?;
             shake::start(handle.clone(), shake, level);
 
@@ -275,7 +278,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .invoke_handler(tauri::generate_handler![assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
 }

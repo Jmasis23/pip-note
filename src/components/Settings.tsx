@@ -1,3 +1,5 @@
+import { aiAvailable, aiSetKey, aiStatus, PROVIDER_HELP, PROVIDER_LABEL, type AiStatus } from "../ai/client";
+import { setSuggestionsOn, suggestionsOn } from "./Suggestions";
 import { PipWord } from "./Pip";
 import { useEffect, useState } from "react";
 import type { Accent, Prefs, Size, TextSize, Theme } from "../domain";
@@ -63,6 +65,7 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
             <div className="bk" key={b.day}><span>{b.day}</span><span className="muted">{b.count} {b.count === 1 ? "note" : "notes"}</span>
               <button className="ghost" onClick={async () => { if (!confirm(`Restore ${b.day}? Your current notes are backed up first.`)) return; try { await repo.restoreBackup(b.day); onRestored(); setMsg("Restored."); } catch (e) { setMsg((e as Error).message); } }}>Restore</button></div>))}
         </div>
+        {aiAvailable() && <AiRow />}
         {isNative() && <UpdateRow />}
       </div>
     </div>
@@ -71,6 +74,19 @@ export function Settings({ prefs, setPrefs, onClose, onRestored }: { prefs: Pref
 
 type Up = { s: "idle" | "checking" | "current" | "downloading" | "ready" | "error"; v?: string; err?: string };
 /** Manual update. Nothing happens until the button is pressed. */
+function AiRow() {
+  const [st, setSt] = useState<AiStatus | null>(null); const [p, setP] = useState<"nvidia" | "gemini">("nvidia"); const [key, setKey] = useState(""); const [msg, setMsg] = useState(""); const [sug, setSug] = useState(suggestionsOn());
+  useEffect(() => { void aiStatus().then(setSt).catch(() => {}); }, []);
+  const has = st ? st[p] : false;
+  const save = async () => { try { setSt(await aiSetKey(p, key)); setKey(""); setMsg(key.trim() ? "Saved on this PC." : "Removed."); } catch (e) { setMsg(String(e)); } };
+  return <div className="row col"><div><b>Pip AI</b><p>Notes, rewrites and reminders. Your key stays in Windows Credential Manager and is never synced. What you ask is sent to the provider you pick.</p></div>
+    <div className="seg" role="radiogroup" aria-label="AI provider">{(["nvidia", "gemini"] as const).map(id => <button key={id} role="radio" aria-checked={p === id} className={p === id ? "on" : ""} onClick={() => { setP(id); setMsg(""); setKey(""); }}>{PROVIDER_LABEL[id]}{st?.[id] ? " (on)" : ""}</button>)}</div>
+    <div className="aikey"><input type="password" autoComplete="off" spellCheck={false} value={key} onChange={e => setKey(e.target.value)} placeholder={has ? "Key saved. Paste to replace" : "Paste your key"} aria-label={`${PROVIDER_LABEL[p]} key`} />
+      <button className="ghost field" disabled={!key.trim()} onClick={() => void save()}>Save</button>{has && <button className="ghost" onClick={async () => { setSt(await aiSetKey(p, "")); setMsg("Removed."); }}>Remove</button>}</div>
+    <label className="row" style={{ padding: 0 }}><div><b>Suggest from my notes</b><p>Pip reads recent note text, at most once every 20 minutes, to offer reminders and folders. Sent to your provider. Off stops it.</p></div><input type="checkbox" className="switch" checked={sug} onChange={e => { setSuggestionsOn(e.target.checked); setSug(e.target.checked); }} /></label>
+    <p className="muted" role="status">{msg || `Free key at ${PROVIDER_HELP[p].where}.`}{st?.nvidia && st?.gemini ? " NVIDIA first, Gemini if it fails." : ""}</p></div>;
+}
+
 function UpdateRow() {
   const [u, setU] = useState<Up>({ s: "idle" });
   const run = async () => {
