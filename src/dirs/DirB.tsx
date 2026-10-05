@@ -46,6 +46,7 @@ export default function DirB() {
   useEffect(() => { const f = () => setSettings(true); window.addEventListener("pip:open-settings", f); return () => window.removeEventListener("pip:open-settings", f); }, []);
   const [clips, setClips] = useState(false);
   const [landmarksOpen, setLandmarksOpen] = useState(false);
+  useEffect(() => { if (!isNative()) return; let off = () => {}; let dead = false; void onNativeEvent("pip://open-landmarks", () => setLandmarksOpen(true)).then(f => { if (dead) f(); else off = f; }); return () => { dead = true; off(); }; }, []);
   const [panel, setPanel] = useState<"" | "projects" | "snippets" | "followups">("");
   useEffect(() => {
     const mq = matchMedia("(prefers-color-scheme: dark)");

@@ -387,7 +387,7 @@ pub fn run() {
             if !std::env::args().any(|a| a == "--background") { show_main(&handle); }
             assist::start_clock(handle.clone());
             clipboard::start(handle.clone())?;
-            shake::start(handle.clone(), shake, level, engine, gesture_status);
+            shake::start(handle.clone(), shake.clone(), level, engine, gesture_status);
             watch_displays(handle.clone());
             start_meter(&handle)?;
 
@@ -401,10 +401,19 @@ pub fn run() {
 
             let open = MenuItem::with_id(app, "open", "Open Pip", true, None::<&str>)?;
             let cap = MenuItem::with_id(app, "capture", "Capture a thought", true, None::<&str>)?;
+            let lm = MenuItem::with_id(app, "landmarks", "Landmarks...", true, None::<&str>)?;
+            let pause = tauri::menu::CheckMenuItem::with_id(app, "pause", "Pause wiggle gestures", true, false, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&open, &cap, &quit])?;
+            let menu = Menu::with_items(app, &[&open, &cap, &lm, &pause, &quit])?;
+            let pause_flag = shake.clone();
             let mut tray = TrayIconBuilder::new().tooltip("Pip").menu(&menu).show_menu_on_left_click(false)
-                .on_menu_event(|app, ev| match ev.id.as_ref() { "open" => show_main(app), "capture" => open_capture(app), "quit" => app.exit(0), _ => {} })
+                .on_menu_event(move |app, ev| match ev.id.as_ref() {
+                    "open" => show_main(app),
+                    "capture" => open_capture(app),
+                    // Session-only pause: the checkmark tracks the flag the Landmark engine already respects. A restart resumes gestures.
+                    "pause" => { let was_enabled = pause_flag.load(Ordering::Relaxed); pause_flag.store(!was_enabled, Ordering::Relaxed); let _ = pause.set_checked(was_enabled); }
+                    "landmarks" => { show_main(app); let app = app.clone(); tauri::async_runtime::spawn(async move { tokio_sleep(900).await; let _ = app.emit_to("main", "pip://open-landmarks", ()); }); }
+                    "quit" => app.exit(0), _ => {} })
                 .on_tray_icon_event(|tray, ev| { if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = ev { show_main(tray.app_handle()); } });
             // Tray: the bare orange spark (32x32 RGBA, no tile) so it reads on light and dark taskbars. Falls back to the app icon.
             let spark = tauri::image::Image::new(include_bytes!("../icons/tray32.rgba"), 32, 32);
