@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { RiArrowLeftSLine, RiPushpin2Fill, RiPushpin2Line } from "@remixicon/react";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { CloseButton } from "@/components/base/buttons/close-button";
-import { Editor } from "./Editor";
+import { Editor, type EditorHandle } from "./Editor";
 import type { Note, Prefs } from "../domain";
 import { repo } from "../useNotes";
 import { isNative } from "../native";
@@ -15,8 +15,10 @@ export function PopupNote({ onClose }: { onClose: (kept: boolean) => void }) {
   const [note, setNote] = useState<Note | null>(null);
   const [folders, setFolders] = useState<string[]>([]);
   const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const [closeError, setCloseError] = useState("");
   const id = useRef<string>();
   const closing = useRef(false);
+  const editor = useRef<EditorHandle>(null);
 
   const refresh = async () => {
     if (!id.current) return;
@@ -42,15 +44,20 @@ export function PopupNote({ onClose }: { onClose: (kept: boolean) => void }) {
 
   const close = async () => {
     if (closing.current) return; closing.current = true;
-    document.querySelector<HTMLElement>(".fr-edit .editor")?.blur();
-    await new Promise(r => setTimeout(r, 120)); // let the editor flush its last keystrokes
-    let kept = false;
-    if (id.current) {
-      const n = await repo.get(id.current).catch(() => null);
-      if (n && n.deletedAt === null && !blank(n)) kept = true;
-      else if (n) { if (n.deletedAt === null) await repo.trash(n.id).catch(() => {}); if (blank(n)) await repo.deleteForever(n.id).catch(() => {}); }
+    setCloseError("");
+    try {
+      if (!editor.current || !await editor.current.flush()) { closing.current = false; return; }
+      let kept = false;
+      if (id.current) {
+        const n = await repo.get(id.current);
+        if (n.deletedAt === null && !blank(n)) kept = true;
+        else { if (n.deletedAt === null) await repo.trash(n.id); if (blank(n)) await repo.deleteForever(n.id); }
+      }
+      onClose(kept);
+    } catch {
+      closing.current = false;
+      setCloseError("Couldn't close. Your note is still here. Try again.");
     }
-    onClose(kept);
   };
   useEffect(() => { const f = () => void close(); window.addEventListener("pip-dismiss", f); return () => window.removeEventListener("pip-dismiss", f); });
 
@@ -67,8 +74,9 @@ export function PopupNote({ onClose }: { onClose: (kept: boolean) => void }) {
         {note?.folder && <IconButton size="small" icon={pinned ? RiPushpin2Fill : RiPushpin2Line} aria-label={pinned ? `Unpin ${folder}` : `Pin ${folder}`} aria-pressed={pinned} className={pinned ? "fr-pinned" : ""} onClick={togglePin} />}
         <CloseButton aria-label="Close" onClick={() => void close()} />
       </header>
+      {closeError && <p role="alert">{closeError}</p>}
       <div className="fr-edit">
-        {note && <Editor key={note.id} note={blank(note) ? { ...note, title: "" } : note} folders={folders} color={prefs?.noteColors?.[note.id] ?? null}
+        {note && <Editor ref={editor} key={note.id} note={blank(note) ? { ...note, title: "" } : note} folders={folders} color={prefs?.noteColors?.[note.id] ?? null}
           onColor={c => { if (!prefs) return; const m = { ...(prefs.noteColors ?? {}) }; if (c) m[note.id] = c; else delete m[note.id]; void repo.setPrefs({ ...prefs, noteColors: m }).then(refresh); }}
           onChanged={() => void refresh()} onBack={() => void close()} />}
       </div>

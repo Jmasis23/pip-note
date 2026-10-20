@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { cleanRewrite, parsePlan, askMessages } from "./plan";
+import { cleanRewrite, parsePlan, askMessages, rewriteMessages } from "./plan";
 
 const now = new Date("2026-10-05T09:00:00").getTime();
 const known = new Set(["n1"]);
+
+it("sends a user's custom rewrite request alongside the note", () => {
+  const messages = rewriteMessages("Translate to Spanish and keep the headings", "My original note");
+  expect(messages.find(m => m.role === "user")?.content).toContain("Translate to Spanish and keep the headings");
+  expect(messages.find(m => m.role === "user")?.content).toContain("My original note");
+  expect(messages[0].content).not.toContain("undefined");
+});
 
 describe("parsePlan", () => {
   it("reads clean JSON and local times", () => {

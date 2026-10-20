@@ -11,7 +11,7 @@ export function observeDesktopRegions(
   let retry: ReturnType<typeof setTimeout> | undefined;
   const report = () => {
     if (dead || pending) return;
-    const surfaces = [...document.querySelectorAll<HTMLElement>(".desktop-edge-tab,.fr,.fr-panel,.fr-float,[role=tooltip],[role=listbox],.dropdown-menu,.rw-menu")]
+    const surfaces = [...document.querySelectorAll<HTMLElement>(".desktop-edge-tab,.fr,.fr-panel,.fr-float,.cp-pop,.rt-bubble,[role=tooltip],[role=listbox],.dropdown-menu,.rw-menu")]
       .filter(el => getComputedStyle(el).visibility !== "hidden" && el.getClientRects().length > 0)
       .map(el => {
         const r = el.getBoundingClientRect();
@@ -41,9 +41,12 @@ export function observeDesktopRegions(
   const resize = new ResizeObserver(schedule);
   resize.observe(document.body);
   window.addEventListener("resize", schedule);
+  // A shaped WebView2 can miss paint-driven ResizeObserver delivery after a native
+  // resize. Also catch compositor-only panel motion; unchanged geometry sends no IPC.
+  const geometryCheck = setInterval(schedule, 250);
   schedule();
   return () => {
-    dead = true; clearTimeout(retry); observer.disconnect(); resize.disconnect();
+    dead = true; clearTimeout(retry); clearInterval(geometryCheck); observer.disconnect(); resize.disconnect();
     window.removeEventListener("resize", schedule);
   };
 }

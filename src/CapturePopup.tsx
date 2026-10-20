@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MotionConfig } from "motion/react";
 import { PopupNote } from "./components/PopupNote";
 import { initStorage, call, onNativeEvent, isNative } from "./native";
@@ -14,6 +14,7 @@ import "./capture-popup.css";
 export default function CapturePopup() {
   const [round, setRound] = useState(0);
   const [closed, setClosed] = useState(false);
+  const dismissed = useRef(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [size, setSize] = useState<TextSize>("m");
   useEffect(() => {
@@ -24,13 +25,18 @@ export default function CapturePopup() {
     };
     void theme();
     let off = () => {}; let dead = false;
-    if (isNative()) void onNativeEvent("pip://capture-show", () => { void (async () => { await initStorage(); await theme(); setRound(r => r + 1); })(); }).then(f => { if (dead) f(); else off = f; });
+    if (isNative()) void onNativeEvent("pip://capture-show", () => { void (async () => {
+      await initStorage(); await theme(); if (dead) return;
+      // A repeat shortcut/shake focuses the current thought instead of replacing its editor.
+      if (dismissed.current) { dismissed.current = false; setClosed(false); setRound(r => r + 1); }
+      else document.querySelector<HTMLElement>(".fr-edit .rt-body")?.focus();
+    })(); }).then(f => { if (dead) f(); else off = f; });
     // Native move/resize and system menus can blur the WebView. Only explicit dismissal closes capture.
     return () => { dead = true; off(); };
   }, []);
   return (
     <MotionConfig reducedMotion={reducedMotion ? "always" : "user"}><div className="db db-pop">
-      {closed ? <div className="cap-closed"><button onClick={() => { setClosed(false); setRound(r => r + 1); }}>Reopen capture</button></div> : <PopupNote key={round} onClose={kept => { if (isNative()) void call(kept ? "capture_saved" : "capture_hide"); else setClosed(true); }} />}
+      {closed ? <div className="cap-closed"><button onClick={() => { dismissed.current = false; setClosed(false); setRound(r => r + 1); }}>Reopen capture</button></div> : <PopupNote key={round} onClose={kept => { dismissed.current = true; setClosed(true); if (isNative()) void call(kept ? "capture_saved" : "capture_hide"); }} />}
     </div></MotionConfig>
   );
 }
