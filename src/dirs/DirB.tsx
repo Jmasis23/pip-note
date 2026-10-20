@@ -30,16 +30,6 @@ const tone = (n: Note, picked?: string) => picked ?? (n.pinned ? "lav" : n.check
 export default function DirB() {
   const { folder, setFolder, folders, view, setView: setNotesView, query, setQuery, notes, allNotes, loaded, drafts, counts, prefs, setPrefs, refresh } = useNotes();
   const [home, setHome] = useState(true);
-  useEffect(()=>{
-    if(!isNative())return;
-    let dead=false;let off=()=>{};
-    void onNativeEvent("pip://dashboard-reveal",()=>{
-      const el=document.querySelector(".db");if(!el)return;
-      el.classList.remove("dashboard-reveal");void (el as HTMLElement).offsetWidth;el.classList.add("dashboard-reveal");
-    }).then(f=>{if(dead)f();else off=f;});
-    return ()=>{dead=true;off();};
-  },[]);
-
   const setView = (next: View) => { setHome(false); setNotesView(next); };
   const browse = (next: View) => { setFolder(""); setQuery(""); setView(next); };
   const openHome = () => { setFolder(""); setQuery(""); setHome(true); };

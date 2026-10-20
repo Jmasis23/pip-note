@@ -3,5 +3,12 @@ html.desktop-win,html.desktop-win body,html.desktop-win #root{background:transpa
 .desktop-win .desktop-host{background:transparent!important;width:100%;height:100%;min-height:0;padding:0}
 .desktop-win .fr{max-height:calc(100dvh - 28px)}
 .floating-win .fr-float{width:calc(100vw - 24px);height:calc(100dvh - 24px)}
-@media(prefers-reduced-motion:no-preference){html[data-motion=full] .dashboard-reveal{animation:pip-edge-reveal .16s ease-out}}
-@keyframes pip-edge-reveal{from{opacity:.86;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+/* Only the orange mark is visible; the transparent button gives it a usable click target. */
+.desktop-edge-tab{position:fixed;z-index:90;border:0;padding:0;background:transparent;cursor:pointer}
+.desktop-edge-tab::before{content:"";position:absolute;background:#FF8A3A;border-radius:999px}
+.desktop-edge-top{top:0;left:calc(50% - 22px);width:44px;height:12px}
+.desktop-edge-top::before{width:28px;height:4px;top:0;left:8px}
+.desktop-edge-right{right:0;top:calc(50% - 22px);width:12px;height:44px}
+.desktop-edge-right::before{width:4px;height:28px;right:0;top:8px}
+.desktop-edge-tab:hover::before,.desktop-edge-tab:focus-visible::before{background:#F07418}
+.desktop-edge-tab:focus-visible{outline:2px solid var(--focus,#2F6FD6);outline-offset:-2px;border-radius:4px}

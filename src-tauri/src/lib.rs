@@ -1,7 +1,5 @@
 mod desktop;
-mod edge_policy;
-#[cfg(test)]
-mod edge_policy_tests;
+mod desktop_geometry;
 mod shake;
 mod capture_bounds;
 mod clipboard;
@@ -296,31 +294,9 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![desktop::desktop_regions, desktop::desktop_float, desktop::desktop_redock,assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, store_commit, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .invoke_handler(tauri::generate_handler![desktop::desktop_regions, desktop::desktop_dashboard, desktop::desktop_float, desktop::desktop_redock,assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, store_commit, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
-}
-
-
-/// Edge hover reveals the real dashboard without requesting keyboard focus.
-/// A visible, unminimized dashboard is left in place to avoid repeated disruption.
-fn reveal_main(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window("main") {
-        if w.is_focused().unwrap_or(false) { return; }
-        #[cfg(windows)] {
-            use windows::Win32::UI::WindowsAndMessaging::*;
-            if let Ok(h) = w.hwnd() { unsafe {
-                let hwnd=windows::Win32::Foundation::HWND(h.0);
-                let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-                let _ = SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-            } }
-        }
-        #[cfg(not(windows))] { let _ = w.unminimize(); let _ = w.show(); }
-        let _ = w.emit("pip://dashboard-reveal", ());
-    } else {
-        // Keep one dashboard lifecycle: use the same builder and the same restore guard.
-        build_main(app, false);
-    }
 }
 
 

@@ -17,7 +17,7 @@ import "./desktop-dock.css";
 /** A host for the real rail and editor. Native window regions leave the desktop clickable. */
 export default function DesktopDock({floatingId=null}: {floatingId?: string|null}) {
   const {allNotes,folders,prefs,setPrefs,refresh}=useNotes();
-  const [visible,setVisible]=useState(!isNative());
+  const [visible,setVisible]=useState(false);
   const [listening,setListening]=useState(!isNative());
   const [redock,setRedock]=useState<{id:string;sequence:number}|null>(null);
   const root=useRef<HTMLDivElement>(null);
@@ -40,7 +40,6 @@ export default function DesktopDock({floatingId=null}: {floatingId?: string|null
     let dead=false;const offs:(()=>void)[]=[];
     void import("@tauri-apps/api/event").then(async({listen})=>{
       for(const off of await Promise.all([
-        listen<boolean>("pip://dock-visible",e=>setVisible(e.payload)),
         listen<string>("pip://redock",e=>{setVisible(true);setRedock(old=>({id:e.payload,sequence:(old?.sequence??0)+1}));}),
       ])){if(dead)off();else offs.push(off);}
       if(!dead)setListening(true);
@@ -56,6 +55,10 @@ export default function DesktopDock({floatingId=null}: {floatingId?: string|null
   };
   const editor=(id:string,back:()=>void)=><DockEditor id={id} notes={allNotes} folders={folders} color={prefs.noteColors?.[id]??null} onColor={c=>color(id,c)} onChanged={()=>void refresh()} onBack={back}/>;
   return <MotionConfig reducedMotion={prefs.reducedMotion?"always":"user"}><div ref={root} className="db desktop-host">
+    {!floatingId && <>
+      <button type="button" className="desktop-edge-tab desktop-edge-top" aria-label="Open Pip dashboard" title="Open Pip dashboard" onClick={()=>{if(isNative())void call("desktop_dashboard");}} />
+      <button type="button" className="desktop-edge-tab desktop-edge-right" aria-label="Toggle folders" title="Folders" aria-controls="fr-panel" aria-expanded={visible} onClick={()=>setVisible(v=>!v)} />
+    </>}
     {floatingId ? <Floating native f={{id:floatingId,x:12,y:12}} z={0} onFront={()=>{}} onClose={()=>void call("win_close")} onDock={()=>void call("desktop_redock",{id:floatingId})}>
       {editor(floatingId,()=>void call("win_close"))}
     </Floating> : <FolderRail desktopVisible={visible} redockId={redock?.id} redockSequence={redock?.sequence} notes={allNotes} folders={folders} pinned={prefs.pinnedFolders??[]}
