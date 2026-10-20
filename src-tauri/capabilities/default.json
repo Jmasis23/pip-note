@@ -4,7 +4,7 @@
   "description": "Pip main window. Commands are explicit Rust functions; there is no shell, file-system or HTTP access from the web view.",
   "windows": [
     "main",
-    "capture"
+    "capture", "desktop-dock", "note-*"
   ],
   "permissions": [
     "core:default",

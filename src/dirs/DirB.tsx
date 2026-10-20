@@ -22,6 +22,7 @@ import "@fontsource-variable/bricolage-grotesque";
 import "../bui/pip.css";
 import "./b.css";
 import "../redesign.css";
+import "../desktop-dock.css";
 
 const VIEWS: { id: View; label: string }[] = [{ id: "all", label: "All" }, { id: "today", label: "Today" }, { id: "pinned", label: "Pinned" }, { id: "drafts", label: "Drafts" }, { id: "trash", label: "Trash" }];
 const tone = (n: Note, picked?: string) => picked ?? (n.pinned ? "lav" : n.checklist.length ? "mint" : Date.now() - n.updatedAt < 864e5 ? "peach" : "white");
@@ -29,6 +30,16 @@ const tone = (n: Note, picked?: string) => picked ?? (n.pinned ? "lav" : n.check
 export default function DirB() {
   const { folder, setFolder, folders, view, setView: setNotesView, query, setQuery, notes, allNotes, loaded, drafts, counts, prefs, setPrefs, refresh } = useNotes();
   const [home, setHome] = useState(true);
+  useEffect(()=>{
+    if(!isNative())return;
+    let dead=false;let off=()=>{};
+    void onNativeEvent("pip://dashboard-reveal",()=>{
+      const el=document.querySelector(".db");if(!el)return;
+      el.classList.remove("dashboard-reveal");void (el as HTMLElement).offsetWidth;el.classList.add("dashboard-reveal");
+    }).then(f=>{if(dead)f();else off=f;});
+    return ()=>{dead=true;off();};
+  },[]);
+
   const setView = (next: View) => { setHome(false); setNotesView(next); };
   const browse = (next: View) => { setFolder(""); setQuery(""); setView(next); };
   const openHome = () => { setFolder(""); setQuery(""); setHome(true); };
@@ -178,7 +189,7 @@ export default function DirB() {
         </AnimatePresence>
       </LayoutGroup>
 
-      <FolderRail notes={allNotes} folders={folders} pinned={prefs.pinnedFolders ?? []} onTogglePin={railPin} onAddFolder={railAdd} renderEditor={paneEditor} />
+      {!isNative() && <FolderRail notes={allNotes} folders={folders} pinned={prefs.pinnedFolders ?? []} onTogglePin={railPin} onAddFolder={railAdd} renderEditor={paneEditor} />}
 
       <nav className="db-dock" aria-label="Views">
         <LayoutGroup id="dock">

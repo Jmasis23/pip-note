@@ -49,6 +49,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: src-tauri }
       - run: npm ci
+      - name: Native window policy tests
+        run: cargo test --lib --manifest-path src-tauri/Cargo.toml
       - name: Version each build so the updater sees it as newer
         shell: bash
         run: |

@@ -4,8 +4,9 @@ import type { NoteRepo } from "./repo/repo";
 import { DEFAULT_PREFS } from "./domain";
 import type { Draft, Note, Prefs, View } from "./domain";
 
-import { kv } from "./native";
-export const repo: NoteRepo = createRepo(kv);
+import { kv, call, isNative, onNativeEvent } from "./native";
+import { createDesktopRepo } from "./desktopRepo";
+export const repo: NoteRepo = isNative() ? createDesktopRepo({ load: () => call("store_load"), commit: (expected, changes) => call("store_commit", { expected, changes }) }) : createRepo(kv);
 
 export function useNotes() {
   const [view, setView] = useState<View>("all");
@@ -31,6 +32,12 @@ export function useNotes() {
   }, [view, query, folder]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    if (!isNative()) return;
+    let dead=false; let off=()=>{};
+    void onNativeEvent("pip://notes-changed",()=>{void refresh();}).then(f=>{if(dead)f();else off=f;});
+    return ()=>{dead=true;off();};
+  },[refresh]);
   useEffect(() => { void repo.runDailyBackup(); }, []);
   useEffect(() => {
     const on = (e: StorageEvent) => { if (e.key?.startsWith("pip.")) void refresh(); };

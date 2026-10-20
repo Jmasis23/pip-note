@@ -1,3 +1,7 @@
+mod desktop;
+mod edge_policy;
+#[cfg(test)]
+mod edge_policy_tests;
 mod shake;
 mod capture_bounds;
 mod clipboard;
@@ -15,7 +19,7 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 
-struct AppState { kv: FileKv, shake: Arc<AtomicBool>, level: Arc<std::sync::atomic::AtomicU8>, shortcut: Mutex<Option<Shortcut>> }
+struct AppState { store_gate: Mutex<()>, kv: FileKv, shake: Arc<AtomicBool>, level: Arc<std::sync::atomic::AtomicU8>, shortcut: Mutex<Option<Shortcut>> }
 
 /// Keep capture on the active monitor, above its taskbar and inside its work area.
 /// Tauri sizes here are physical pixels; UI limits are converted using that monitor's DPI.
@@ -60,27 +64,36 @@ pub fn open_capture(app: &AppHandle) {
 }
 fn show_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") { let _ = w.unminimize(); let _ = w.show(); let _ = w.set_focus(); return; }
-    // The main window's web view is released while Pip sits in the tray (see the close handler). Build it again with the same settings.
-    // Built off the event-loop thread so it cannot deadlock on Windows.
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        if app.get_webview_window("main").is_some() { return; }
-        if let Ok(w) = tauri::WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::App("index.html".into()))
-            .title("Pip").inner_size(1180.0, 780.0).min_inner_size(420.0, 520.0).resizable(true).decorations(false).build()
-        { let _ = w.set_focus(); }
-    });
+    build_main(app, true);
 }
 
+static MAIN_BUILDING: AtomicBool = AtomicBool::new(false);
+fn build_main(app: &AppHandle, focus: bool) {
+    if MAIN_BUILDING.swap(true, Ordering::SeqCst) { return; }
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if app.get_webview_window("main").is_none() {
+            if let Ok(w) = tauri::WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::App("index.html".into()))
+                .title("Pip").inner_size(1180.0,780.0).min_inner_size(420.0,520.0).resizable(true).decorations(false).focused(focus).build()
+            { if focus { let _=w.set_focus(); } }
+        }
+        MAIN_BUILDING.store(false, Ordering::SeqCst);
+    });
+}
 fn web_key_ok(k: &str) -> bool { k.starts_with("pip.") && !k.starts_with("pip.ai") }
 
 #[tauri::command]
 fn store_load(st: State<AppState>) -> Result<HashMap<String, String>, String> {
+    let _guard = st.store_gate.lock().map_err(|_| "busy")?;
     Ok(st.kv.all().map_err(|e| e.to_string())?.into_iter().filter(|(k, _)| web_key_ok(k)).collect())
 }
 #[tauri::command]
-fn store_set(st: State<AppState>, key: String, value: String) -> Result<(), String> {
+fn store_set(app: AppHandle, st: State<AppState>, key: String, value: String) -> Result<(), String> {
     if !web_key_ok(&key) { return Err("bad key".into()); }
-    st.kv.set(&key, &value).map_err(|e| e.to_string())
+    let _guard = st.store_gate.lock().map_err(|_| "busy")?;
+    st.kv.set(&key, &value).map_err(|e| e.to_string())?;
+    let _ = app.emit("pip://notes-changed", ());
+    Ok(())
 }
 
 const CRED_KEY: &str = "chatgpt-cred"; // none of these are "pip." keys, so the web view cannot read them
@@ -217,13 +230,14 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         // Pip lives in the tray: it starts with Windows, quietly, so the shake and hotkey always work.
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--background"])))
+        .manage(desktop::DesktopState::default())
         .manage(Pending(Mutex::new(None)))
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             let kv = FileKv::open(dir.join("store")).map_err(|e| e.to_string())?;
             let shake = Arc::new(AtomicBool::new(true));
             let level = Arc::new(std::sync::atomic::AtomicU8::new(50));
-            let st = AppState { kv, shake: shake.clone(), level: level.clone(), shortcut: Mutex::new(None) };
+            let st = AppState { store_gate: Mutex::new(()), kv, shake: shake.clone(), level: level.clone(), shortcut: Mutex::new(None) };
             let handle = app.handle().clone();
             let _ = register_shortcut(&handle, &st, parse_shortcut("Ctrl+Shift+Space")?); // default until the web view says otherwise
             app.manage(st);
@@ -238,6 +252,7 @@ pub fn run() {
             }
             // Started by Windows (--background): stay in the tray. Opened by hand: show the window.
             if !std::env::args().any(|a| a == "--background") { show_main(&handle); }
+            desktop::create(&handle)?;
             assist::start_clock(handle.clone());
             clipboard::start(handle.clone())?;
             shake::start(handle.clone(), shake, level);
@@ -263,6 +278,9 @@ pub fn run() {
         // The main window's web view (the biggest memory cost) is released a few seconds later, after any pending note save has flushed,
         // and rebuilt on demand by show_main. The small capture box stays loaded so the shake still opens it instantly.
         .on_window_event(|w, ev| {
+            if matches!(ev, WindowEvent::ScaleFactorChanged { .. }) {
+                if let Some(dock)=w.app_handle().get_webview_window(w.label()) { desktop::refresh_regions(&dock); }
+            }
             if w.label() == "capture" && matches!(ev, WindowEvent::Moved(_) | WindowEvent::Resized(_)) {
                 if let Some(capture) = w.app_handle().get_webview_window("capture") { fit_capture(&capture, false); }
             }
@@ -278,7 +296,46 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
+        .invoke_handler(tauri::generate_handler![desktop::desktop_regions, desktop::desktop_float, desktop::desktop_redock,assist::ai_status, assist::ai_set_key, assist::ai_set_primary, assist::ai_complete, clipboard::clipboard_status, clipboard::clipboard_enable, clipboard::clipboard_delete, clipboard::clipboard_copy, store_load, store_set, store_commit, chatgpt_sign_in, chatgpt_id_token, oauth_browser, set_shake_enabled, set_shake_level, update_check, update_download, update_install, set_shortcut, export_file, win_minimize, win_toggle_max, win_is_max, win_close, capture_hide, capture_saved, prefs_changed])
         .run(tauri::generate_context!())
         .expect("error while running Pip");
+}
+
+
+/// Edge hover reveals the real dashboard without requesting keyboard focus.
+/// A visible, unminimized dashboard is left in place to avoid repeated disruption.
+fn reveal_main(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        if w.is_focused().unwrap_or(false) { return; }
+        #[cfg(windows)] {
+            use windows::Win32::UI::WindowsAndMessaging::*;
+            if let Ok(h) = w.hwnd() { unsafe {
+                let hwnd=windows::Win32::Foundation::HWND(h.0);
+                let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+                let _ = SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+            } }
+        }
+        #[cfg(not(windows))] { let _ = w.unminimize(); let _ = w.show(); }
+        let _ = w.emit("pip://dashboard-reveal", ());
+    } else {
+        // Keep one dashboard lifecycle: use the same builder and the same restore guard.
+        build_main(app, false);
+    }
+}
+
+
+/// Commit against one authoritative snapshot. A stale whole-store cache can never overwrite another window.
+#[tauri::command]
+fn store_commit(app: AppHandle, st: State<AppState>, expected: HashMap<String,String>, changes: HashMap<String,String>) -> Result<bool,String> {
+    if changes.keys().any(|k| !web_key_ok(k)) { return Err("bad key".into()); }
+    let _guard=st.store_gate.lock().map_err(|_| "busy")?;
+    for key in changes.keys() {
+        if st.kv.get(key).map_err(|e|e.to_string())?.as_ref() != expected.get(key) { return Ok(false); }
+    }
+    // Backups are committed before the live store. Each FileKv write is an atomic replacement.
+    let mut keys: Vec<_>=changes.keys().collect();
+    keys.sort_by_key(|k| (k.as_str()=="pip.store.v1",k.as_str()));
+    for key in keys { st.kv.set(key,&changes[key]).map_err(|e|e.to_string())?; }
+    let _=app.emit("pip://notes-changed",());
+    Ok(true)
 }

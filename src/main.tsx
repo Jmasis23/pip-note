@@ -6,6 +6,11 @@ import "./styles.css";
 async function boot() {
   seedIfAsked(import.meta.env.VITE_PREVIEW === "true");
   try { await initStorage(); } catch (e) { console.error("native init failed", e); }
+  const mode = new URLSearchParams(location.search);
+  if (mode.has("desktop-dock") || mode.has("floating")) {
+    const { default: DesktopDock } = await import("./DesktopDock");
+    createRoot(document.getElementById("root")!).render(<DesktopDock floatingId={mode.get("floating")} />); return;
+  }
   if (new URLSearchParams(location.search).has("capture")) {
     const { default: Pop } = await import("./CapturePopup");
     createRoot(document.getElementById("root")!).render(<Pop />); return;

@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, LayoutGroup, motion, useDragControls, type PanInfo } from "motion/react";
 import { Button as AriaButton } from "react-aria-components";
 import { RiPushpin2Fill, RiPushpin2Line, RiDragMove2Line, RiArrowLeftSLine, RiLayoutRightLine } from "@remixicon/react";
 import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { CloseButton } from "@/components/base/buttons/close-button";
+import { call, isNative } from "../native";
 import type { Note } from "../domain";
 import { preview, when } from "../dirs/util";
 import "./rail.css";
@@ -15,7 +16,8 @@ const SPRING = { type: "spring", stiffness: 520, damping: 38 } as const;
 const PANEL = { type: "spring", stiffness: 420, damping: 36, mass: 0.9 } as const;
 type Float = { id: string; x: number; y: number };
 
-export function FolderRail({ notes, folders, pinned, onTogglePin, onAddFolder, renderEditor }: {
+export function FolderRail({ notes, folders, pinned, onTogglePin, onAddFolder, renderEditor, desktopVisible, redockId, redockSequence }: {
+  desktopVisible?: boolean; redockId?: string | null; redockSequence?: number;
   notes: Note[]; folders: string[]; pinned: string[];
   onTogglePin: (folder: string) => void;
   onAddFolder: (name: string) => Promise<string | null>;
@@ -29,6 +31,12 @@ export function FolderRail({ notes, folders, pinned, onTogglePin, onAddFolder, r
   const panelRef = useRef<HTMLElement>(null);
   const controls = useDragControls();
   const panelOffset = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!redockId) return;
+    const top = notes.find(n => n.id === redockId)?.folder?.split("/")[0];
+    if (top) { setOpen(top); setNoteId(redockId); setCreating(false); }
+  }, [redockId, redockSequence]);
 
   const tops = useMemo(() => {
     const t = [...new Set(folders.map(f => f.split("/")[0]))].sort((a, b) => a.localeCompare(b));
@@ -52,7 +60,8 @@ export function FolderRail({ notes, folders, pinned, onTogglePin, onAddFolder, r
     setDragging(false); if (!fromPanel) panelOffset.current = { x: 0, y: 0 };
     if (!outside(info.point, panelOffset.current)) return false;
     const x = Math.max(12, Math.min(window.innerWidth - 440, info.point.x - 210)), y = Math.max(12, Math.min(window.innerHeight - 160, info.point.y - 22));
-    setFloats(fs => [...fs.filter(f => f.id !== id), { id, x, y }]);
+    if (desktopVisible !== undefined && isNative()) void call("desktop_float", { id });
+    else setFloats(fs => [...fs.filter(f => f.id !== id), { id, x, y }]);
     return true;
   };
   const dock = (id: string) => {
@@ -77,7 +86,7 @@ export function FolderRail({ notes, folders, pinned, onTogglePin, onAddFolder, r
   const editing = noteId && !floats.some(f => f.id === noteId) ? noteId : null;
 
   return <>
-    <nav className="fr" aria-label="Folders">
+    <nav className="fr" aria-label="Folders" aria-hidden={desktopVisible === false ? true : undefined} style={desktopVisible === false ? { visibility: "hidden", pointerEvents: "none" } : undefined}>
       <LayoutGroup id="rail">
         {tops.p.map(tile)}
         {tops.p.length > 0 && tops.r.length > 0 && <hr className="fr-sep" />}
@@ -96,7 +105,7 @@ export function FolderRail({ notes, folders, pinned, onTogglePin, onAddFolder, r
 
     <AnimatePresence>
       {(open || creating) && (
-        <motion.section key="panel" id="fr-panel" ref={panelRef} className="fr-panel" data-edit={editing ? "" : undefined} aria-label={creating ? "New folder" : open ?? ""}
+        <motion.section key="panel" id="fr-panel" ref={panelRef} className="fr-panel" style={desktopVisible === false && !(open && pinned.includes(open)) ? { visibility: "hidden", pointerEvents: "none" } : undefined} data-edit={editing ? "" : undefined} aria-label={creating ? "New folder" : open ?? ""}
           initial={{ opacity: 0, x: 36, scale: 0.97 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 28, scale: 0.97, transition: { duration: 0.16, ease: "easeIn" } }} transition={PANEL}
           drag={!!editing} dragControls={controls} dragListener={false} dragSnapToOrigin dragElastic={0.18} dragMomentum={false}
           onDragStart={() => setDragging(true)}
@@ -155,12 +164,12 @@ function NewFolder({ onDone, onCancel }: { onDone: (n: string) => void; onCancel
   </form>;
 }
 
-function Floating({ f, z, children, onFront, onClose, onDock }: { f: Float; z: number; children: ReactNode; onFront: () => void; onClose: () => void; onDock: () => void }) {
+export function Floating({ f, z, children, onFront, onClose, onDock, native = false }: { native?: boolean; f: Float; z: number; children: ReactNode; onFront: () => void; onClose: () => void; onDock: () => void }) {
   const c = useDragControls();
   return <motion.section className="fr-float" style={{ left: f.x, top: f.y, zIndex: 60 + z }} aria-label="Floating note"
     initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }} transition={PANEL}
-    drag dragControls={c} dragListener={false} dragMomentum={false} dragElastic={0} onPointerDown={onFront}>
-    <header className="fr-fh" onPointerDown={e => { if (!(e.target as HTMLElement).closest("button")) c.start(e); }}>
+    drag={!native} dragControls={c} dragListener={false} dragMomentum={false} dragElastic={0} onPointerDown={onFront}>
+    <header className="fr-fh" onPointerDown={e => { if (!(e.target as HTMLElement).closest("button")) native ? void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow().startDragging()) : c.start(e); }}>
       <RiDragMove2Line className="fr-grip" aria-hidden />
       <span className="fr-fgrow" />
       <TooltipTrigger><IconButton size="small" icon={RiLayoutRightLine} aria-label="Dock back to the folder" onClick={onDock} /><Tooltip placement="bottom">Dock</Tooltip></TooltipTrigger>
