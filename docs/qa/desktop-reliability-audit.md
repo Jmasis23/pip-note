@@ -1,6 +1,6 @@
 # Desktop reliability audit
 
-This change fixes reproduced persistence and desktop interaction bugs without changing the dashboard, dock appearance, AI configuration, or landing site.
+This change fixes reproduced persistence and desktop interaction bugs, and replaces the clipped Rewrite preset menu with the custom instruction form requested by the user. Dashboard/dock appearance, AI providers and credentials, and the landing site are preserved.
 
 ## Confirmed regressions
 
@@ -11,10 +11,12 @@ This change fixes reproduced persistence and desktop interaction bugs without ch
 - Markdown export could read old content before a pending save completed. It now awaits a successful save.
 - Capture close treated a failed verification read as an empty note. Read/cleanup errors now keep the popup open with a retryable error.
 - Editor color and selection popovers outside the note panel were omitted from the shaped native window. Their rectangles now participate in the native hit region.
+- Native region updates could stay stale after a layout change without a delivered resize/paint event. A 250 ms geometry check now recovers those changes, sends no IPC for unchanged regions, and stops on cleanup. The observed installed 0.2.58 clip region ended at x=1696 on a 1920-pixel-wide work area; live verification of the replacement is still required.
+- Rewrite's right-aligned absolute menu could extend out of a narrow sidebar. Rewrite now opens an inline instruction textarea within the editor, with wrapping toolbar/actions, keyboard cancellation and Undo. Freeform requests replace the preset-only menu. Responses are discarded if local typing or another window changes the source document while the request is pending.
 
 ## Automated validation
 
-- `npm test`: 99 tests passed across 19 files. Tests use delayed real repository writes and injected storage failures to reproduce the save/close races; existing gesture, capture resize, repository, sync, AI planning, and dock tests also pass.
+- `npm test`: 105 tests passed across 20 files. Tests use delayed real repository writes and injected storage failures to reproduce the save/close races; custom prompt submission, focus/cancel, Undo, stale AI response rejection, and silent region movement are covered. Existing gesture, capture resize, repository, sync, AI planning, and dock tests also pass.
 - `npm run typecheck`: passed.
 - `npm run build`: passed.
 - `cargo check --tests --manifest-path src-tauri/Cargo.toml`: passed with local GNU compiler helpers.
@@ -31,6 +33,7 @@ Native test execution and Windows CI status are reported in the pull request. Br
 - Edit the same note from the dashboard and a floating window. A clean editor should show the new body, while unsaved concurrent edits should retain conflict recovery.
 - Export Markdown immediately after typing; verify the file contains the latest title/body.
 - Check color and selection popovers from the desktop dock, including areas extending outside the note panel.
+- In a narrow sidebar/floating editor, open Rewrite. Confirm the instruction field and actions stay inside the panel; submit an arbitrary request, cancel with Escape, and use Undo. Real provider output and live layout have not been exercised by the automated tests.
 - Confirm orange tabs, pinned panels, tray operation, monitor transitions, display scaling, focus, and fullscreen suppression still behave as before.
 
-The audit does not claim exhaustive bug elimination or live desktop validation. The existing main-window destroy/quit paths still do not provide a general save-failure veto; this change adds explicit save protection to editor actions and capture dismissal.
+The audit does not claim exhaustive bug elimination or live desktop validation. Computer Use was stopped at the user's request; subsequent work used code and automated tests only. The existing main-window destroy/quit paths still do not provide a general save-failure veto; this change adds explicit save protection to editor actions and capture dismissal.

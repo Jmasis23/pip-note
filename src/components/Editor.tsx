@@ -11,7 +11,7 @@ import { RichBody } from "./RichBody";
 import { Dropdown, NewFolder } from "./Dropdown";
 import type { RichHandle } from "./RichBody";
 import { aiAvailable, aiComplete } from "../ai/client";
-import { cleanRewrite, REWRITE_LABEL, rewriteMessages, type RewriteMode } from "../ai/plan";
+import { cleanRewrite, rewriteMessages } from "../ai/plan";
 import "./ai.css";
 
 type Save = "idle" | "pending" | "saved" | "error";
@@ -41,21 +41,32 @@ export const Editor = forwardRef<EditorHandle, { note: Note; folders?: string[];
   const [folder, setFolder] = useState(note.folder ?? "");
   useEffect(() => setFolder(note.folder ?? ""), [note.id, note.folder]);
   const [menu, setMenu] = useState(false);
+  const [instruction, setInstruction] = useState("");
+  const rewriteButton = useRef<HTMLButtonElement>(null);
+  const rewriteInput = useRef<HTMLTextAreaElement>(null);
+  const rewriting = useRef(false);
   const [rw, setRw] = useState<{ s: "busy" } | { s: "done"; prev: { body: string; rich: string; items: ChecklistItem[] } } | { s: "err"; msg: string } | null>(null);
-  useEffect(() => { setRw(null); setMenu(false); }, [note.id]);
-  const rewrite = async (mode: RewriteMode) => {
+  useEffect(() => { setRw(null); setMenu(false); setInstruction(""); }, [note.id]);
+  useEffect(() => { if (menu) rewriteInput.current?.focus(); }, [menu]);
+  const closeRewrite = () => { setMenu(false); rewriteButton.current?.focus(); };
+  const rewrite = async () => {
+    if (!instruction.trim() || rewriting.current) return;
     setMenu(false);
     const src = latest.current.body.trim() || latest.current.items.map(i => i.text).join("\n");
     if (!src) { setRw({ s: "err", msg: "Write something first." }); return; }
+    rewriting.current = true;
+    const version = editVersion.current;
+    const source = JSON.stringify(latest.current);
     setRw({ s: "busy" });
     try {
-      const out = cleanRewrite(await aiComplete(rewriteMessages(mode, src)));
+      const out = cleanRewrite(await aiComplete(rewriteMessages(instruction, src)));
       if (!out) throw new Error("Empty reply.");
+      if (editVersion.current !== version || JSON.stringify(latest.current) !== source) throw new Error("Your note changed while rewriting. Your edits are still here. Try again.");
       const prev = { body: latest.current.body, rich: latest.current.rich, items: latest.current.items };
-      if (mode === "checklist") { setItems([...prev.items, ...out.split("\n").map(t => t.replace(/^[-*\u2022\d.)\s]+/, "").trim()).filter(Boolean).slice(0, 30).map(text => ({ id: uid(), text, done: false }))]); }
-      else { const r = plainToRich(out); setBody(out); setRich(r); setSeed(x => x + 1); }
+      const r = plainToRich(out); setBody(out); setRich(r); setSeed(x => x + 1);
       touch(); setRw({ s: "done", prev });
     } catch (e) { setRw({ s: "err", msg: String((e as Error)?.message ?? e).slice(0, 140) }); }
+    finally { rewriting.current = false; }
   };
   const undoRw = () => { if (rw?.s !== "done") return; const { prev } = rw; setBody(prev.body); setRich(prev.rich); setItems(prev.items); setSeed(x => x + 1); touch(); setRw(null); };
   const moveTo = async (to?: string) => { const f = cleanFolder(to ?? folder); setFolder(f); if (f === (note.folder ?? "")) return; if (!await flush()) return; try { const n = await repo.update(note.id, rev.current, { folder: f }); rev.current = n.revision; onChanged(); } catch { setErr("Couldn't move it."); setSave("error"); } };
@@ -118,8 +129,7 @@ export const Editor = forwardRef<EditorHandle, { note: Note; folders?: string[];
             <button className="ghost" onClick={async () => { await repo.restore(note.id); onChanged(); }}>Restore</button>
             <button className="ghost danger" onClick={async () => { if (confirm("Delete this note forever? This can't be undone.")) { await repo.deleteForever(note.id); onChanged(); } }}>Delete forever</button>
           </>) : (<>
-            {aiAvailable() && <div className="rw"><button className="ghost" aria-haspopup="menu" aria-expanded={menu} disabled={rw?.s === "busy"} onClick={() => setMenu(m => !m)} onKeyDown={e => { if (e.key === "Escape" && menu) { e.stopPropagation(); setMenu(false); } }}>{rw?.s === "busy" ? "Working..." : "Rewrite"}</button>
-              {menu && <div className="rw-menu" role="menu">{(Object.keys(REWRITE_LABEL) as RewriteMode[]).map(m => <button key={m} role="menuitem" onClick={() => void rewrite(m)}>{REWRITE_LABEL[m]}</button>)}</div>}</div>}
+            {aiAvailable() && <button ref={rewriteButton} className="ghost" aria-expanded={menu} disabled={rw?.s === "busy"} onClick={() => setMenu(m => !m)}>{rw?.s === "busy" ? "Working..." : "Rewrite"}</button>}
             {onColor && <ColorPick value={color} onChange={onColor} />}
             <button className="ghost" aria-pressed={note.pinned} onClick={async () => { if (!await flush()) return; await repo.setPinned(note.id, !note.pinned); onChanged(); }}>{note.pinned ? "Unpin" : "Pin"}</button>
             <button className="ghost" onClick={async () => { if (!await flush()) return; try { const m = await repo.exportMarkdown(note.id); const where = await exportFile(m.filename, m.text, "text/markdown"); if (where) setInfo(`Saved to ${where}`); } catch { setInfo("Couldn't save the file."); } }}>Export .md</button>
@@ -127,6 +137,15 @@ export const Editor = forwardRef<EditorHandle, { note: Note; folders?: string[];
           </>)}
         </div>
       </div>
+      {menu && !locked && <form className="rw-form" aria-label="Rewrite note" onSubmit={e => { e.preventDefault(); void rewrite(); }} onKeyDown={e => {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeRewrite(); }
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.stopPropagation(); void rewrite(); }
+      }}>
+        <label>What would you like to change?
+          <textarea ref={rewriteInput} aria-label="Rewrite instruction" value={instruction} maxLength={2000} rows={3} placeholder="Make it shorter, translate it, or turn it into an email…" onChange={e => setInstruction(e.target.value)} />
+        </label>
+        <div className="rw-form-actions"><button type="button" className="ghost" onClick={closeRewrite}>Cancel</button><button type="submit" className="primary sm" disabled={!instruction.trim()}>Rewrite note</button></div>
+      </form>}
       {!locked && (
         <div className="ed-folder">
           <span>Folder</span>
