@@ -30,3 +30,13 @@ it("delivers the latest geometry after a prior native update finishes",async()=>
  await settle();el.style.visibility="visible";await settle();complete();await settle();
  expect(region).toEqual([{x:1790,y:370,width:78,height:240}]);
 });
+it("includes editor color and selection popovers outside the note panel",async()=>{
+ const color=document.createElement("div"),selection=document.createElement("div");
+ color.className="cp-pop";selection.className="rt-bubble";document.body.append(color,selection);
+ for(const el of [color,selection]){
+  vi.spyOn(el,"getClientRects").mockReturnValue([{}] as unknown as DOMRectList);
+  vi.spyOn(el,"getBoundingClientRect").mockReturnValue({x:500,y:50,width:200,height:40} as DOMRect);
+ }
+ let region:Rect[]=[];stop=observeDesktopRegions(async next=>{region=next;});await settle();
+ expect(region).toEqual([{x:490,y:40,width:220,height:60},{x:490,y:40,width:220,height:60}]);
+});

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import {Simulate} from "react-dom/test-utils";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { DEFAULT_PREFS } from "./domain";
 import CapturePopup from "./CapturePopup";
@@ -20,7 +21,7 @@ vi.mock("./captureService", () => ({ captureModelEnabled: false, suggestCapture:
 vi.mock("./useNotes", () => ({ repo: {
   getPrefs: async () => ({ ...DEFAULT_PREFS, reducedMotion: true }),
   list: async () => [], listDrafts: async () => [], saveDraft: mocks.saveDraft,
-  create: async () => NOTE, get: async () => NOTE, trash: async () => NOTE, deleteForever: async () => {},
+  create: async () => NOTE, get: async () => NOTE, update: async (_id:string,_revision:number,patch:object) => ({...NOTE,...patch,revision:2}), trash: async () => NOTE, deleteForever: async () => {},
 } }));
 let root: Root;
 let host: HTMLDivElement;
@@ -47,4 +48,11 @@ it("closes on Escape and drops the empty note", async () => {
   await act(async () => { host.querySelector(".fr-panel")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
   await act(async () => { await new Promise(r => setTimeout(r, 200)); });
   expect(mocks.call).toHaveBeenCalledWith("capture_hide");
+});
+it("preserves active capture text when the shortcut or shake opens it again",async()=>{
+  const title=host.querySelector<HTMLInputElement>('[aria-label="Title"]')!;
+  await act(async()=>{title.value="Still writing";Simulate.change(title);});
+  await act(async()=>{mocks.show?.();});
+  expect(host.querySelector('[aria-label="Title"]')).toBe(title);
+  expect(title.value).toBe("Still writing");
 });

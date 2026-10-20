@@ -11,7 +11,7 @@ export function observeDesktopRegions(
   let retry: ReturnType<typeof setTimeout> | undefined;
   const report = () => {
     if (dead || pending) return;
-    const surfaces = [...document.querySelectorAll<HTMLElement>(".desktop-edge-tab,.fr,.fr-panel,.fr-float,[role=tooltip],[role=listbox],.dropdown-menu,.rw-menu")]
+    const surfaces = [...document.querySelectorAll<HTMLElement>(".desktop-edge-tab,.fr,.fr-panel,.fr-float,.cp-pop,.rt-bubble,[role=tooltip],[role=listbox],.dropdown-menu,.rw-menu")]
       .filter(el => getComputedStyle(el).visibility !== "hidden" && el.getClientRects().length > 0)
       .map(el => {
         const r = el.getBoundingClientRect();

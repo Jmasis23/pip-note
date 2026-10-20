@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { LiveTextStepper } from "./LiveTextStepper";
 import { ColorPick, type Tone } from "./ColorPick";
 import type { ChecklistItem, Note } from "../domain";
@@ -17,7 +17,8 @@ import "./ai.css";
 type Save = "idle" | "pending" | "saved" | "error";
 const uid = () => crypto.randomUUID();
 
-export function Editor({ note, folders = [], onChanged, onBack, color = null, onColor }: { note: Note; folders?: string[]; onChanged: () => void; onBack: () => void; color?: Tone | null; onColor?: (c: Tone | null) => void }) {
+export type EditorHandle = { flush: () => Promise<boolean> };
+export const Editor = forwardRef<EditorHandle, { note: Note; folders?: string[]; onChanged: () => void; onBack: () => void; color?: Tone | null; onColor?: (c: Tone | null) => void }>(function Editor({ note, folders = [], onChanged, onBack, color = null, onColor }, handle) {
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
   const [rich, setRich] = useState(note.rich ?? plainToRich(note.body));
@@ -29,6 +30,8 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
   const rev = useRef(note.revision);
   const timer = useRef<number>();
   const dirty = useRef(false);
+  const editVersion = useRef(0);
+  const saving = useRef<Promise<boolean> | null>(null);
   const latest = useRef({ title, body, rich, items });
   latest.current = { title, body, rich, items };
   const locked = note.deletedAt !== null;
@@ -55,26 +58,44 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
     } catch (e) { setRw({ s: "err", msg: String((e as Error)?.message ?? e).slice(0, 140) }); }
   };
   const undoRw = () => { if (rw?.s !== "done") return; const { prev } = rw; setBody(prev.body); setRich(prev.rich); setItems(prev.items); setSeed(x => x + 1); touch(); setRw(null); };
-  const moveTo = async (to?: string) => { const f = cleanFolder(to ?? folder); setFolder(f); if (f === (note.folder ?? "")) return; await flush(); try { const n = await repo.update(note.id, rev.current, { folder: f }); rev.current = n.revision; onChanged(); } catch { setErr("Couldn't move it."); setSave("error"); } };
+  const moveTo = async (to?: string) => { const f = cleanFolder(to ?? folder); setFolder(f); if (f === (note.folder ?? "")) return; if (!await flush()) return; try { const n = await repo.update(note.id, rev.current, { folder: f }); rev.current = n.revision; onChanged(); } catch { setErr("Couldn't move it."); setSave("error"); } };
 
   useEffect(() => { setTitle(note.title); setBody(note.body); setRich(note.rich ?? plainToRich(note.body)); setSeed(x => x + 1); setItems(note.checklist); rev.current = note.revision; setSave("idle"); setConflict(null); setErr(""); dirty.current = false; }, [note.id]);
   useEffect(() => {
-    if (!dirty.current && !conflict) { setTitle(note.title); setBody(note.body); setRich(note.rich ?? plainToRich(note.body)); setItems(note.checklist); rev.current = note.revision; }
+    if (!dirty.current && !conflict) {
+      const nextRich = note.rich ?? plainToRich(note.body);
+      // RichBody is intentionally uncontrolled: reseed only for a different saved document.
+      if (nextRich !== latest.current.rich) setSeed(x => x + 1);
+      setTitle(note.title); setBody(note.body); setRich(nextRich); setItems(note.checklist); rev.current = note.revision;
+    }
   }, [note.revision]);
 
-  const flush = async () => {
+  const flush = (): Promise<boolean> => {
     window.clearTimeout(timer.current);
-    if (!dirty.current || locked) return;
-    const { title, body, rich, items } = latest.current;
-    try {
-      const n = await repo.update(note.id, rev.current, { title, body, rich, checklist: items });
-      rev.current = n.revision; dirty.current = false; setSave("saved"); setErr(""); onChanged();
-    } catch (e) {
-      if (e instanceof ConflictError) { setConflict(e.latest); setSave("error"); }
-      else { setSave("error"); setErr("Couldn't save. Your text is still here."); }
-    }
+    if (saving.current) return saving.current;
+    if (!dirty.current || locked) return Promise.resolve(!dirty.current);
+    saving.current = (async () => {
+      try {
+        // Blur, debounce and close can all request a save. Share one writer and drain newer edits.
+        do {
+          const version = editVersion.current;
+          const { title, body, rich, items } = latest.current;
+          const n = await repo.update(note.id, rev.current, { title, body, rich, checklist: items });
+          rev.current = n.revision; dirty.current = editVersion.current !== version;
+          if (!dirty.current) { setSave("saved"); setErr(""); }
+          onChanged();
+        } while (dirty.current);
+        return true;
+      } catch (e) {
+        if (e instanceof ConflictError) { setConflict(e.latest); setSave("error"); }
+        else { setSave("error"); setErr("Couldn't save. Your text is still here."); }
+        return false;
+      }
+    })().finally(() => { saving.current = null; });
+    return saving.current;
   };
-  const touch = () => { dirty.current = true; setSave("pending"); window.clearTimeout(timer.current); timer.current = window.setTimeout(() => void flush(), 600); };
+  const touch = () => { editVersion.current++; dirty.current = true; setSave("pending"); window.clearTimeout(timer.current); timer.current = window.setTimeout(() => void flush(), 600); };
+  useImperativeHandle(handle, () => ({ flush }));
   useEffect(() => () => { window.clearTimeout(timer.current); if (dirty.current) void flush(); }, [note.id]);
 
   const toggle = (id: string) => { setItems(a => a.map(i => i.id === id ? { ...i, done: !i.done } : i)); touch(); };
@@ -90,7 +111,7 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
   return (
     <section className="editor" onBlur={() => void flush()} aria-label="Note editor">
       <div className="ed-bar">
-        <button className="ghost back" onClick={onBack} aria-label="Back to notes">Notes</button>
+        <button className="ghost back" onClick={async () => { if (await flush()) onBack(); }} aria-label="Back to notes">Notes</button>
         <span className={`status ${save === "error" ? "bad" : ""}`} role="status" aria-live="polite">{label}</span>
         <div className="ed-actions">
           {locked ? (<>
@@ -100,9 +121,9 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
             {aiAvailable() && <div className="rw"><button className="ghost" aria-haspopup="menu" aria-expanded={menu} disabled={rw?.s === "busy"} onClick={() => setMenu(m => !m)} onKeyDown={e => { if (e.key === "Escape" && menu) { e.stopPropagation(); setMenu(false); } }}>{rw?.s === "busy" ? "Working..." : "Rewrite"}</button>
               {menu && <div className="rw-menu" role="menu">{(Object.keys(REWRITE_LABEL) as RewriteMode[]).map(m => <button key={m} role="menuitem" onClick={() => void rewrite(m)}>{REWRITE_LABEL[m]}</button>)}</div>}</div>}
             {onColor && <ColorPick value={color} onChange={onColor} />}
-            <button className="ghost" aria-pressed={note.pinned} onClick={async () => { await flush(); await repo.setPinned(note.id, !note.pinned); onChanged(); }}>{note.pinned ? "Unpin" : "Pin"}</button>
-            <button className="ghost" onClick={async () => { const m = await repo.exportMarkdown(note.id); try { const where = await exportFile(m.filename, m.text, "text/markdown"); if (where) setInfo(`Saved to ${where}`); } catch { setInfo("Couldn't save the file."); } }}>Export .md</button>
-            <button className="ghost" onClick={async () => { await flush(); await repo.trash(note.id); onChanged(); }}>Trash</button>
+            <button className="ghost" aria-pressed={note.pinned} onClick={async () => { if (!await flush()) return; await repo.setPinned(note.id, !note.pinned); onChanged(); }}>{note.pinned ? "Unpin" : "Pin"}</button>
+            <button className="ghost" onClick={async () => { if (!await flush()) return; try { const m = await repo.exportMarkdown(note.id); const where = await exportFile(m.filename, m.text, "text/markdown"); if (where) setInfo(`Saved to ${where}`); } catch { setInfo("Couldn't save the file."); } }}>Export .md</button>
+            <button className="ghost" onClick={async () => { if (!await flush()) return; await repo.trash(note.id); onChanged(); }}>Trash</button>
           </>)}
         </div>
       </div>
@@ -135,4 +156,4 @@ export function Editor({ note, folders = [], onChanged, onBack, color = null, on
       </div>
     </section>
   );
-}
+});
