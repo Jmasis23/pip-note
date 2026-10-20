@@ -1,4 +1,4 @@
-//! Windows desktop companion host. No additional global mouse hook: 40 small cursor samples/sec.
+//! Click-only desktop tabs. A small background sampler follows monitors and suppresses fullscreen overlays.
 use serde::Deserialize;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -78,19 +78,11 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
 #[cfg(windows)]
 mod native {
     use super::*;
-    use crate::edge_policy::{Action, Policy, Sample};
-    use std::{
-        mem::size_of,
-        sync::atomic::Ordering,
-        time::{Duration, Instant},
-    };
+    use std::{mem::size_of, sync::atomic::Ordering, time::Duration};
     use windows::Win32::{
         Foundation::{HWND, POINT, RECT},
         Graphics::Gdi::*,
-        UI::{
-            Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON},
-            WindowsAndMessaging::*,
-        },
+        UI::WindowsAndMessaging::*,
     };
 
     pub fn show_without_focus(w: &tauri::WebviewWindow) {
@@ -119,7 +111,7 @@ mod native {
             }
             for r in surfaces {
                 let (left, top, right, bottom) =
-                    crate::edge_policy::physical_rect((r.x, r.y, r.width, r.height), scale);
+                    crate::desktop_geometry::physical_rect((r.x, r.y, r.width, r.height), scale);
                 let part = CreateRectRgn(left, top, right, bottom);
                 CombineRgn(region, region, part, RGN_OR);
                 let _ = DeleteObject(part);
@@ -130,9 +122,6 @@ mod native {
             }
         }
         Ok(())
-    }
-    fn contains(r: &RECT, p: POINT) -> bool {
-        p.x >= r.left && p.x < r.right && p.y >= r.top && p.y < r.bottom
     }
     // Borderless foreground windows covering the complete monitor are treated conservatively as fullscreen.
     unsafe fn fullscreen(monitor: &RECT, fg: HWND, app: &AppHandle) -> bool {
@@ -165,12 +154,11 @@ mod native {
     }
     pub fn start(app: AppHandle) {
         std::thread::spawn(move || {
-            let t0 = Instant::now();
-            let mut policy = Policy::default();
+            let mut last_area = None;
             let mut hidden_for_fullscreen = false;
             let mut hidden_notes = std::collections::HashSet::new();
             loop {
-                std::thread::sleep(Duration::from_millis(25));
+                std::thread::sleep(Duration::from_millis(100));
                 let Some(w) = app.get_webview_window("desktop-dock") else {
                     break;
                 };
@@ -259,72 +247,26 @@ mod native {
                             );
                         }
                     }
-                    let buttons = [VK_LBUTTON, VK_RBUTTON, VK_MBUTTON]
-                        .iter()
-                        .any(|k| GetAsyncKeyState(k.0 as i32) < 0);
-                    let pos = w.outer_position().unwrap_or_default();
-                    let scale = w.scale_factor().unwrap_or(1.0);
-                    let over = w.is_visible().unwrap_or(false)
-                        && st
-                            .surfaces
-                            .lock()
-                            .map(|rs| {
-                                rs.iter().any(|r| {
-                                    contains(
-                                        &RECT {
-                                            left: pos.x + (r.x * scale) as i32,
-                                            top: pos.y + (r.y * scale) as i32,
-                                            right: pos.x + ((r.x + r.width) * scale) as i32,
-                                            bottom: pos.y + ((r.y + r.height) * scale) as i32,
-                                        },
-                                        p,
-                                    )
-                                })
-                            })
-                            .unwrap_or(false);
-                    let sample = Sample {
-                        now: t0.elapsed().as_millis() as u64,
-                        monitor: monitor.0 as isize,
-                        right: !buttons
-                            && p.x >= info.rcMonitor.right - 3
-                            && p.y >= info.rcWork.top
-                            && p.y < info.rcWork.bottom,
-                        top: !buttons && p.y <= info.rcMonitor.top + 1,
-                        away_top: p.y > info.rcMonitor.top + 16,
-                        over_surface: over,
-                        interacting: w.hwnd().ok().map(|h| HWND(h.0)) == Some(fg),
-                        blocked: full || dock_full,
-                    };
-                    for action in policy.tick(sample) {
-                        match action {
-                            Action::ShowDock(_) => {
-                                // Floating notes are independent native windows and keep their own monitor.
-                                let _ = w.set_position(tauri::PhysicalPosition::new(
-                                    info.rcWork.left,
-                                    info.rcWork.top,
-                                ));
-                                let _ = w.set_size(tauri::PhysicalSize::new(
-                                    (info.rcWork.right - info.rcWork.left) as u32,
-                                    (info.rcWork.bottom - info.rcWork.top) as u32,
-                                ));
-                                let _ = w.emit("pip://dock-visible", true);
-                                if let Ok(h) = w.hwnd().map(|h| HWND(h.0)) {
-                                    let _ = SetWindowPos(
-                                        h,
-                                        HWND_TOPMOST,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
-                                    );
-                                }
-                            }
-                            Action::HideDock => {
-                                let _ = w.emit("pip://dock-visible", false);
-                            }
-                            Action::RevealDashboard => crate::reveal_main(&app),
-                        }
+                    // Monitor tracking never opens Pip. Preserve open/pinned panels on their monitor.
+                    // A collapsed host may leave a fullscreen monitor for an unobstructed one.
+                    let area = (
+                        info.rcWork.left,
+                        info.rcWork.top,
+                        info.rcWork.right,
+                        info.rcWork.bottom,
+                    );
+                    let collapsed = st
+                        .surfaces
+                        .lock()
+                        .map(|surfaces| surfaces.len() <= 2)
+                        .unwrap_or(false);
+                    if !full && collapsed && last_area != Some(area) {
+                        let _ = w.set_position(tauri::PhysicalPosition::new(area.0, area.1));
+                        let _ = w.set_size(tauri::PhysicalSize::new(
+                            (area.2 - area.0) as u32,
+                            (area.3 - area.1) as u32,
+                        ));
+                        last_area = Some(area);
                     }
                 }
             }
@@ -414,4 +356,13 @@ pub fn refresh_regions(w: &tauri::WebviewWindow) {
             let _ = native::regions(w, &surfaces);
         };
     }
+}
+
+#[tauri::command]
+pub fn desktop_dashboard(app: AppHandle, w: tauri::WebviewWindow) -> Result<(), String> {
+    if w.label() != "desktop-dock" {
+        return Err("Unexpected window".into());
+    }
+    crate::show_main(&app);
+    Ok(())
 }

@@ -3,5 +3,20 @@ html.desktop-win,html.desktop-win body,html.desktop-win #root{background:transpa
 .desktop-win .desktop-host{background:transparent!important;width:100%;height:100%;min-height:0;padding:0}
 .desktop-win .fr{max-height:calc(100dvh - 28px)}
 .floating-win .fr-float{width:calc(100vw - 24px);height:calc(100dvh - 24px)}
-@media(prefers-reduced-motion:no-preference){html[data-motion=full] .dashboard-reveal{animation:pip-edge-reveal .16s ease-out}}
-@keyframes pip-edge-reveal{from{opacity:.86;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+/* Only the orange mark is visible; the transparent button gives it a usable click target. */
+.desktop-edge-tab{--tab-orange:var(--color-accent-500,#FF8A3A);--tab-orange-deep:var(--color-accent-700,#C85C0E);position:fixed;z-index:90;border:0;padding:0;background:transparent;cursor:pointer;touch-action:manipulation}
+.desktop-edge-tab::before{content:"";position:absolute;pointer-events:none;background:linear-gradient(135deg,var(--tab-orange),var(--color-accent-600,#F07418));border-radius:999px;box-shadow:inset 0 0 0 1px rgba(124,60,18,.3),0 1px 3px rgba(32,35,43,.22);transition:transform 140ms cubic-bezier(.2,.8,.2,1),box-shadow 140ms ease,background-color 100ms ease}
+.desktop-edge-top{top:0;left:calc(50% - 22px);width:44px;height:12px}
+.desktop-edge-top::before{width:28px;height:4px;top:0;left:8px}
+.desktop-edge-right{right:0;top:calc(50% - 22px);width:12px;height:44px}
+.desktop-edge-right::before{width:4px;height:28px;right:0;top:8px}
+.desktop-edge-top:hover::before,.desktop-edge-top[aria-expanded=true]::before{transform:scaleX(1.14)}
+.desktop-edge-right:hover::before,.desktop-edge-right[aria-expanded=true]::before{transform:scaleY(1.14)}
+.desktop-edge-tab:hover::before{box-shadow:inset 0 0 0 1px rgba(124,60,18,.45),0 1px 4px rgba(32,35,43,.3)}
+.desktop-edge-tab[aria-expanded=true]::before,.desktop-edge-tab:active::before{background:var(--tab-orange-deep)}
+.desktop-edge-tab:active::before{transform:scale(.92);box-shadow:inset 0 0 0 1px rgba(67,29,7,.35)}
+.desktop-edge-tab:focus-visible{outline:2px solid var(--focus,#2F6FD6);outline-offset:-2px;border-radius:4px}
+.desktop-edge-tab:focus-visible::before{box-shadow:0 0 0 1px #fff,0 0 0 3px var(--focus,#2F6FD6)}
+@media(prefers-reduced-motion:reduce){.desktop-edge-tab::before{transition:none}}
+:root[data-motion=reduced] .desktop-edge-tab::before{transition:none}
+@media(forced-colors:active){.desktop-edge-tab::before{background:ButtonText;box-shadow:none}.desktop-edge-tab[aria-expanded=true]::before,.desktop-edge-tab:active::before{background:Highlight}.desktop-edge-tab:focus-visible{outline-color:Highlight}}
