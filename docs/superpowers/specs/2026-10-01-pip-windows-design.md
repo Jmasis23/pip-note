@@ -41,7 +41,7 @@ The main window uses a compact sidebar, a searchable note list, and an editor. T
 
 The arrow mascot has an asymmetric rounded silhouette, two small eyes, and a folded tail. Provide SVG source, Windows ICO assets, and simplified 16/24/32 px tray variants. Mascot states: idle, capturing, saving, saved, error. A success nod runs only after confirmed persistence. Error feedback includes text and a retry action. Reduced motion replaces movement with static state changes. Mascot animation never replaces the system pointer or obstructs input.
 
-Copy: “Thought it? Keep it.” / “Something on your mind?” / “Keep it” / “Got it. Saved.” / “Couldn't save. Your text is still here.”
+Copy: “Need it later? Pip it.” / “Something on your mind?” / “Keep it” / “Got it. Saved.” / “Couldn't save. Your text is still here.”
 
 ## useLayouts integration
 

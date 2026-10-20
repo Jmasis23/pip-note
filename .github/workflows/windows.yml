@@ -1,0 +1,77 @@
+name: Windows build
+
+on:
+  push:
+    branches: [build/full-app, windows/pip-app, feature/pip-app, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  web:
+    name: Web tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+
+  core:
+    name: Rust core tests (shake, storage, AI client)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: src-tauri/core }
+      - run: cargo test --manifest-path src-tauri/core/Cargo.toml
+
+  installer:
+    name: Windows installer
+    runs-on: windows-latest
+    needs: [web, core]
+    permissions:
+      contents: write
+    env:
+      VITE_CAPTURE_JEV: "true"
+      # Updates are signed and published only when the signing key is set as a repo secret.
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      PUBLISH: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && github.event_name == 'push' && github.ref == 'refs/heads/windows/pip-app' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: src-tauri }
+      - run: npm ci
+      - name: Native window policy tests
+        run: cargo test --lib --manifest-path src-tauri/Cargo.toml
+      - name: Version each build so the updater sees it as newer
+        shell: bash
+        run: |
+          node -e "const f='src-tauri/tauri.conf.json',c=JSON.parse(require('fs').readFileSync(f));c.version='0.2.'+process.env.GITHUB_RUN_NUMBER;if(process.env.PUBLISH==='true')c.bundle.createUpdaterArtifacts=true;require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+      - name: Build installer only (no signing key set)
+        if: env.PUBLISH != 'true'
+        run: npx tauri build
+      - name: Build, sign and publish release (updater feed)
+        if: env.PUBLISH == 'true'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v0.2.${{ github.run_number }}
+          releaseName: Pip 0.2.${{ github.run_number }}
+          releaseBody: Install the .exe. Pip updates from Settings > Updates.
+          releaseDraft: false
+          prerelease: false
+          uploadUpdaterJson: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Pip-windows-installer
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error

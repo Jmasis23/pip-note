@@ -12,7 +12,7 @@ The user selected Pip and Windows first. Preserve that direction. The next produ
 - Use cream #FAF8F3, ink #20232B, lavender #858CFF, mint #BCEBD8, and peach #FFD3BB.
 - Use Segoe UI Variable, Segoe UI, sans-serif fallbacks.
 - Build an original arrow cursor mascot; never copy Grok Bot assets.
-- Use the exact primary copy: “Thought it? Keep it.” and “Keep it”.
+- Use the exact primary copy: “Need it later? Pip it.” and “Keep it”.
 - Inspect actual useLayouts component source and licensing before adaptation. Prefer accessible native buttons and reduced-motion behavior.
 - Bundle production dependencies locally. Do not depend on public CDNs at runtime.
 

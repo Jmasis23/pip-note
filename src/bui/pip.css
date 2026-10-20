@@ -1,0 +1,15 @@
+/* BoardUI (MIT) tokens + utilities only. No preflight, so Pip's own CSS stays untouched. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "./styles/theme.css";
+@import "./styles/typography.css";
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant rtl (&:dir(rtl));
+@custom-variant ltr (&:dir(ltr));
+/* Pip tint: orange accent ramp */
+@theme {
+  --color-accent-50: #fff4ec; --color-accent-100: #ffe6d3; --color-accent-200: #ffcca6; --color-accent-300: #ffad73;
+  --color-accent-400: #ff9a52; --color-accent-500: #ff8a3a; --color-accent-600: #f07418; --color-accent-700: #c85c0e;
+  --color-accent-800: #9c4810; --color-accent-900: #7c3c12; --color-accent-950: #431d07;
+}
