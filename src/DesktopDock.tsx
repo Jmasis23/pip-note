@@ -80,4 +80,3 @@ export default function DesktopDock({floatingId=null}: {floatingId?: string|null
 function DockEditor({id,notes,...props}:{id:string;notes:Note[]}&Omit<Parameters<typeof Editor>[0],"note">){
   const note=useFull(id,notes);return note?<Editor key={note.id} note={note} {...props}/>:null;
 }
-
