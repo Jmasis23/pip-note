@@ -5,7 +5,7 @@ import {observeDesktopRegions} from "./desktopRegions";
 type Rect={x:number;y:number;width:number;height:number};
 let stop=()=>{};
 beforeEach(()=>{vi.stubGlobal("ResizeObserver",class {observe(){} disconnect(){}});});
-afterEach(()=>{stop();document.body.innerHTML="";vi.restoreAllMocks();vi.unstubAllGlobals();});
+afterEach(()=>{stop();document.body.innerHTML="";vi.useRealTimers();vi.restoreAllMocks();vi.unstubAllGlobals();});
 function rail(){
  const el=document.createElement("nav");el.className="fr";el.style.visibility="hidden";document.body.append(el);
  vi.spyOn(el,"getClientRects").mockReturnValue([{}] as unknown as DOMRectList);
@@ -39,4 +39,22 @@ it("includes editor color and selection popovers outside the note panel",async()
  }
  let region:Rect[]=[];stop=observeDesktopRegions(async next=>{region=next;});await settle();
  expect(region).toEqual([{x:490,y:40,width:220,height:60},{x:490,y:40,width:220,height:60}]);
+});
+it("repairs stale clipping after layout moves without a delivered resize or paint event",async()=>{
+ vi.useFakeTimers();
+ const el=rail();el.style.visibility="visible";
+ const send=vi.fn(async(_regions:Rect[])=>{});
+ stop=observeDesktopRegions(send);await settle();
+ expect(send).toHaveBeenLastCalledWith([{x:1790,y:370,width:78,height:240}]);
+ // Native/WebView2 resize and compositor-driven motion need not mutate the DOM.
+ vi.mocked(el.getBoundingClientRect).mockReturnValue({x:1860,y:400,width:58,height:220} as DOMRect);
+ await vi.advanceTimersByTimeAsync(250);await settle();
+ expect(send).toHaveBeenLastCalledWith([{x:1850,y:390,width:78,height:240}]);
+ const calls=send.mock.calls.length;
+ await vi.advanceTimersByTimeAsync(1000);await settle();
+ expect(send).toHaveBeenCalledTimes(calls); // Stable geometry sends no extra IPC.
+ stop();
+ vi.mocked(el.getBoundingClientRect).mockReturnValue({x:1000,y:400,width:58,height:220} as DOMRect);
+ await vi.advanceTimersByTimeAsync(1000);await settle();
+ expect(send).toHaveBeenCalledTimes(calls);
 });

@@ -41,9 +41,12 @@ export function observeDesktopRegions(
   const resize = new ResizeObserver(schedule);
   resize.observe(document.body);
   window.addEventListener("resize", schedule);
+  // A shaped WebView2 can miss paint-driven ResizeObserver delivery after a native
+  // resize. Also catch compositor-only panel motion; unchanged geometry sends no IPC.
+  const geometryCheck = setInterval(schedule, 250);
   schedule();
   return () => {
-    dead = true; clearTimeout(retry); observer.disconnect(); resize.disconnect();
+    dead = true; clearTimeout(retry); clearInterval(geometryCheck); observer.disconnect(); resize.disconnect();
     window.removeEventListener("resize", schedule);
   };
 }
