@@ -3,6 +3,7 @@ import {MotionConfig} from "motion/react";
 import {FolderRail, Floating} from "./components/FolderRail";
 import {Editor} from "./components/Editor";
 import {repo, useNotes} from "./useNotes";
+import {observeDesktopRegions} from "./desktopRegions";
 import {call, isNative, syncDesktopPrefs} from "./native";
 import {cleanFolder} from "./repo/repo";
 import {useFull} from "./dirs/util";
@@ -48,21 +49,7 @@ export default function DesktopDock({floatingId=null}: {floatingId?: string|null
   },[floatingId]);
   useEffect(()=>{
     if(!isNative() || floatingId || !listening)return;
-    let frame=0,last="",pending=false,dead=false;
-    const report=()=>{
-      if(dead)return;
-      const surfaces=[...document.querySelectorAll<HTMLElement>(".fr,.fr-panel,.fr-float,[role=tooltip],[role=listbox],.dropdown-menu,.rw-menu")]
-        .filter(el=>getComputedStyle(el).visibility!=="hidden" && el.getClientRects().length>0)
-        .map(el=>{const r=el.getBoundingClientRect();return {x:Math.max(0,r.x-10),y:Math.max(0,r.y-10),width:r.width+20,height:r.height+20};});
-      const next=JSON.stringify({surfaces,scale:window.devicePixelRatio});
-      if(next!==last && !pending){pending=true;void call("desktop_regions",{surfaces}).then(()=>{last=next;}).catch(console.error).finally(()=>{pending=false;schedule();});}
-    };
-    const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(report);};
-    const observer=new MutationObserver(schedule);
-    observer.observe(document.body,{attributes:true,childList:true,subtree:true});
-    const resize=new ResizeObserver(schedule);resize.observe(document.body);
-    window.addEventListener("resize",schedule);schedule();
-    return ()=>{dead=true;cancelAnimationFrame(frame);observer.disconnect();resize.disconnect();window.removeEventListener("resize",schedule);};
+    return observeDesktopRegions(surfaces => call("desktop_regions", { surfaces }));
   },[floatingId,listening]);
   const color=(id:string,c:Parameters<typeof Editor>[0]["color"])=>{
     const colors={...(prefs.noteColors??{})};if(c)colors[id]=c;else delete colors[id];void setPrefs({...prefs,noteColors:colors});

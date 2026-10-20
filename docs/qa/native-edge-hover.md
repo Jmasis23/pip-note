@@ -47,3 +47,10 @@ Use an MSVC build on the user's Windows desktop. Keep a recoverable test workspa
 ## Actual limits
 
 Native interactive Windows QA and an MSVC installer build remain outstanding. Local GNU link/runtime failures above are unresolved; passing browser/policy/core checks do not certify native behavior. Exclusive fullscreen behavior is guarded conservatively by foreground window geometry/style; validate against the user's games and monitor layout. Floating cards are initially sized and positioned within the dock monitor's work area. Display-disconnect recovery still requires manual validation.
+## 2026-10-20 follow-up: invisible native dock
+
+On installed 0.2.53, Computer Use found the folder buttons in accessibility data, but no visible/clickable rail. A read-only native diagnostic found the top-level dock visible at the correct work-area bounds and 96 DPI, with an empty Win32 region. The frontend had switched the rail to visible but scheduled its region update through requestAnimationFrame; an entirely clipped/occluded WebView2 can suspend those frames, so the update needed to enable painting never ran.
+
+The region observer now coalesces changes through microtasks, independent of painting. An in-flight native update is followed by a fresh measurement; failed invocations retry with a delay rather than starving the event loop. New regression tests hold animation frames indefinitely and reveal/retract the rail, and change geometry during an unfinished native update. Both fail with the original scheduler and pass with the fix.
+
+Local validation: `npm test` passes 87 tests; `npm run typecheck` and `npm run build` pass. Windows CI and interactive verification of the corrected installer are recorded below when available. The local MSVC attempt could not link because Visual Studio Build Tools lacks the C++ linker; no native-test success is claimed from that attempt.
