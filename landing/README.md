@@ -1,0 +1,1 @@
+This directory contains the source for https://pip-note.pages.dev/, deployed to the Cloudflare Pages project pip-note. The privacy copy in this landing page is deliberate and must not be "improved" without Joe.

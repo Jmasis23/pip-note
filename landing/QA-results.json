@@ -1,0 +1,134 @@
+[
+  {
+    "width": 390,
+    "overflow": false,
+    "errors": [],
+    "images": [
+      {
+        "src": "img/pip-icon-only.svg",
+        "loaded": true
+      },
+      {
+        "src": "img/app-home.webp",
+        "loaded": true
+      },
+      {
+        "src": "img/pip-idle-animated.svg",
+        "loaded": true
+      },
+      {
+        "src": "img/capture.webp",
+        "loaded": true
+      },
+      {
+        "src": "img/sheet-editor.webp",
+        "loaded": true
+      },
+      {
+        "src": "img/pip-saved-animated.svg",
+        "loaded": true
+      }
+    ],
+    "anchors": [
+      {
+        "href": "#top",
+        "target": true
+      },
+      {
+        "href": "#how",
+        "target": true
+      },
+      {
+        "href": "#capture-suggestions",
+        "target": true
+      },
+      {
+        "href": "#privacy",
+        "target": true
+      },
+      {
+        "href": "#know",
+        "target": true
+      },
+      {
+        "href": "#know",
+        "target": true
+      },
+      {
+        "href": "#privacy",
+        "target": true
+      },
+      {
+        "href": "#privacy",
+        "target": true
+      }
+    ],
+    "returnHome": "http://127.0.0.1:4173/"
+  },
+  {
+    "width": 1440,
+    "overflow": false,
+    "errors": [],
+    "images": [
+      {
+        "src": "img/pip-icon-only.svg",
+        "loaded": true
+      },
+      {
+        "src": "img/app-home.webp",
+        "loaded": true
+      },
+      {
+        "src": "img/pip-idle-animated.svg",
+        "loaded": true
+      },
+      {
+        "src": "img/capture.webp",
+        "loaded": true
+      },
+      {
+        "src": "img/sheet-editor.webp",
+        "loaded": true
+      },
+      {
+        "src": "img/pip-saved-animated.svg",
+        "loaded": true
+      }
+    ],
+    "anchors": [
+      {
+        "href": "#top",
+        "target": true
+      },
+      {
+        "href": "#how",
+        "target": true
+      },
+      {
+        "href": "#capture-suggestions",
+        "target": true
+      },
+      {
+        "href": "#privacy",
+        "target": true
+      },
+      {
+        "href": "#know",
+        "target": true
+      },
+      {
+        "href": "#know",
+        "target": true
+      },
+      {
+        "href": "#privacy",
+        "target": true
+      },
+      {
+        "href": "#privacy",
+        "target": true
+      }
+    ],
+    "returnHome": "http://127.0.0.1:4173/"
+  }
+]
